@@ -25,22 +25,30 @@ jobs:
 
       - name: Prepare tasks file
         env:
-          APP_ID: ${{ github.event.client_payload.app_id || inputs.app_id }}
-          TASKS_JSON: ${{ github.event.client_payload.tasks_json || inputs.tasks_json }}
+          APP_ID: ${{ inputs.app_id }}
+          TASKS_JSON: ${{ inputs.tasks_json }}
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$APP_ID" ]; then
-            echo "App ID is required" >&2
-            exit 1
-          fi
-          mkdir -p "data/tasks/$APP_ID"
-          if [ -z "${TASKS_JSON:-}" ]; then
-            printf '%s\n' '[]' > "data/tasks/$APP_ID/tasks.json"
-          else
-            printf '%s\n' "$TASKS_JSON" > "data/tasks/$APP_ID/tasks.json"
-          fi
-          echo "Wrote data/tasks/$APP_ID/tasks.json"
+          python3 - <<'PY'
+          import os, json, sys, pathlib
+          event_path = os.environ.get('GITHUB_EVENT_PATH', '')
+          data = {}
+          if event_path and os.path.exists(event_path):
+              with open(event_path, 'r', encoding='utf-8') as fh:
+                  data = json.load(fh)
+          payload = data.get('client_payload', {})
+          app_id = payload.get('app_id') or os.environ.get('APP_ID')
+          tasks_json = payload.get('tasks_json') or os.environ.get('TASKS_JSON') or '[]'
+          if not app_id:
+              print('App ID is required', file=sys.stderr)
+              sys.exit(1)
+          out_dir = pathlib.Path('data/tasks') / app_id
+          out_dir.mkdir(parents=True, exist_ok=True)
+          with open(out_dir / 'tasks.json', 'w', encoding='utf-8') as f:
+              f.write(tasks_json)
+          print(f'Wrote {out_dir}/tasks.json')
+          PY
 
       - name: Commit and push changes
         shell: bash
