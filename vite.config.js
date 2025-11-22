@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/Sentinel/', // GitHub Pages repository name
+  base: './', // Use relative paths for local development
   root: '.',
   publicDir: 'public',
   build: {

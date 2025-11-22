@@ -14,6 +14,11 @@ class DataStore {
   constructor() {
     this.db = null;
     this.initialized = false;
+    this.fallbackStorage = {
+      portfolio: new Map(),
+      ideas: new Map()
+    };
+    this.usingFallback = false;
   }
 
   /**
@@ -41,107 +46,30 @@ class DataStore {
         }
       });
 
-      // Initialize with sample data if empty
-      await this.initializeSampleData();
       this.initialized = true;
       console.log('DataStore initialized successfully');
     } catch (error) {
       console.error('Failed to initialize DataStore:', error);
-      throw new Error('Database initialization failed');
+      console.log('Falling back to in-memory storage');
+      this.usingFallback = true;
+      this.initialized = true;
     }
   }
 
-  /**
-   * Initialize sample data if database is empty
-   */
-  async initializeSampleData() {
-    try {
-      const portfolioCount = await this.db.count(PORTFOLIO_STORE);
-      const ideasCount = await this.db.count(IDEAS_STORE);
 
-      if (portfolioCount === 0) {
-        const sampleApps = [
-          {
-            id: 'workout-tracker',
-            repoUrl: 'https://api.github.com/repos/user/workout-tracker',
-            platform: 'iOS',
-            status: 'Active',
-            lastReviewDate: '2025-09-01',
-            nextReviewDate: '2025-12-01',
-            pendingTodos: 3,
-            notes: 'Decided to use SwiftUI for all views. Need to refactor the workout history screen.',
-            lastCommitDate: null,
-            latestTag: null
-          },
-          {
-            id: 'expense-manager',
-            repoUrl: 'https://api.github.com/repos/user/expense-manager',
-            platform: 'Web',
-            status: 'Active',
-            lastReviewDate: '2025-08-15',
-            nextReviewDate: '2025-11-15',
-            pendingTodos: 1,
-            notes: 'React app with TypeScript. Performance optimization needed for large datasets.',
-            lastCommitDate: null,
-            latestTag: null
-          },
-          {
-            id: 'habit-tracker',
-            repoUrl: 'https://api.github.com/repos/user/habit-tracker',
-            platform: 'Android',
-            status: 'Active',
-            lastReviewDate: '2025-07-20',
-            nextReviewDate: '2025-10-20',
-            pendingTodos: 5,
-            notes: 'Kotlin app using Room database. Need to implement dark mode.',
-            lastCommitDate: null,
-            latestTag: null
-          }
-        ];
 
-        for (const app of sampleApps) {
-          await this.db.put(PORTFOLIO_STORE, app);
-        }
-      }
 
-      if (ideasCount === 0) {
-        const sampleIdeas = [
-          {
-            id: 'idea-1',
-            conceptName: 'Smart Recipe Suggester',
-            problemSolved: 'Helps users find recipes based on ingredients they already have at home, reducing food waste.',
-            targetAudience: 'Home cooks and busy professionals who want to minimize grocery shopping.',
-            initialFeatures: 'Ingredient scanner, recipe matching algorithm, dietary restrictions filter, shopping list generation.',
-            techStack: 'React Native',
-            riskRating: 'Medium',
-            dateCreated: new Date().toISOString()
-          },
-          {
-            id: 'idea-2',
-            conceptName: 'Local Event Discovery',
-            problemSolved: 'Connects users with local events and activities that match their interests and schedule.',
-            targetAudience: 'Young professionals and students looking for social activities and networking opportunities.',
-            initialFeatures: 'Event feed, interest matching, calendar integration, social sharing.',
-            techStack: 'Flutter',
-            riskRating: 'Low',
-            dateCreated: new Date().toISOString()
-          }
-        ];
-
-        for (const idea of sampleIdeas) {
-          await this.db.put(IDEAS_STORE, idea);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to initialize sample data:', error);
-    }
-  }
 
   /**
    * Get all portfolio apps
    */
   async getPortfolio() {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      return Array.from(this.fallbackStorage.portfolio.values());
+    }
+    
     try {
       return await this.db.getAll(PORTFOLIO_STORE);
     } catch (error) {
@@ -155,6 +83,11 @@ class DataStore {
    */
   async getApp(id) {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      return this.fallbackStorage.portfolio.get(id);
+    }
+    
     try {
       return await this.db.get(PORTFOLIO_STORE, id);
     } catch (error) {
@@ -168,6 +101,12 @@ class DataStore {
    */
   async saveApp(app) {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      this.fallbackStorage.portfolio.set(app.id, app);
+      return app;
+    }
+    
     try {
       await this.db.put(PORTFOLIO_STORE, app);
       return app;
@@ -178,10 +117,36 @@ class DataStore {
   }
 
   /**
+   * Remove an app by ID
+   */
+  async removeApp(appId) {
+    if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      this.fallbackStorage.portfolio.delete(appId);
+      return true;
+    }
+    
+    try {
+      await this.db.delete(PORTFOLIO_STORE, appId);
+      return true;
+    } catch (error) {
+      console.error('Failed to remove app:', error);
+      throw new Error('Failed to remove app data');
+    }
+  }
+
+  /**
    * Delete an app
    */
   async deleteApp(id) {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      this.fallbackStorage.portfolio.delete(id);
+      return;
+    }
+    
     try {
       await this.db.delete(PORTFOLIO_STORE, id);
     } catch (error) {
@@ -195,6 +160,11 @@ class DataStore {
    */
   async getIdeas() {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      return Array.from(this.fallbackStorage.ideas.values());
+    }
+    
     try {
       return await this.db.getAll(IDEAS_STORE);
     } catch (error) {
@@ -208,6 +178,11 @@ class DataStore {
    */
   async getIdea(id) {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      return this.fallbackStorage.ideas.get(id);
+    }
+    
     try {
       return await this.db.get(IDEAS_STORE, id);
     } catch (error) {
@@ -221,6 +196,12 @@ class DataStore {
    */
   async saveIdea(idea) {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      this.fallbackStorage.ideas.set(idea.id, idea);
+      return idea;
+    }
+    
     try {
       await this.db.put(IDEAS_STORE, idea);
       return idea;
@@ -235,6 +216,12 @@ class DataStore {
    */
   async deleteIdea(id) {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      this.fallbackStorage.ideas.delete(id);
+      return;
+    }
+    
     try {
       await this.db.delete(IDEAS_STORE, id);
     } catch (error) {
@@ -294,12 +281,21 @@ class DataStore {
   }
 
   /**
-   * Calculate next review date (3 months from now)
+   * Calculate next review date (60 days from last commit, or today if no commit)
    */
-  calculateNextReviewDate() {
-    const now = new Date();
-    now.setMonth(now.getMonth() + 3);
-    return now.toISOString().split('T')[0];
+  calculateNextReviewDate(lastCommitDate = null) {
+    const reviewDate = new Date();
+    
+    if (lastCommitDate) {
+      // If we have a last commit date, set review to 60 days after that
+      reviewDate.setTime(new Date(lastCommitDate).getTime());
+      reviewDate.setDate(reviewDate.getDate() + 60);
+    } else {
+      // If no commit date, default to 60 days from now
+      reviewDate.setDate(reviewDate.getDate() + 60);
+    }
+    
+    return reviewDate.toISOString().split('T')[0];
   }
 
   /**
@@ -307,6 +303,13 @@ class DataStore {
    */
   async clearAll() {
     if (!this.initialized) await this.init();
+    
+    if (this.usingFallback) {
+      this.fallbackStorage.portfolio.clear();
+      this.fallbackStorage.ideas.clear();
+      return;
+    }
+    
     try {
       const tx = this.db.transaction([PORTFOLIO_STORE, IDEAS_STORE], 'readwrite');
       await tx.objectStore(PORTFOLIO_STORE).clear();

@@ -165,11 +165,15 @@ class AppState {
   }
 
   /**
-   * Set portfolio data
+   * Set portfolio data - filter to only public repositories
    */
   setPortfolio(portfolio) {
+    // Filter out private repositories and eventcall-images
+    const publicRepos = (portfolio || []).filter(app => !app.isPrivate && app.id !== 'eventcall-images');
+    console.log(`Setting portfolio with ${publicRepos.length} public repositories (filtered from ${portfolio?.length || 0} total)`);
+    
     this.setState({ 
-      portfolio: portfolio || [],
+      portfolio: publicRepos,
       portfolioLoading: false,
       portfolioError: null 
     });

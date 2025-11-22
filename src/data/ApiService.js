@@ -9,27 +9,33 @@ class ApiService {
     this.retryAttempts = 3;
     this.retryDelay = 1000; // Start with 1 second
     this.maxDelay = 30000; // Max 30 seconds
+    
+    // Debug: Check if GITHUB_API_KEY is available at module load time
+    console.log('ApiService constructor - window.GITHUB_API_KEY:', window.GITHUB_API_KEY);
   }
 
   /**
    * Fetch repository data with exponential backoff retry logic
    */
   async fetchRepoData(repoUrl) {
+    console.log('Fetching repository data for:', repoUrl);
+    
     if (!repoUrl || !repoUrl.includes('github.com')) {
       console.warn('Invalid GitHub repository URL:', repoUrl);
-      return this.getFallbackData();
+      throw new Error('Invalid GitHub repository URL: ' + repoUrl);
     }
 
     // Extract owner and repo from URL
     const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!match) {
       console.warn('Could not parse GitHub repository URL:', repoUrl);
-      return this.getFallbackData();
+      throw new Error('Could not parse GitHub repository URL: ' + repoUrl);
     }
 
     const [, owner, repo] = match;
     const cleanRepo = repo.replace(/\.git$/, ''); // Remove .git suffix if present
 
+    console.log(`Extracted owner: ${owner}, repo: ${cleanRepo}`);
     return this.fetchWithRetry(`/repos/${owner}/${cleanRepo}`);
   }
 
@@ -48,6 +54,22 @@ class ApiService {
   }
 
   /**
+   * Fetch repository traffic views (last 14 days)
+   */
+  async fetchTrafficViews(owner, repo) {
+    console.log(`Fetching traffic views for ${owner}/${repo}`);
+    return this.fetchWithRetry(`/repos/${owner}/${repo}/traffic/views`, { per: 'day' });
+  }
+
+  /**
+   * Fetch repository traffic clones (last 14 days)
+   */
+  async fetchTrafficClones(owner, repo) {
+    console.log(`Fetching traffic clones for ${owner}/${repo}`);
+    return this.fetchWithRetry(`/repos/${owner}/${repo}/traffic/clones`, { per: 'day' });
+  }
+
+  /**
    * Make API request with exponential backoff retry logic
    */
   async fetchWithRetry(endpoint, params = {}) {
@@ -59,6 +81,8 @@ class ApiService {
     });
 
     let lastError;
+    
+    console.log(`Making GitHub API call to: ${endpoint}`);
     
     for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
       try {
@@ -84,7 +108,7 @@ class ApiService {
         // Handle not found
         if (response.status === 404) {
           console.warn(`Repository not found: ${endpoint}`);
-          return this.getFallbackData();
+          throw new Error(`Repository not found: ${endpoint}`);
         }
         
         // Handle other errors
@@ -105,8 +129,8 @@ class ApiService {
       }
     }
     
-    console.error('All API attempts failed, returning fallback data');
-    return this.getFallbackData();
+    console.error('All API attempts failed');
+    throw lastError || new Error('Failed to fetch data from GitHub API');
   }
 
   /**
@@ -115,12 +139,15 @@ class ApiService {
   async makeApiRequest(url) {
     const headers = {
       'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'APM-Portfolio-Manager/1.0'
+      'User-Agent': 'Sentinel-App-Portfolio-Manager/1.0'
     };
 
     // Add authentication if API key is provided
     if (window.GITHUB_API_KEY && window.GITHUB_API_KEY !== 'YOUR_API_KEY_HERE') {
-      headers['Authorization'] = `token ${window.GITHUB_API_KEY}`;
+      headers['Authorization'] = `Bearer ${window.GITHUB_API_KEY}`;
+      console.log('Using GitHub API token for authentication');
+    } else {
+      console.log('No GitHub API token configured, using unauthenticated requests');
     }
 
     return fetch(url, {
@@ -134,18 +161,24 @@ class ApiService {
    * Get comprehensive repository data including commits and tags
    */
   async getComprehensiveRepoData(repoUrl) {
+    console.log('Getting comprehensive data for:', repoUrl);
     try {
       const repoData = await this.fetchRepoData(repoUrl);
       
       // If we got fallback data, return it immediately
       if (repoData.isFallback) {
+        console.log('Using fallback data for:', repoUrl);
         return repoData;
       }
+      
+      console.log('Fetched repository data:', repoData.name);
 
       // Fetch additional data in parallel
-      const [commits, tags] = await Promise.allSettled([
+      const [commits, tags, views, clones] = await Promise.allSettled([
         this.fetchLastCommit(repoData.owner.login, repoData.name),
-        this.fetchLatestTag(repoData.owner.login, repoData.name)
+        this.fetchLatestTag(repoData.owner.login, repoData.name),
+        this.fetchTrafficViews(repoData.owner.login, repoData.name),
+        this.fetchTrafficClones(repoData.owner.login, repoData.name)
       ]);
 
       // Extract relevant data
@@ -166,6 +199,10 @@ class ApiService {
         archived: repoData.archived,
         updatedAt: repoData.updated_at,
         url: repoData.html_url,
+        recentViews: views.status === 'fulfilled' ? views.value.count || 0 : 0,
+        recentClones: clones.status === 'fulfilled' ? clones.value.count || 0 : 0,
+        uniqueViews: views.status === 'fulfilled' ? views.value.uniques || 0 : 0,
+        uniqueClones: clones.status === 'fulfilled' ? clones.value.uniques || 0 : 0,
         isFallback: false
       };
 
@@ -176,31 +213,34 @@ class ApiService {
     }
   }
 
+
+
   /**
-   * Get fallback data when API fails
+   * Fetch all public user repositories
    */
-  getFallbackData() {
-    return {
-      id: 'unknown-repo',
-      name: 'Unknown Repository',
-      fullName: 'user/unknown-repo',
-      description: 'Repository data unavailable - API access failed or repo not found',
-      lastCommitDate: null,
-      latestTag: null,
-      stars: 0,
-      language: 'Unknown',
-      isPrivate: false,
-      archived: false,
-      updatedAt: null,
-      url: '#',
-      isFallback: true
-    };
+  async fetchUserRepos() {
+    console.log('Fetching public user repositories from GitHub...');
+    
+    // Fetch only public repositories
+    const repos = await this.fetchWithRetry('/user/repos', { 
+      per_page: 100, 
+      sort: 'updated', 
+      direction: 'desc',
+      visibility: 'public'  // Only fetch public repositories
+    });
+    
+    console.log(`Found ${repos.length} public repositories`);
+    return repos;
   }
 
   /**
    * Check if API key is configured
    */
   isApiKeyConfigured() {
+    console.log('Checking API key configuration:');
+    console.log('window.GITHUB_API_KEY exists:', !!window.GITHUB_API_KEY);
+    console.log('window.GITHUB_API_KEY value:', window.GITHUB_API_KEY);
+    console.log('Is placeholder?', window.GITHUB_API_KEY === 'YOUR_API_KEY_HERE');
     return window.GITHUB_API_KEY && window.GITHUB_API_KEY !== 'YOUR_API_KEY_HERE';
   }
 

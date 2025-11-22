@@ -2,7 +2,7 @@
  * AppCard Component - Displays individual app information in a card format
  */
 
-import { formatDate, calculateHealth, getHealthColor } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate } from '../utils/helpers.js';
 
 export class AppCard {
   constructor(app, onClick) {
@@ -17,6 +17,7 @@ export class AppCard {
   render() {
     const health = calculateHealth(this.app);
     const healthColor = getHealthColor(health);
+    const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
     
     const card = document.createElement('div');
     card.className = 'app-card';
@@ -33,13 +34,13 @@ export class AppCard {
       
       <div class="app-card-metrics">
         <div class="metric-item">
-          <span class="metric-label">Current Version:</span>
-          <span class="metric-value">${this.escapeHtml(this.app.latestTag || 'N/A')}</span>
+          <span class="metric-label">Last Reviewed:</span>
+          <span class="metric-value">${formatDate(lastReviewedDate, { relative: true })}</span>
         </div>
         
         <div class="metric-item">
-          <span class="metric-label">Last Commit:</span>
-          <span class="metric-value">${formatDate(this.app.lastCommitDate, { relative: true })}</span>
+          <span class="metric-label">Activity (14d):</span>
+          <span class="metric-value">${this.app.recentViews || 0} views</span>
         </div>
         
         <div class="metric-item">

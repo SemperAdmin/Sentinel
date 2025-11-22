@@ -169,6 +169,20 @@ export function calculateNextReviewDate(lastReviewDate = null) {
 }
 
 /**
+ * Get the latest date between last commit and last review
+ */
+export function getLatestReviewDate(lastCommitDate = null, lastReviewDate = null) {
+  if (!lastCommitDate && !lastReviewDate) return null;
+  if (!lastCommitDate) return lastReviewDate;
+  if (!lastReviewDate) return lastCommitDate;
+  
+  const commitDate = new Date(lastCommitDate);
+  const reviewDate = new Date(lastReviewDate);
+  
+  return commitDate > reviewDate ? lastCommitDate : lastReviewDate;
+}
+
+/**
  * Parse GitHub repository URL
  */
 export function parseGitHubUrl(url) {
