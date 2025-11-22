@@ -28,6 +28,13 @@ class DataStore {
     if (this.initialized) return;
 
     try {
+      if (typeof indexedDB === 'undefined' || !indexedDB) {
+        this.usingFallback = true;
+        this.initialized = true;
+        console.warn('IndexedDB unavailable, using fallback storage');
+        return;
+      }
+
       this.db = await openDB(DB_NAME, DB_VERSION, {
         upgrade(db) {
           // Create portfolio store
@@ -49,8 +56,7 @@ class DataStore {
       this.initialized = true;
       console.log('DataStore initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize DataStore:', error);
-      console.log('Falling back to in-memory storage');
+      console.warn('Failed to initialize DataStore, using fallback storage:', error);
       this.usingFallback = true;
       this.initialized = true;
     }
