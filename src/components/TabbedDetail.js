@@ -265,6 +265,7 @@ export class TabbedDetail {
           <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
             <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
             <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
+            <button class="btn btn-secondary" id="save-tasks-repo-btn">💾 Save Tasks to Repo</button>
           </div>
         </div>
       </div>
@@ -936,6 +937,37 @@ export class TabbedDetail {
     if (exportTodosBtn) {
       exportTodosBtn.addEventListener('click', () => {
         this.exportTodos();
+      });
+    }
+
+    const saveTasksRepoBtn = this.element.querySelector('#save-tasks-repo-btn');
+    if (saveTasksRepoBtn) {
+      saveTasksRepoBtn.addEventListener('click', async () => {
+        try {
+          const apiModule = await import('../data/ApiService.js');
+          const api = new apiModule.default();
+          const res = await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+          const original = saveTasksRepoBtn.innerHTML;
+          if (res && res.ok) {
+            saveTasksRepoBtn.innerHTML = '✅ Saved to Repo';
+          } else {
+            saveTasksRepoBtn.innerHTML = '⚠️ Save Failed';
+          }
+          saveTasksRepoBtn.disabled = true;
+          setTimeout(() => {
+            saveTasksRepoBtn.innerHTML = original;
+            saveTasksRepoBtn.disabled = false;
+          }, 2000);
+        } catch (err) {
+          const original = saveTasksRepoBtn.innerHTML;
+          saveTasksRepoBtn.innerHTML = '⚠️ Save Error';
+          saveTasksRepoBtn.disabled = true;
+          setTimeout(() => {
+            saveTasksRepoBtn.innerHTML = original;
+            saveTasksRepoBtn.disabled = false;
+          }, 2000);
+          console.warn('Error dispatching save_tasks workflow:', err);
+        }
       });
     }
     // Removed Work Management and Improvement listeners as those sections were removed
