@@ -1,0 +1,10 @@
+[
+  {
+    "id": "test-1",
+    "title": "Autosync test",
+    "description": "Verify sync from app",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false
+  }
+]
