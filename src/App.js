@@ -650,13 +650,10 @@ class App {
         async (updatedApp) => {
           await this.saveAppData(state.currentApp.id, updatedApp);
           try {
-            const shouldSync = appState.getState().autoRepoSync;
-            if (shouldSync) {
-              const api = new (await import('./data/ApiService.js')).default();
-              const appId = state.currentApp.id;
-              const tasks = updatedApp.todos || state.currentApp.todos || [];
-              await api.triggerSaveTasks(appId, tasks);
-            }
+            const api = new (await import('./data/ApiService.js')).default();
+            const appId = state.currentApp.id;
+            const tasks = updatedApp.todos || state.currentApp.todos || [];
+            await api.triggerSaveTasks(appId, tasks);
           } catch (err) {}
         },
         (tab) => appState.setActiveTab(tab),

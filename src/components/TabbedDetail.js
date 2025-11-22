@@ -267,10 +267,6 @@ export class TabbedDetail {
             <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
             <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
             <button class="btn btn-secondary" id="save-tasks-repo-btn">💾 Save Tasks to Repo</button>
-            <label style="display: inline-flex; align-items: center; gap: 0.4rem;">
-              <input type="checkbox" id="auto-sync-toggle" ${appState.getState().autoRepoSync ? 'checked' : ''}>
-              Auto-sync to Repo
-            </label>
           </div>
         </div>
       </div>
@@ -976,12 +972,7 @@ export class TabbedDetail {
       });
     }
 
-    const autoSyncToggle = this.element.querySelector('#auto-sync-toggle');
-    if (autoSyncToggle) {
-      autoSyncToggle.addEventListener('change', (e) => {
-        appState.setAutoRepoSync(e.target.checked);
-      });
-    }
+    
     // Removed Work Management and Improvement listeners as those sections were removed
     
     // Todo checkbox and action listeners (using event delegation)
