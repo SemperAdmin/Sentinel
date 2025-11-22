@@ -33,7 +33,8 @@ class AppState {
       
       // Form state
       showIdeaForm: false,
-      editingIdea: null
+      editingIdea: null,
+      autoRepoSync: false
     };
     
     this.listeners = new Set();
@@ -120,6 +121,10 @@ class AppState {
     }
     
     this.setState({ activeTab: tab });
+  }
+
+  setAutoRepoSync(enabled) {
+    this.setState({ autoRepoSync: !!enabled });
   }
 
   /**
