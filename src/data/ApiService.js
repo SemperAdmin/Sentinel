@@ -10,8 +10,10 @@ class ApiService {
     this.retryDelay = 1000; // Start with 1 second
     this.maxDelay = 30000; // Max 30 seconds
     
-    // Debug: Check if GITHUB_API_KEY is available at module load time
-    console.log('ApiService constructor - window.GITHUB_API_KEY:', window.GITHUB_API_KEY);
+    this.githubToken = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY) 
+      || (typeof window !== 'undefined' ? window.GITHUB_API_KEY : '') 
+      || '';
+    this.managerRepo = window.MANAGER_REPO_FULL_NAME || '';
   }
 
   /**
@@ -143,8 +145,8 @@ class ApiService {
     };
 
     // Add authentication if API key is provided
-    if (window.GITHUB_API_KEY && window.GITHUB_API_KEY !== 'YOUR_API_KEY_HERE') {
-      headers['Authorization'] = `Bearer ${window.GITHUB_API_KEY}`;
+    if (this.githubToken) {
+      headers['Authorization'] = `Bearer ${this.githubToken}`;
       console.log('Using GitHub API token for authentication');
     } else {
       console.log('No GitHub API token configured, using unauthenticated requests');
@@ -155,6 +157,32 @@ class ApiService {
       headers: headers,
       mode: 'cors'
     });
+  }
+
+  /**
+   * Trigger repository_dispatch to save tasks via GitHub Actions
+   */
+  async triggerSaveTasks(appId, tasks) {
+    if (!this.managerRepo) {
+      console.warn('Manager repository not configured (window.MANAGER_REPO_FULL_NAME)');
+      return { ok: false, error: 'Manager repo not configured' };
+    }
+    const headers = {
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'Sentinel-App-Portfolio-Manager/1.0',
+      'Authorization': this.githubToken ? `Bearer ${this.githubToken}` : undefined,
+      'Content-Type': 'application/json'
+    };
+    const body = {
+      event_type: 'save_tasks',
+      client_payload: {
+        app_id: appId,
+        tasks_json: JSON.stringify(tasks || [])
+      }
+    };
+    const url = `https://api.github.com/repos/${this.managerRepo}/dispatches`;
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    return res;
   }
 
   /**
@@ -230,6 +258,19 @@ class ApiService {
     });
     
     console.log(`Found ${repos.length} public repositories`);
+    return repos;
+  }
+  /**
+   * Fetch public repositories for a given username (no auth required)
+   */
+  async fetchPublicReposForUser(username) {
+    console.log(`Fetching public repositories for user: ${username}`);
+    const repos = await this.fetchWithRetry(`/users/${username}/repos`, {
+      per_page: 100,
+      sort: 'updated',
+      direction: 'desc'
+    });
+    console.log(`Found ${repos.length} public repositories for ${username}`);
     return repos;
   }
 

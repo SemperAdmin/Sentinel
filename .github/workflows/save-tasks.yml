@@ -1,0 +1,53 @@
+name: Save Tasks to Repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_id:
+        description: App identifier (folder name)
+        required: true
+        type: string
+      tasks_json:
+        description: JSON string of tasks
+        required: true
+        type: string
+  repository_dispatch:
+    types: [save_tasks]
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Prepare tasks file
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_ID="${{ github.event.client_payload.app_id || inputs.app_id }}"
+          TASKS_JSON="${{ github.event.client_payload.tasks_json || inputs.tasks_json }}"
+          if [ -z "$APP_ID" ]; then
+            echo "App ID is required" >&2
+            exit 1
+          fi
+          mkdir -p "data/tasks/$APP_ID"
+          echo "$TASKS_JSON" | jq . > "data/tasks/$APP_ID/tasks.json"
+          echo "Wrote data/tasks/$APP_ID/tasks.json"
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tasks/**
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Save tasks for ${{ github.event.client_payload.app_id || inputs.app_id }}"
+          git push

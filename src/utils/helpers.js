@@ -319,6 +319,17 @@ export function truncate(text, maxLength = 100) {
   return text.substring(0, maxLength).trim() + '...';
 }
 
+export const SOURCE_OPTIONS = [
+  'Facebook',
+  'Instagram',
+  'Teams',
+  'Feedback (app)',
+  'Email',
+  'Sponsor',
+  'Policy',
+  'Other'
+];
+
 /**
  * Get platform icon class (for future use)
  */

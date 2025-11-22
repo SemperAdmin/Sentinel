@@ -17,6 +17,7 @@ class App {
     this.tabbedDetail = null;
     this.ideaForm = null;
     this.initialized = false;
+    this.DEFAULT_GITHUB_USER = 'SemperAdmin';
   }
 
   /**
@@ -426,14 +427,13 @@ class App {
   async fetchUserRepositories() {
     try {
       // Check if API key is configured
+      let repos;
       if (!apiService.isApiKeyConfigured()) {
-        throw new Error('GitHub API key not configured');
+        repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
+      } else {
+        console.log('Fetching user repositories from GitHub...');
+        repos = await apiService.fetchUserRepos();
       }
-
-      console.log('Fetching user repositories from GitHub...');
-      
-      // Fetch all user repositories
-      const repos = await apiService.fetchUserRepos();
       
       // Filter to only public repositories and exclude image/asset repos
       const publicRepos = repos.filter(repo => !repo.private && repo.name !== 'eventcall-images');
@@ -647,7 +647,20 @@ class App {
       console.log('Creating new TabbedDetail component...');
       this.tabbedDetail = new TabbedDetail(
         state.currentApp,
-        (updatedApp) => this.saveAppData(state.currentApp.id, updatedApp),
+        async (updatedApp) => {
+          await this.saveAppData(state.currentApp.id, updatedApp);
+          try {
+            const api = new (await import('./data/ApiService.js')).default();
+            const appId = state.currentApp.id;
+            const tasks = updatedApp.todos || state.currentApp.todos || [];
+            const res = await api.triggerSaveTasks(appId, tasks);
+            if (!res || !res.ok) {
+              console.warn('Failed to dispatch save_tasks workflow');
+            }
+          } catch (err) {
+            console.warn('Error dispatching save_tasks workflow:', err);
+          }
+        },
         (tab) => appState.setActiveTab(tab),
         (appId) => this.markAppAsReviewed(appId)
       );

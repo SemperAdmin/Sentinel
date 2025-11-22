@@ -2,7 +2,7 @@
  * TabbedDetail Component - Tabbed interface for app detail view
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS } from '../utils/helpers.js';
 
 export class TabbedDetail {
   constructor(app, onNotesSave, onTabChange, onReviewComplete) {
@@ -127,27 +127,36 @@ export class TabbedDetail {
     const healthColor = getHealthColor(health);
     const isOverdue = this.app.nextReviewDate && new Date(this.app.nextReviewDate) < new Date();
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
+    const appUrl = this.getAppUrl(this.app.repoUrl);
     
     return `
       <div id="overview-tab" class="tab-pane active">
         <div class="detail-section">
-          <h3>Quarterly Review Schedule</h3>
-          <div class="review-info">
-            <div class="info-item">
-              <label>Last Review:</label>
-              <span>${formatDate(this.app.lastReviewDate) || 'Never'}</span>
+          <h3>Repository Information</h3>
+          <div class="status-grid">
+            <div class="status-item">
+              <label>Repository:</label>
+              <span>${this.app.repoUrl ? `<a href="${this.app.repoUrl}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(this.app.repoUrl)}</a>` : 'Not linked'}</span>
             </div>
-            <div class="info-item">
-              <label>Next Due (60d from latest):</label>
-              <span style="color: ${isOverdue ? '#dc3545' : 'inherit'}; font-weight: ${isOverdue ? '600' : 'normal'}">
-                ${formatDate(this.app.nextReviewDate) || 'Not scheduled'}
-                ${isOverdue ? ' (OVERDUE)' : ''}
+            <div class="status-item">
+              <label>App URL:</label>
+              <span>${appUrl ? `<a href="${appUrl}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(appUrl)}</a>` : 'Not available'}</span>
+            </div>
+            <div class="status-item">
+              <label>Description:</label>
+              <span>${this.escapeHtml(this.app.description || this.app.notes || 'No description available')}</span>
+            </div>
+            <div class="status-item">
+              <label>Status:</label>
+              <span class="status-badge ${this.app.status === 'Active' ? 'status-good' : 'status-warning'}">
+                ${this.app.status}
               </span>
             </div>
+            <div class="status-item">
+              <label>Pending Tasks:</label>
+              <span>${this.app.pendingTodos || 0}</span>
+            </div>
           </div>
-          <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
-            ▶ Start Review Checklist
-          </button>
         </div>
         
         <div class="detail-section">
@@ -175,23 +184,23 @@ export class TabbedDetail {
         </div>
         
         <div class="detail-section">
-          <h3>Repository Information</h3>
-          <div class="status-grid">
-            <div class="status-item">
-              <label>Repository:</label>
-              <span>${this.escapeHtml(this.app.repoUrl || 'Not linked')}</span>
+          <h3>Quarterly Review Schedule</h3>
+          <div class="review-info">
+            <div class="info-item">
+              <label>Last Review:</label>
+              <span>${formatDate(this.app.lastReviewDate) || 'Never'}</span>
             </div>
-            <div class="status-item">
-              <label>Status:</label>
-              <span class="status-badge ${this.app.status === 'Active' ? 'status-good' : 'status-warning'}">
-                ${this.app.status}
+            <div class="info-item">
+              <label>Next Due (60d from latest):</label>
+              <span style="color: ${isOverdue ? '#dc3545' : 'inherit'}; font-weight: ${isOverdue ? '600' : 'normal'}">
+                ${formatDate(this.app.nextReviewDate) || 'Not scheduled'}
+                ${isOverdue ? ' (OVERDUE)' : ''}
               </span>
             </div>
-            <div class="status-item">
-              <label>Pending Tasks:</label>
-              <span>${this.app.pendingTodos || 0}</span>
-            </div>
           </div>
+          <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
+            ▶ Start Review Checklist
+          </button>
         </div>
       </div>
     `;
@@ -204,32 +213,53 @@ export class TabbedDetail {
     const todos = this.app.todos || [];
     const completedTodos = todos.filter(todo => todo.completed);
     const activeTodos = todos.filter(todo => !todo.completed);
-    const budgetUsed = Math.min((completedTodos.length / Math.max(todos.length, 1)) * 100, 100);
     
     return `
-      <div id="todo-tab" class="tab-pane">
+      <div id="todo-tab" class="tab-pane active">
         <div class="detail-section">
-          <h3>To-Do Management</h3>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <span>Total Tasks: ${todos.length} (${activeTodos.length} active, ${completedTodos.length} completed)</span>
+            <h3>To-Do Dashboard</h3>
             <button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 1rem;">
+            <div class="app-card">
+              <div class="app-card-header"><h4 class="app-card-title">Total</h4></div>
+              <div style="font-size: 1.8rem; font-weight: 700;">${todos.length}</div>
+              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">All tasks</div>
+            </div>
+            <div class="app-card">
+              <div class="app-card-header"><h4 class="app-card-title">Active</h4></div>
+              <div style="font-size: 1.8rem; font-weight: 700;">${activeTodos.length}</div>
+              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">In progress</div>
+            </div>
+            <div class="app-card">
+              <div class="app-card-header"><h4 class="app-card-title">Completed</h4></div>
+              <div style="font-size: 1.8rem; font-weight: 700;">${completedTodos.length}</div>
+              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">Finished</div>
+            </div>
+            <div class="app-card">
+              <div class="app-card-header"><h4 class="app-card-title">Overdue</h4></div>
+              <div style="font-size: 1.8rem; font-weight: 700;">${activeTodos.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length}</div>
+              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">Past due</div>
+            </div>
           </div>
         </div>
         
+
         <div class="detail-section">
           <h3>Active Tasks</h3>
           <div id="active-todos" class="todo-list">
             ${activeTodos.length > 0 ? activeTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p style="color: #6c757d;">No active tasks</p>'}
           </div>
         </div>
-        
+
         <div class="detail-section">
           <h3>Completed Tasks</h3>
           <div id="completed-todos" class="todo-list completed">
             ${completedTodos.length > 0 ? completedTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p style="color: #6c757d;">No completed tasks</p>'}
           </div>
         </div>
-        
+
         <div class="detail-section">
           <h3>Quick Actions</h3>
           <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -269,7 +299,7 @@ export class TabbedDetail {
   /**
    * Add new todo item
    */
-  addTodo(title, description = '', priority = 'medium', dueDate = null) {
+  addTodo(title, description = '', priority = 'medium', dueDate = null, extra = {}) {
     const todo = {
       id: Date.now().toString(),
       title,
@@ -277,7 +307,8 @@ export class TabbedDetail {
       priority,
       dueDate,
       completed: false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...extra
     };
     
     if (!this.app.todos) this.app.todos = [];
@@ -316,8 +347,10 @@ export class TabbedDetail {
    * Edit todo item (placeholder for future implementation)
    */
   editTodo(todoId) {
-    console.log('Edit todo clicked:', todoId);
-    alert('Edit functionality coming soon! For now, you can delete and re-add the task.');
+    if (!this.app.todos) return;
+    const todo = this.app.todos.find(t => t.id === todoId);
+    if (!todo) return;
+    this.showEditTodoDialog(todo);
   }
 
   /**
@@ -336,13 +369,144 @@ export class TabbedDetail {
     this.render();
   }
 
+  showEditTodoDialog(todo) {
+    const existingDialog = document.querySelector('.todo-dialog');
+    if (existingDialog) existingDialog.remove();
+    const dialog = document.createElement('div');
+    dialog.className = 'todo-dialog';
+    const sourceOptionsHtml = SOURCE_OPTIONS.map(s => `<option value="${this.escapeHtml(s)}" ${todo.source === s ? 'selected' : ''}>${this.escapeHtml(s)}</option>`).join('');
+    const priorityOptionsHtml = ['low','medium','high'].map(p => `<option value="${p}" ${String(todo.priority||'medium')===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('');
+    const effortOptionsHtml = ['Small','Medium','Large'].map(e => `<option value="${e}" ${String(todo.effortEstimate||'')===e?'selected':''}>${e}</option>`).join('');
+    const statusOptionsHtml = ['Draft','Submitted','Review','Approved','In Development','Complete','Rejected']
+      .map(s => `<option ${String(todo.status||'Draft')===s?'selected':''}>${s}</option>`).join('');
+    dialog.innerHTML = `
+      <div class="dialog-overlay">
+        <div class="dialog-content">
+          <h3>Edit Task</h3>
+          <form id="edit-todo-form">
+            <h4>Task Definition</h4>
+            <div class="form-group">
+              <label>Title *</label>
+              <input type="text" id="todo-title" required value="${this.escapeHtml(todo.title || '')}">
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="todo-description" rows="3">${this.escapeHtml(todo.description || '')}</textarea>
+            </div>
+
+            <h4>Task Management & Triage</h4>
+            <div class="form-group">
+              <label>Priority</label>
+              <select id="todo-priority">${priorityOptionsHtml}</select>
+            </div>
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" id="todo-due-date" value="${todo.dueDate || ''}">
+            </div>
+            <div class="form-group">
+              <label>Effort Estimate</label>
+              <select id="todo-effort-estimate">${effortOptionsHtml}</select>
+            </div>
+
+            <h4>Task Origin & Context</h4>
+            <div class="form-group">
+              <label>Source</label>
+              <select id="todo-source">${sourceOptionsHtml}</select>
+            </div>
+            <div class="form-group">
+              <label>User Feedback Summary</label>
+              <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback">${this.escapeHtml(todo.feedbackSummary || '')}</textarea>
+            </div>
+
+            <h4>Workflow & Completion</h4>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="todo-status">${statusOptionsHtml}</select>
+            </div>
+            <div class="form-group" id="rejection-group" style="${String(todo.status||'Draft')==='Rejected' ? '' : 'display:none'}">
+              <label>Reason for Rejection</label>
+              <textarea id="todo-rejection-reason" rows="2" placeholder="If status is Rejected">${this.escapeHtml(todo.rejectionReason || '')}</textarea>
+            </div>
+            <div class="form-group" id="completion-group" style="${String(todo.status||'Draft')==='Complete' ? '' : 'display:none'}">
+              <label>Completion Date</label>
+              <input type="date" id="todo-completion-date" value="${todo.completionDate || ''}" ${String(todo.status||'Draft')==='Complete' ? '' : 'disabled'}>
+            </div>
+
+            <div class="dialog-actions">
+              <button type="button" class="btn btn-secondary" id="cancel-todo">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const form = dialog.querySelector('#edit-todo-form');
+    const statusEl = dialog.querySelector('#todo-status');
+    const rejectionGroup = dialog.querySelector('#rejection-group');
+    const completionGroup = dialog.querySelector('#completion-group');
+    const completionInput = dialog.querySelector('#todo-completion-date');
+    const syncWorkflow = () => {
+      const v = statusEl.value;
+      if (v === 'Rejected') {
+        rejectionGroup.style.display = '';
+      } else {
+        rejectionGroup.style.display = 'none';
+      }
+      if (v === 'Complete') {
+        completionGroup.style.display = '';
+        completionInput.disabled = false;
+      } else {
+        completionGroup.style.display = 'none';
+        completionInput.disabled = true;
+      }
+    };
+    statusEl.addEventListener('change', syncWorkflow);
+    syncWorkflow();
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = dialog.querySelector('#todo-title').value;
+      const description = dialog.querySelector('#todo-description').value;
+      const source = dialog.querySelector('#todo-source').value;
+      const feedbackSummary = dialog.querySelector('#todo-feedback-summary').value;
+      const priority = dialog.querySelector('#todo-priority').value;
+      const dueDate = dialog.querySelector('#todo-due-date').value || null;
+      const effortEstimate = dialog.querySelector('#todo-effort-estimate').value || null;
+      const completionDate = dialog.querySelector('#todo-completion-date').value || null;
+      const rejectionReason = dialog.querySelector('#todo-rejection-reason').value || '';
+      const status = dialog.querySelector('#todo-status').value;
+
+      const updated = { ...todo, title, description, source, feedbackSummary, priority, dueDate, effortEstimate, completionDate, rejectionReason, status };
+      this.app.todos = this.app.todos.map(t => t.id === todo.id ? updated : t);
+      if (this.onNotesSave) this.onNotesSave(this.app);
+      this.activeTab = 'todo';
+      this.render();
+      document.body.removeChild(dialog);
+    });
+
+    dialog.querySelector('#cancel-todo').addEventListener('click', () => {
+      document.body.removeChild(dialog);
+    });
+
+    dialog.querySelector('.dialog-overlay').addEventListener('click', (e) => {
+      if (e.target === dialog.querySelector('.dialog-overlay')) {
+        document.body.removeChild(dialog);
+      }
+    });
+  }
+
   /**
    * Show add todo dialog
    */
   showAddTodoDialog() {
+    const existingDialog = document.querySelector('.todo-dialog');
+    if (existingDialog) existingDialog.remove();
     console.log('Opening add todo dialog...');
     const dialog = document.createElement('div');
     dialog.className = 'todo-dialog';
+    const sourceOptionsHtml = SOURCE_OPTIONS.map(s => `<option value="${this.escapeHtml(s)}">${this.escapeHtml(s)}</option>`).join('');
     dialog.innerHTML = `
       <div class="dialog-overlay">
         <div class="dialog-content">
@@ -357,16 +521,12 @@ export class TabbedDetail {
               <textarea id="todo-description" rows="3"></textarea>
             </div>
             <div class="form-group">
-              <label>Priority</label>
-              <select id="todo-priority">
-                <option value="low">Low</option>
-                <option value="medium" selected>Medium</option>
-                <option value="high">High</option>
-              </select>
+              <label>Source</label>
+              <select id="todo-source">${sourceOptionsHtml}</select>
             </div>
             <div class="form-group">
-              <label>Due Date</label>
-              <input type="date" id="todo-due-date">
+              <label>User Feedback Summary</label>
+              <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback"></textarea>
             </div>
             <div class="dialog-actions">
               <button type="button" class="btn btn-secondary" id="cancel-todo">Cancel</button>
@@ -386,11 +546,17 @@ export class TabbedDetail {
       console.log('Form submitted');
       const title = dialog.querySelector('#todo-title').value;
       const description = dialog.querySelector('#todo-description').value;
-      const priority = dialog.querySelector('#todo-priority').value;
-      const dueDate = dialog.querySelector('#todo-due-date').value;
+      const priority = 'medium';
+      const dueDate = null;
+      const effortEstimate = null;
+      const source = dialog.querySelector('#todo-source').value;
+      const completionDate = null;
+      const feedbackSummary = dialog.querySelector('#todo-feedback-summary').value;
+      const rejectionReason = '';
+      const status = 'Draft';
       
-      console.log('Adding todo:', { title, description, priority, dueDate });
-      this.addTodo(title, description, priority, dueDate);
+      console.log('Adding todo:', { title, description, source, feedbackSummary, status });
+      this.addTodo(title, description, priority, dueDate, { source, feedbackSummary, status });
       document.body.removeChild(dialog);
     });
     
@@ -445,7 +611,7 @@ export class TabbedDetail {
     const developerNotes = this.app.developerNotes || '';
     
     return `
-      <div id="notes-tab" class="tab-pane">
+      <div id="notes-tab" class="tab-pane active">
         <div class="detail-section">
           <h3>Improvement Tracker</h3>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -772,6 +938,7 @@ export class TabbedDetail {
         this.exportTodos();
       });
     }
+    // Removed Work Management and Improvement listeners as those sections were removed
     
     // Todo checkbox and action listeners (using event delegation)
     this.element.addEventListener('click', (e) => {
@@ -811,6 +978,7 @@ export class TabbedDetail {
         const improvementId = e.target.dataset.improvementId;
         this.convertImprovementToTodo(improvementId);
       }
+      // Related task deletion removed with section
     });
     
     // Add improvement button
@@ -956,6 +1124,15 @@ export class TabbedDetail {
     return div.innerHTML;
   }
 
+  getAppUrl(repoUrl) {
+    if (!repoUrl || typeof repoUrl !== 'string') return '';
+    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!match) return '';
+    const owner = match[1];
+    const repo = match[2].replace(/\.git$/, '');
+    if (repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) return `https://${owner}.github.io/`;
+    return `https://${owner}.github.io/${repo}/`;
+  }
   /**
    * Update with new app data
    */
