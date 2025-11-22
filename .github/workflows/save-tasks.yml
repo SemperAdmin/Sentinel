@@ -23,9 +23,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Prepare tasks file
         env:
           APP_ID: ${{ github.event.client_payload.app_id || inputs.app_id }}
@@ -39,9 +36,9 @@ jobs:
           fi
           mkdir -p "data/tasks/$APP_ID"
           if [ -z "${TASKS_JSON:-}" ]; then
-            echo "[]" | jq . > "data/tasks/$APP_ID/tasks.json"
+            printf '%s\n' '[]' > "data/tasks/$APP_ID/tasks.json"
           else
-            echo "$TASKS_JSON" | jq . > "data/tasks/$APP_ID/tasks.json"
+            printf '%s\n' "$TASKS_JSON" > "data/tasks/$APP_ID/tasks.json"
           fi
           echo "Wrote data/tasks/$APP_ID/tasks.json"
 
