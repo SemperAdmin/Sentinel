@@ -647,20 +647,7 @@ class App {
       console.log('Creating new TabbedDetail component...');
       this.tabbedDetail = new TabbedDetail(
         state.currentApp,
-        async (updatedApp) => {
-          await this.saveAppData(state.currentApp.id, updatedApp);
-          try {
-            const api = new (await import('./data/ApiService.js')).default();
-            const appId = state.currentApp.id;
-            const tasks = updatedApp.todos || state.currentApp.todos || [];
-            const res = await api.triggerSaveTasks(appId, tasks);
-            if (!res || !res.ok) {
-              console.warn('Failed to dispatch save_tasks workflow');
-            }
-          } catch (err) {
-            console.warn('Error dispatching save_tasks workflow:', err);
-          }
-        },
+        (updatedApp) => this.saveAppData(state.currentApp.id, updatedApp),
         (tab) => appState.setActiveTab(tab),
         (appId) => this.markAppAsReviewed(appId)
       );
