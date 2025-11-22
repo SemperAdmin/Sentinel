@@ -235,7 +235,7 @@ body {
 
 .metric-label {
   font-size: 0.875rem;
-  color: var(--gray-600);
+  color: var(--gray-800);
   font-weight: 500;
 }
 
