@@ -1,10 +1,1 @@
-[
-  {
-    "id": "test-1",
-    "title": "Autosync test",
-    "description": "Verify sync from app",
-    "priority": "medium",
-    "dueDate": null,
-    "completed": false
-  }
-]
+[{"id":"test-5","title":"Repo autosync (python)","description":"Dispatch with python handler","priority":"medium","dueDate":null,"completed":false}]
