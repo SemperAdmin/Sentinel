@@ -2,6 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ feature/pages-config ]
 
 permissions:
   contents: read
@@ -31,17 +33,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v4
-        with:
-          enablement: true
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
