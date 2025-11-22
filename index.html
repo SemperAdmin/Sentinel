@@ -729,6 +729,7 @@
                 margin: 0.5rem 0;
                 background: #2a2a2a;
                 border-left: 3px solid #666;
+                border: 1px solid #555;
                 border-radius: 4px;
                 transition: all 0.2s ease;
             }
@@ -736,6 +737,7 @@
             .todo-item:hover {
                 background: #333;
                 transform: translateX(2px);
+                border-color: #777;
             }
             
             .todo-item.completed {
@@ -1059,6 +1061,15 @@
             <div id="dashboard-view" class="view active">
                 <div class="view-header">
                     <h2>PORTFOLIO OVERVIEW</h2>
+                    <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+                        <span>Sort by</span>
+                        <select id="sort-select" class="btn btn-secondary" style="padding:.25rem .5rem;">
+                            <option value="alphabetical">Alphabetical</option>
+                            <option value="lastReviewed">Last Reviewed</option>
+                            <option value="nextReview">Next Review</option>
+                            <option value="activeTodo">Active To-Dos</option>
+                        </select>
+                    </label>
                     <div class="view-actions">
                         <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
                     </div>
@@ -1216,7 +1227,7 @@
     </div>
 
     <script>
-        window.GITHUB_API_KEY = '';
+        window.GITHUB_API_KEY = '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';
         window.MANAGER_REPO_FULL_NAME = window.MANAGER_REPO_FULL_NAME || 'SemperAdmin/Sentinel';
     </script>
     <script type="module" src="src/App.js"></script>

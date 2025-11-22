@@ -35,6 +35,13 @@ export class TabbedDetail {
       if (this.onNotesSave) {
         this.onNotesSave(this.app);
       }
+      (async () => {
+        try {
+          const apiModule = await import('../data/ApiService.js');
+          const api = apiModule.default;
+          await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+        } catch (_) {}
+      })();
       
       this.activeTab = 'todo';
       this.render();
@@ -213,7 +220,8 @@ export class TabbedDetail {
   renderTodoTab() {
     const todos = this.app.todos || [];
     const completedTodos = todos.filter(todo => todo.completed);
-    const activeTodos = todos.filter(todo => !todo.completed);
+    const pendingTodos = todos.filter(todo => !todo.completed && String(todo.status||'') === 'Draft');
+    const activeTodos = todos.filter(todo => !todo.completed && String(todo.status||'') !== 'Draft');
     
     return `
       <div id="todo-tab" class="tab-pane active">
@@ -246,6 +254,13 @@ export class TabbedDetail {
           </div>
         </div>
         
+
+        <div class="detail-section">
+          <h3>Pending Tasks</h3>
+          <div id="pending-todos" class="todo-list">
+            ${pendingTodos.length > 0 ? pendingTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p style="color: #6c757d;">No pending tasks</p>'}
+          </div>
+        </div>
 
         <div class="detail-section">
           <h3>Active Tasks</h3>
@@ -282,9 +297,6 @@ export class TabbedDetail {
     
     return `
       <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass}" data-todo-id="${todo.id}">
-        <div class="todo-checkbox">
-          <input type="checkbox" ${todo.completed ? 'checked' : ''} data-todo-id="${todo.id}">
-        </div>
         <div class="todo-content">
           <div class="todo-title">${this.escapeHtml(todo.title)}</div>
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
@@ -320,6 +332,13 @@ export class TabbedDetail {
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
+    (async () => {
+      try {
+        const apiModule = await import('../data/ApiService.js');
+        const api = apiModule.default;
+        await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+      } catch (_) {}
+    })();
     
     // Re-render the todo tab
     this.activeTab = 'todo';
@@ -339,6 +358,13 @@ export class TabbedDetail {
       if (this.onNotesSave) {
         this.onNotesSave(this.app);
       }
+      (async () => {
+        try {
+          const apiModule = await import('../data/ApiService.js');
+          const api = apiModule.default;
+          await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+        } catch (_) {}
+      })();
       
       this.activeTab = 'todo';
       this.render();
@@ -366,6 +392,13 @@ export class TabbedDetail {
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
+    (async () => {
+      try {
+        const apiModule = await import('../data/ApiService.js');
+        const api = apiModule.default;
+        await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+      } catch (_) {}
+    })();
     
     this.activeTab = 'todo';
     this.render();
@@ -418,6 +451,10 @@ export class TabbedDetail {
             <div class="form-group">
               <label>User Feedback Summary</label>
               <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback">${this.escapeHtml(todo.feedbackSummary || '')}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Submitted By</label>
+              <input type="text" id="todo-submitted-by" value="${this.escapeHtml(todo.submittedBy || '')}">
             </div>
 
             <h4>Workflow & Completion</h4>
@@ -473,6 +510,7 @@ export class TabbedDetail {
       const description = dialog.querySelector('#todo-description').value;
       const source = dialog.querySelector('#todo-source').value;
       const feedbackSummary = dialog.querySelector('#todo-feedback-summary').value;
+      const submittedBy = dialog.querySelector('#todo-submitted-by').value || '';
       const priority = dialog.querySelector('#todo-priority').value;
       const dueDate = dialog.querySelector('#todo-due-date').value || null;
       const effortEstimate = dialog.querySelector('#todo-effort-estimate').value || null;
@@ -480,9 +518,16 @@ export class TabbedDetail {
       const rejectionReason = dialog.querySelector('#todo-rejection-reason').value || '';
       const status = dialog.querySelector('#todo-status').value;
 
-      const updated = { ...todo, title, description, source, feedbackSummary, priority, dueDate, effortEstimate, completionDate, rejectionReason, status };
+      const updated = { ...todo, title, description, source, feedbackSummary, submittedBy, priority, dueDate, effortEstimate, completionDate, rejectionReason, status };
       this.app.todos = this.app.todos.map(t => t.id === todo.id ? updated : t);
       if (this.onNotesSave) this.onNotesSave(this.app);
+      (async () => {
+        try {
+          const apiModule = await import('../data/ApiService.js');
+          const api = apiModule.default;
+          await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+        } catch (_) {}
+      })();
       this.activeTab = 'todo';
       this.render();
       document.body.removeChild(dialog);
@@ -492,11 +537,7 @@ export class TabbedDetail {
       document.body.removeChild(dialog);
     });
 
-    dialog.querySelector('.dialog-overlay').addEventListener('click', (e) => {
-      if (e.target === dialog.querySelector('.dialog-overlay')) {
-        document.body.removeChild(dialog);
-      }
-    });
+    
   }
 
   /**
@@ -530,6 +571,10 @@ export class TabbedDetail {
               <label>User Feedback Summary</label>
               <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback"></textarea>
             </div>
+            <div class="form-group">
+              <label>Submitted By</label>
+              <input type="text" id="todo-submitted-by">
+            </div>
             <div class="dialog-actions">
               <button type="button" class="btn btn-secondary" id="cancel-todo">Cancel</button>
               <button type="submit" class="btn btn-primary">Add Task</button>
@@ -554,11 +599,12 @@ export class TabbedDetail {
       const source = dialog.querySelector('#todo-source').value;
       const completionDate = null;
       const feedbackSummary = dialog.querySelector('#todo-feedback-summary').value;
+      const submittedBy = dialog.querySelector('#todo-submitted-by').value || '';
       const rejectionReason = '';
       const status = 'Draft';
       
       console.log('Adding todo:', { title, description, source, feedbackSummary, status });
-      this.addTodo(title, description, priority, dueDate, { source, feedbackSummary, status });
+      this.addTodo(title, description, priority, dueDate, { source, feedbackSummary, submittedBy, status });
       document.body.removeChild(dialog);
     });
     
@@ -567,12 +613,7 @@ export class TabbedDetail {
       document.body.removeChild(dialog);
     });
     
-    // Handle overlay click
-    dialog.querySelector('.dialog-overlay').addEventListener('click', (e) => {
-      if (e.target === dialog.querySelector('.dialog-overlay')) {
-        document.body.removeChild(dialog);
-      }
-    });
+    
   }
 
   /**
@@ -977,12 +1018,6 @@ export class TabbedDetail {
     
     // Todo checkbox and action listeners (using event delegation)
     this.element.addEventListener('click', (e) => {
-      // Todo checkbox
-      if (e.target.matches('input[type="checkbox"][data-todo-id]')) {
-        const todoId = e.target.dataset.todoId;
-        this.toggleTodo(todoId);
-      }
-      
       // Todo action buttons
       if (e.target.matches('[data-action="edit"][data-todo-id]')) {
         const todoId = e.target.dataset.todoId;

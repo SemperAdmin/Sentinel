@@ -35,6 +35,7 @@ class AppState {
       showIdeaForm: false,
       editingIdea: null,
       autoRepoSync: false
+      ,sortOrder: 'alphabetical'
     };
     
     this.listeners = new Set();
@@ -125,6 +126,11 @@ class AppState {
 
   setAutoRepoSync(enabled) {
     this.setState({ autoRepoSync: !!enabled });
+  }
+
+  setSortOrder(order) {
+    const allowed = ['alphabetical','lastReviewed','nextReview','activeTodo'];
+    this.setState({ sortOrder: allowed.includes(order) ? order : 'alphabetical' });
   }
 
   /**

@@ -14,6 +14,7 @@ class ApiService {
       || (typeof window !== 'undefined' ? window.GITHUB_API_KEY : '') 
       || '';
     this.managerRepo = window.MANAGER_REPO_FULL_NAME || '';
+    this.tasksCache = new Map();
   }
 
   /**
@@ -181,8 +182,87 @@ class ApiService {
       }
     };
     const url = `https://api.github.com/repos/${this.managerRepo}/dispatches`;
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
-    return res;
+    try {
+      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), mode: 'cors' });
+      if (res && res.ok) return res;
+      console.warn('Dispatch failed, falling back to direct contents API');
+    } catch (err) {
+      console.warn('Dispatch error, falling back to direct contents API:', err);
+    }
+    const fallback = await this.saveTasksViaContents(appId, tasks || []);
+    return { ok: fallback };
+  }
+
+  async fetchRepoTasks(appId) {
+    if (!this.managerRepo || !appId) {
+      return null;
+    }
+    if (this.tasksCache.has(appId)) {
+      return this.tasksCache.get(appId);
+    }
+    const url = `https://api.github.com/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+    const res = await this.makeApiRequest(url);
+    if (!res || !res.ok) {
+      return null;
+    }
+    const data = await res.json();
+    const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
+    try {
+      const parsed = JSON.parse(content);
+      const tasks = Array.isArray(parsed) ? parsed : [];
+      this.tasksCache.set(appId, tasks);
+      return tasks;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  encodeBase64(text) {
+    try {
+      return btoa(unescape(encodeURIComponent(text)));
+    } catch (_) {
+      return Buffer.from(text, 'utf-8').toString('base64');
+    }
+  }
+
+  async getFileSha(appId) {
+    try {
+      const url = `https://api.github.com/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      return data.sha || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async saveTasksViaContents(appId, tasks) {
+    try {
+      const sha = await this.getFileSha(appId);
+      const url = `https://api.github.com/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
+      const headers = {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'Sentinel-App-Portfolio-Manager/1.0',
+        'Authorization': this.githubToken ? `Bearer ${this.githubToken}` : undefined,
+        'Content-Type': 'application/json'
+      };
+      const arr = Array.isArray(tasks) ? tasks.slice() : [];
+      arr.sort((a,b) => String(a.id||'').localeCompare(String(b.id||'')));
+      const pretty = JSON.stringify(arr, null, 2) + "\n";
+      const content = this.encodeBase64(pretty);
+      const body = {
+        message: `Save tasks for ${appId} (direct contents API)`,
+        content,
+        branch: 'main',
+        sha: sha || undefined
+      };
+      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
+      return !!(res && res.ok);
+    } catch (err) {
+      console.warn('Direct contents API save failed:', err);
+      return false;
+    }
   }
 
   /**
@@ -278,11 +358,9 @@ class ApiService {
    * Check if API key is configured
    */
   isApiKeyConfigured() {
-    console.log('Checking API key configuration:');
-    console.log('window.GITHUB_API_KEY exists:', !!window.GITHUB_API_KEY);
-    console.log('window.GITHUB_API_KEY value:', window.GITHUB_API_KEY);
-    console.log('Is placeholder?', window.GITHUB_API_KEY === 'YOUR_API_KEY_HERE');
-    return window.GITHUB_API_KEY && window.GITHUB_API_KEY !== 'YOUR_API_KEY_HERE';
+    const configured = !!this.githubToken && this.githubToken !== 'YOUR_API_KEY_HERE';
+    console.log('API key configured (env/window):', configured);
+    return configured;
   }
 
   /**

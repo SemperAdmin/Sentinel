@@ -1,9 +1,72 @@
 /**
  * DataStore - Local persistence layer for Sentinel
  * Handles IndexedDB operations for app portfolio and ideas data
+ * Uses a lightweight native IndexedDB wrapper (no external idb dependency)
  */
 
-import { openDB } from 'idb';
+function openNativeDB(name, version, options = {}) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, version);
+    req.onupgradeneeded = (event) => {
+      try {
+        if (options.upgrade) options.upgrade(req.result, event.oldVersion, event.newVersion, req.transaction);
+      } catch (e) {
+        console.error('Upgrade failed:', e);
+        reject(e);
+      }
+    };
+    req.onsuccess = () => {
+      const db = req.result;
+      const wrapper = {
+        get(store, key) {
+          return new Promise((res, rej) => {
+            const tx = db.transaction(store, 'readonly');
+            const r = tx.objectStore(store).get(key);
+            r.onsuccess = () => res(r.result);
+            r.onerror = () => rej(r.error);
+          });
+        },
+        getAll(store) {
+          return new Promise((res, rej) => {
+            const tx = db.transaction(store, 'readonly');
+            const r = tx.objectStore(store).getAll();
+            r.onsuccess = () => res(r.result || []);
+            r.onerror = () => rej(r.error);
+          });
+        },
+        put(store, value) {
+          return new Promise((res, rej) => {
+            const tx = db.transaction(store, 'readwrite');
+            const r = tx.objectStore(store).put(value);
+            r.onsuccess = () => res(value);
+            r.onerror = () => rej(r.error);
+          });
+        },
+        delete(store, key) {
+          return new Promise((res, rej) => {
+            const tx = db.transaction(store, 'readwrite');
+            const r = tx.objectStore(store).delete(key);
+            r.onsuccess = () => res(true);
+            r.onerror = () => rej(r.error);
+          });
+        },
+        transaction(storeNames, mode) {
+          const tx = db.transaction(storeNames, mode);
+          return {
+            objectStore(name) { return tx.objectStore(name); },
+            done: new Promise((res, rej) => {
+              tx.oncomplete = () => res(true);
+              tx.onerror = () => rej(tx.error);
+              tx.onabort = () => rej(tx.error || new Error('Transaction aborted'));
+            })
+          };
+        }
+      };
+      resolve(wrapper);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
 
 const DB_NAME = 'APM-Portfolio-Manager';
 const DB_VERSION = 1;
@@ -35,7 +98,7 @@ class DataStore {
         return;
       }
 
-      this.db = await openDB(DB_NAME, DB_VERSION, {
+      this.db = await openNativeDB(DB_NAME, DB_VERSION, {
         upgrade(db) {
           // Create portfolio store
           if (!db.objectStoreNames.contains(PORTFOLIO_STORE)) {
@@ -253,7 +316,7 @@ class DataStore {
         repoUrl: repoUrl,
         platform: this.inferPlatform(idea.techStack),
         status: 'Active',
-        lastReviewDate: new Date().toISOString().split('T')[0],
+        lastReviewDate: null,
         nextReviewDate: this.calculateNextReviewDate(),
         pendingTodos: 0,
         notes: `Converted from idea: ${idea.conceptName}. Original problem: ${idea.problemSolved}`,

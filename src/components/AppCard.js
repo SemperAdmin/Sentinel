@@ -18,6 +18,11 @@ export class AppCard {
     const health = calculateHealth(this.app);
     const healthColor = getHealthColor(health);
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
+    const todos = Array.isArray(this.app.todos) ? this.app.todos : [];
+    const activeCount = todos.filter(t => {
+      const s = String(t.status || '');
+      return !t.completed && s !== 'Draft' && s !== 'Rejected';
+    }).length;
     
     const card = document.createElement('div');
     card.className = 'app-card';
@@ -51,8 +56,8 @@ export class AppCard {
         </div>
         
         <div class="metric-item">
-          <span class="metric-label">Pending To-Dos:</span>
-          <span class="metric-value">${this.app.pendingTodos || 0}</span>
+          <span class="metric-label">Active To-Dos:</span>
+          <span class="metric-value">${activeCount}</span>
         </div>
       </div>
       
