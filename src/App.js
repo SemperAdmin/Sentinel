@@ -7,6 +7,7 @@ import dataStore from './data/DataStore.js';
 import apiService from './data/ApiService.js';
 import appState from './state/AppState.js';
 import { AppGrid } from './components/AppCard.js';
+import { getLatestReviewDate } from './utils/helpers.js';
 import { TabbedDetail } from './components/TabbedDetail.js';
 import { IdeaForm } from './components/IdeaForm.js';
 import { formatDate, calculateHealth, isValidGitHubUrl } from './utils/helpers.js';
@@ -61,6 +62,14 @@ class App {
       // Set up event listeners
       this.setupEventListeners();
       
+      // Hydrate API key from Vite env
+      try {
+        const envToken = import.meta?.env?.VITE_GITHUB_API_KEY || '';
+        if (envToken) {
+          window.GITHUB_API_KEY = envToken;
+        }
+      } catch (e) {}
+
       // Subscribe to state changes
       this.subscribeToState();
       
@@ -270,6 +279,15 @@ class App {
       });
     }
 
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', (e) => {
+        appState.setSortOrder(e.target.value);
+        const state = appState.getState();
+        this.updateDashboard(state);
+      });
+    }
+
     // New idea button
     const newIdeaBtn = document.getElementById('new-idea-btn');
     if (newIdeaBtn) {
@@ -445,7 +463,7 @@ class App {
         repoUrl: repo.html_url,
         platform: 'Web', // Default to Web since your apps are web-based
         status: 'Active',
-        lastReviewDate: new Date().toISOString().split('T')[0], // Set to today
+        lastReviewDate: null,
         nextReviewDate: this.calculateNextReviewDate(repo.updated_at, null),
         pendingTodos: 0,
         notes: repo.description || 'No description available',
@@ -626,8 +644,56 @@ class App {
         </div>
       `;
     } else {
-      this.appGrid.render(state.portfolio);
+      const order = state.sortOrder || 'alphabetical';
+      const apps = [...state.portfolio];
+      const byAlpha = (a,b) => String(a.id).localeCompare(String(b.id));
+      const toDate = (s) => s ? new Date(s) : null;
+      const lastRev = (app) => getLatestReviewDate(app.lastCommitDate, app.lastReviewDate);
+      const nextRev = (app) => toDate(app.nextReviewDate) || new Date(8640000000000000);
+      const activeCount = (app) => (Array.isArray(app.todos)? app.todos:[])
+        .filter(t => {
+          const s = String(t.status||'');
+          return !t.completed && s !== 'Draft' && s !== 'Rejected';
+        }).length;
+      if (order === 'alphabetical') apps.sort(byAlpha);
+      else if (order === 'lastReviewed') apps.sort((a,b) => {
+        const ad = toDate(lastRev(a)) || new Date(0);
+        const bd = toDate(lastRev(b)) || new Date(0);
+        return bd - ad;
+      });
+      else if (order === 'nextReview') apps.sort((a,b) => nextRev(a) - nextRev(b));
+      else if (order === 'activeTodo') apps.sort((a,b) => activeCount(b) - activeCount(a));
+      this.appGrid.render(apps);
     }
+  }
+
+  async hydrateTasksForApps(apps) {
+    try {
+      const updates = [];
+      for (const app of apps) {
+        const local = Array.isArray(app.todos) ? app.todos : [];
+        const remote = await apiService.fetchRepoTasks(app.id);
+        if (!remote || !Array.isArray(remote) || remote.length === 0) continue;
+        const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
+        const existingKeys = new Set(local.map(keyOf));
+        const toAdd = remote.filter((rt) => !existingKeys.has(keyOf(rt)));
+        if (toAdd.length === 0) continue;
+        const merged = [...local, ...toAdd];
+        const updatedApp = { ...app, todos: merged };
+        await dataStore.saveApp(updatedApp);
+        updates.push(updatedApp);
+      }
+      if (updates.length > 0) {
+        const state = appState.getState();
+        const mergedPortfolio = state.portfolio.map(a => {
+          const u = updates.find(x => x.id === a.id);
+          return u ? u : a;
+        });
+        appState.setPortfolio(mergedPortfolio);
+        const order = state.sortOrder || 'alphabetical';
+        this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
+      }
+    } catch (_) {}
   }
 
   /**
@@ -670,6 +736,29 @@ class App {
     if (this.tabbedDetail.activeTab !== state.activeTab) {
       this.tabbedDetail.switchTab(state.activeTab);
     }
+
+    this.hydrateTasksFromRepo(state.currentApp);
+  }
+
+  async hydrateTasksFromRepo(app) {
+    try {
+      if (!app) return;
+      const remote = await apiService.fetchRepoTasks(app.id);
+      if (!remote || !Array.isArray(remote) || remote.length === 0) return;
+
+      const local = Array.isArray(app.todos) ? app.todos : [];
+      const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
+      const existingKeys = new Set(local.map(keyOf));
+      const toAdd = remote.filter((rt) => !existingKeys.has(keyOf(rt)));
+
+      if (toAdd.length === 0) return;
+
+      const merged = [...local, ...toAdd];
+      const updatedApp = { ...app, todos: merged };
+      await dataStore.saveApp(updatedApp);
+      appState.updateApp(updatedApp);
+      if (this.tabbedDetail) this.tabbedDetail.update(updatedApp);
+    } catch (_) {}
   }
 
   /**

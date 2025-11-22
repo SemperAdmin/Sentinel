@@ -22,6 +22,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Ensure on latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout main
+          git fetch origin main
+          git pull --rebase origin main
 
       - name: Prepare tasks file
         env:
@@ -45,8 +56,16 @@ jobs:
               sys.exit(1)
           out_dir = pathlib.Path('data/tasks') / app_id
           out_dir.mkdir(parents=True, exist_ok=True)
+          try:
+              obj = json.loads(tasks_json)
+              if isinstance(obj, list):
+                  obj = sorted(obj, key=lambda x: str(x.get('id','')))
+              pretty = json.dumps(obj, indent=2)
+              content = pretty + '\n'
+          except Exception:
+              content = tasks_json
           with open(out_dir / 'tasks.json', 'w', encoding='utf-8') as f:
-              f.write(tasks_json)
+              f.write(content)
           print(f'Wrote {out_dir}/tasks.json')
           PY
 
@@ -62,4 +81,5 @@ jobs:
             exit 0
           fi
           git commit -m "Save tasks for ${{ github.event.client_payload.app_id || inputs.app_id }}"
-          git push
+          git pull --rebase origin main || true
+          git push origin main
