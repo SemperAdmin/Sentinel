@@ -231,15 +231,20 @@ function createErrorUI(error) {
   container.innerHTML = `
     <h3 style="margin: 0 0 0.5rem 0;">⚠️ Something went wrong</h3>
     <p style="margin: 0 0 0.5rem 0;">${escapeHtml(error.message || 'An unexpected error occurred')}</p>
-    <button onclick="window.location.reload()" style="
-      padding: 0.5rem 1rem;
-      background: #ff4444;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    ">Reload Page</button>
   `;
+
+  const reloadButton = document.createElement('button');
+  reloadButton.textContent = 'Reload Page';
+  reloadButton.style.cssText = `
+    padding: 0.5rem 1rem;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  `;
+  reloadButton.addEventListener('click', () => window.location.reload());
+  container.appendChild(reloadButton);
 
   return container;
 }

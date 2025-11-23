@@ -121,8 +121,6 @@ export class TabbedDetail {
         return this.renderOverviewTab();
       case 'todo':
         return this.renderTodoTab();
-      case 'notes':
-        return this.renderNotesTab();
       default:
         return this.renderOverviewTab();
     }
@@ -215,6 +213,17 @@ export class TabbedDetail {
         <div class="detail-section">
           <h3>Past Reviews</h3>
           <div id="past-reviews" style="color:#6c757d;">Loading...</div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Improvement Tracker</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span>Improvement Budget: ${this.app.improvementBudget || 20}%</span>
+            <button class="btn btn-primary" id="add-improvement-btn">+ Add Improvement</button>
+          </div>
+          <div id="improvements-list" class="improvements-list">
+            ${(this.app.improvements || []).length > 0 ? (this.app.improvements || []).map(imp => this.renderImprovementItem(imp)).join('') : '<p style="color: #6c757d;">No improvements tracked</p>'}
+          </div>
         </div>
       </div>
     `;
@@ -686,55 +695,6 @@ export class TabbedDetail {
   }
 
   /**
-   * Render notes tab with improvements and developer notes
-   */
-  renderNotesTab() {
-    const improvements = this.app.improvements || [];
-    const developerNotes = this.app.developerNotes || '';
-    
-    return `
-      <div id="notes-tab" class="tab-pane active">
-        <div class="detail-section">
-          <h3>Improvement Tracker</h3>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <span>Improvement Budget: ${this.app.improvementBudget || 20}%</span>
-            <button class="btn btn-primary" id="add-improvement-btn">+ Add Improvement</button>
-          </div>
-          <div id="improvements-list" class="improvements-list">
-            ${improvements.length > 0 ? improvements.map(imp => this.renderImprovementItem(imp)).join('') : '<p style="color: #6c757d;">No improvements tracked</p>'}
-          </div>
-        </div>
-        
-        <div class="detail-section">
-          <h3>Developer Notes</h3>
-          <textarea 
-            id="developer-notes" 
-            class="notes-textarea" 
-            placeholder="Add your development notes here... Use this space to document decisions, technical considerations, and future plans.">${this.escapeHtml(developerNotes)}</textarea>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-            <span style="color: #6c757d; font-size: 0.875rem;">
-              ${developerNotes.length} characters
-            </span>
-            <button class="btn btn-primary" id="save-notes">
-              💾 Save Notes
-            </button>
-          </div>
-        </div>
-        
-        <div class="detail-section">
-          <h3>Quick Templates</h3>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" data-template="decision">Decision Template</button>
-            <button class="btn btn-secondary" data-template="technical">Technical Notes</button>
-            <button class="btn btn-secondary" data-template="todo">Future TODO</button>
-            <button class="btn btn-secondary" data-template="bug">Bug Report</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
    * Render improvement item
    */
   renderImprovementItem(improvement) {
@@ -983,21 +943,6 @@ export class TabbedDetail {
       });
     }
     
-    const saveNotesBtn = this.element.querySelector('#save-notes');
-    if (saveNotesBtn) {
-      saveNotesBtn.addEventListener('click', () => {
-        this.saveNotes();
-      });
-    }
-    
-    // Template buttons
-    const templateButtons = this.element.querySelectorAll('[data-template]');
-    templateButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        const template = e.target.dataset.template;
-        this.insertTemplate(template);
-      });
-    });
     
     // Todo management buttons
     const addTodoBtn = this.element.querySelector('#add-todo-btn');
@@ -1225,65 +1170,6 @@ export class TabbedDetail {
   viewExternalTracker() {
     console.log('Opening external task tracker for:', this.app.id);
     alert(`Opening external task tracker for ${this.app.id}\n\nThis would typically open your preferred task management tool (Jira, Trello, GitHub Issues, etc.)`);
-  }
-
-  /**
-   * Save notes
-   */
-  saveNotes() {
-    const notesTextarea = this.element.querySelector('#developer-notes');
-    if (notesTextarea && this.onNotesSave) {
-      const notes = notesTextarea.value;
-      console.log('Saving developer notes:', notes);
-      const updatedApp = { ...this.app, developerNotes: notes };
-      this.onNotesSave(updatedApp);
-      
-      // Show feedback
-      const button = this.element.querySelector('#save-notes');
-      const originalText = button.innerHTML;
-      button.innerHTML = '✅ Saved!';
-      button.disabled = true;
-      
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-      }, 2000);
-    } else {
-      console.error('Cannot save notes: textarea or callback not found');
-    }
-  }
-
-  /**
-   * Insert template into notes
-   */
-  insertTemplate(template) {
-    const notesTextarea = this.element.querySelector('#developer-notes');
-    if (!notesTextarea) return;
-    
-    const templates = {
-      decision: `## Decision Made\n\n**Date:** ${new Date().toLocaleDateString()}\n\n**Context:** \n[Describe the situation that required a decision]\n\n**Decision:** \n[What was decided]\n\n**Rationale:** \n[Why this decision was made]\n\n**Impact:** \n[Expected consequences and next steps]\n\n---\n\n`,
-      
-      technical: `## Technical Notes\n\n**Component:** \n[Which part of the system]\n\n**Implementation Details:** \n[Technical details about the implementation]\n\n**Considerations:** \n[Important technical considerations]\n\n**Potential Issues:** \n[Any known limitations or potential problems]\n\n---\n\n`,
-      
-      todo: `## TODO\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n\n**Priority:** Medium\n**Estimated Effort:** \n**Dependencies:** \n\n---\n\n`,
-      
-      bug: `## Bug Report\n\n**Date:** ${new Date().toLocaleDateString()}\n\n**Description:** \n[Describe the bug]\n\n**Steps to Reproduce:** \n1. Step 1\n2. Step 2\n3. Step 3\n\n**Expected Behavior:** \n[What should happen]\n\n**Actual Behavior:** \n[What actually happens]\n\n**Severity:** Medium\n**Status:** Open\n\n---\n\n`
-    };
-    
-    const templateText = templates[template] || '';
-    const cursorPos = notesTextarea.selectionStart;
-    const textBefore = notesTextarea.value.substring(0, cursorPos);
-    const textAfter = notesTextarea.value.substring(cursorPos);
-    
-    notesTextarea.value = textBefore + templateText + textAfter;
-    notesTextarea.focus();
-    
-    // Set cursor position after template
-    const newCursorPos = cursorPos + templateText.length;
-    notesTextarea.setSelectionRange(newCursorPos, newCursorPos);
-    
-    // Trigger input event to update character count
-    notesTextarea.dispatchEvent(new Event('input'));
   }
 
   /**
