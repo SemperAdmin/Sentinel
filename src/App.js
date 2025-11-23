@@ -16,7 +16,7 @@ import { AppGrid } from './components/AppCard.js';
 import { getLatestReviewDate } from './utils/helpers.js';
 import { TabbedDetail } from './components/TabbedDetail.js';
 import { IdeaForm } from './components/IdeaForm.js';
-import { formatDate, calculateHealth, isValidGitHubUrl } from './utils/helpers.js';
+import { formatDate, calculateHealth } from './utils/helpers.js';
 import { unwrapOr } from './utils/result.js';
 import {
   REVIEW_CYCLE_DAYS,
@@ -31,6 +31,8 @@ import { batchProcess } from './utils/batchProcessor.js';
 import errorHandler, { ErrorType, ErrorSeverity, RecoveryStrategies } from './utils/errorHandler.js';
 import { LoadingStateManager } from './utils/loadingState.js';
 import DataController from './controllers/DataController.js';
+import { toastManager, loadingOverlay, escapeHtml } from './utils/uiComponents.js';
+import { isValidGitHubUrl } from './utils/validation.js';
 
 class App {
   constructor() {
@@ -732,11 +734,11 @@ class App {
 
     return `
       <div class="idea-item" data-idea-id="${idea.id}">
-        <h4>${this.escapeHtml(idea.conceptName)}</h4>
-        <p>${this.escapeHtml(idea.problemSolved ? idea.problemSolved.substring(0, 100) : '')}${idea.problemSolved && idea.problemSolved.length > 100 ? '...' : ''}</p>
+        <h4>${escapeHtml(idea.conceptName)}</h4>
+        <p>${escapeHtml(idea.problemSolved ? idea.problemSolved.substring(0, 100) : '')}${idea.problemSolved && idea.problemSolved.length > 100 ? '...' : ''}</p>
         <div class="idea-meta">
-          <span>👥 ${this.escapeHtml(idea.targetAudience)}</span>
-          <span>🛠️ ${this.escapeHtml(idea.techStack)}</span>
+          <span>👥 ${escapeHtml(idea.targetAudience)}</span>
+          <span>🛠️ ${escapeHtml(idea.techStack)}</span>
           <span style="color: ${riskColor}">⚠️ ${idea.riskRating} Risk</span>
           <span>📅 ${formatDate(idea.dateCreated)}</span>
         </div>
@@ -920,59 +922,36 @@ class App {
 
   /**
    * Show loading overlay
+   * @param {string} [message='Loading...'] - Loading message
+   * @returns {void}
    */
   showLoading(message = 'Loading...') {
-    const overlay = document.getElementById('loading-overlay');
-    const messageElement = overlay.querySelector('p');
-    if (messageElement) {
-      messageElement.textContent = message;
-    }
-    overlay.classList.remove('hidden');
+    loadingOverlay.show(message);
   }
 
   /**
    * Hide loading overlay
+   * @returns {void}
    */
   hideLoading() {
-    const overlay = document.getElementById('loading-overlay');
-    overlay.classList.add('hidden');
+    loadingOverlay.hide();
   }
 
   /**
    * Show error message
+   * @param {string} message - Error message
+   * @returns {void}
    */
   showError(message) {
-    const errorToast = document.getElementById('error-toast');
-    const errorMessage = document.getElementById('error-message');
-
-    if (errorMessage) {
-      errorMessage.textContent = message;
-    }
-
-    errorToast.classList.remove('hidden');
-
-    // Auto-hide after configured duration
-    setTimeout(() => {
-      this.hideError();
-    }, ERROR_TOAST_DURATION_MS);
+    toastManager.showError(message);
   }
 
   /**
    * Hide error message
+   * @returns {void}
    */
   hideError() {
-    const errorToast = document.getElementById('error-toast');
-    errorToast.classList.add('hidden');
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    toastManager.hide();
   }
 }
 

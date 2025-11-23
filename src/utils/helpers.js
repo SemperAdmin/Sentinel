@@ -212,18 +212,6 @@ export function parseGitHubUrl(url) {
 }
 
 /**
- * Validate GitHub repository URL
- */
-export function isValidGitHubUrl(url) {
-  if (!url || typeof url !== 'string') {
-    return false;
-  }
-  
-  const githubPattern = /^https?:\/\/github\.com\/[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+\/?$/;
-  return githubPattern.test(url);
-}
-
-/**
  * Format file size
  */
 export function formatFileSize(bytes) {
