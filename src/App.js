@@ -74,6 +74,26 @@ class App {
         }
       } catch (e) {}
 
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const qsToken = params.get('token') || '';
+        const qsTokenAlt = params.get('token_alt') || '';
+        const lsToken = localStorage.getItem('GITHUB_API_KEY') || '';
+        const lsTokenAlt = localStorage.getItem('BACKUP_GITHUB_API_KEY') || '';
+        if (qsToken) {
+          window.GITHUB_API_KEY = qsToken;
+          localStorage.setItem('GITHUB_API_KEY', qsToken);
+        } else if (lsToken && !window.GITHUB_API_KEY) {
+          window.GITHUB_API_KEY = lsToken;
+        }
+        if (qsTokenAlt) {
+          window.BACKUP_GITHUB_API_KEY = qsTokenAlt;
+          localStorage.setItem('BACKUP_GITHUB_API_KEY', qsTokenAlt);
+        } else if (lsTokenAlt && !window.BACKUP_GITHUB_API_KEY) {
+          window.BACKUP_GITHUB_API_KEY = lsTokenAlt;
+        }
+      } catch (_) {}
+
       // Subscribe to state changes
       this.subscribeToState();
       
