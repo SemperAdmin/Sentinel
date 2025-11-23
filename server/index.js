@@ -11,19 +11,18 @@ const port = Number(process.env.PORT || DEFAULT_API_PORT)
 const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SECONDS)
 
 /**
- * Validate GitHub token format
- * Accepts classic tokens (ghp_) with exactly 36 characters and fine-grained PATs (github_pat_) with exactly 84 characters
+ * Validate GitHub token format (relaxed)
+ * Accepts classic (ghp_) and fine-grained (github_pat_) tokens of reasonable length
  */
 const validateToken = (token) => {
   if (!token) return null
   const trimmed = token.trim()
-
-  // Validate format - classic tokens have exactly 36 chars after prefix, fine-grained have exactly 84
-  if (!trimmed.match(/^(ghp_[a-zA-Z0-9_]{36}|github_pat_[a-zA-Z0-9_]{84})$/)) {
+  const classic = /^ghp_[a-zA-Z0-9_]{20,}$/
+  const fine = /^github_pat_[a-zA-Z0-9_]{40,}$/
+  if (!(classic.test(trimmed) || fine.test(trimmed))) {
     console.error('Invalid GitHub token format detected')
     return null
   }
-
   return trimmed
 }
 
