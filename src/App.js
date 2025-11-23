@@ -708,6 +708,7 @@ class App {
    * Update dashboard view
    */
   updateDashboard(state) {
+    if (!state) state = appState.getState();
     const appGrid = document.getElementById('app-grid');
     if (!appGrid) return;
 
