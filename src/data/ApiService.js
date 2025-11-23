@@ -321,6 +321,56 @@ class ApiService {
     }
   }
 
+  async fetchAppReviews(appId) {
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return [];
+      const data = await res.json();
+      const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async getReviewsSha(appId) {
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      return data.sha || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async saveAppReviews(appId, reviews) {
+    try {
+      const sha = await this.getReviewsSha(appId);
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json`;
+      const headers = {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': this.getAuthHeader(),
+        'Content-Type': 'application/json'
+      };
+      const pretty = JSON.stringify(Array.isArray(reviews) ? reviews : [], null, 2) + "\n";
+      const content = this.encodeBase64(pretty);
+      const body = {
+        message: `Update reviews for ${appId}`,
+        content,
+        branch: 'main',
+        sha: sha || undefined
+      };
+      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
+      return !!(res && res.ok);
+    } catch (err) {
+      return false;
+    }
+  }
+
   async getFileSha(appId) {
     try {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;

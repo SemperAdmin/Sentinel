@@ -210,6 +210,11 @@ export class TabbedDetail {
             ▶ Start Review Checklist
           </button>
         </div>
+
+        <div class="detail-section">
+          <h3>Past Reviews</h3>
+          <div id="past-reviews" style="color:#6c757d;">Loading...</div>
+        </div>
       </div>
     `;
   }
@@ -1091,6 +1096,8 @@ export class TabbedDetail {
         this.showAddImprovementDialog();
       });
     }
+
+    this.loadPastReviews();
   }
 
   /**
@@ -1129,8 +1136,48 @@ export class TabbedDetail {
    * Start review checklist
    */
   startReviewChecklist() {
-    console.log('Starting review checklist for:', this.app.id);
-    alert(`Review checklist started for ${this.app.id}\n\nThis would typically open a detailed checklist with items like:\n- Code quality review\n- Security audit\n- Performance analysis\n- Dependency updates\n- Documentation review`);
+    (async () => {
+      const mod = await import('./ReviewChecklist.js');
+      const reviews = await (await import('../data/ApiService.js')).default.fetchAppReviews(this.app.id);
+      let current = null;
+      if (Array.isArray(reviews) && reviews.length > 0) {
+        const last = reviews[reviews.length - 1];
+        if (!last.completedAt) current = last;
+      }
+      const checklist = new mod.ReviewChecklist(this.app, current, (appId) => {
+        if (this.onReviewComplete) this.onReviewComplete(appId);
+        this.loadPastReviews();
+      });
+      checklist.render();
+    })();
+  }
+
+  async loadPastReviews() {
+    try {
+      const api = (await import('../data/ApiService.js')).default;
+      const arr = await api.fetchAppReviews(this.app.id);
+      const el = this.element.querySelector('#past-reviews');
+      if (!el) return;
+      if (!arr || arr.length === 0) {
+        el.textContent = 'No past reviews';
+        return;
+      }
+      const html = arr.map(r => {
+        const done = !!r.completedAt;
+        const comp = (() => {
+          const answers = r.answers || {};
+          const vals = Object.values(answers);
+          const total = vals.length || 0;
+          const finished = vals.filter(v => v && v.status && v.status !== 'Pending').length;
+          return total > 0 ? Math.round((finished/total)*100) : 0;
+        })();
+        return `<div style="display:flex; justify-content:space-between; border:1px solid #444; padding:.5rem; margin:.25rem 0;">
+          <span>ID: ${this.escapeHtml(r.id)} · Started: ${r.startedAt ? new Date(r.startedAt).toLocaleDateString() : '-'}</span>
+          <span>${done ? 'Completed' : 'In Progress'} · ${comp}%</span>
+        </div>`;
+      }).join('');
+      el.innerHTML = html;
+    } catch (_) {}
   }
 
   /**
