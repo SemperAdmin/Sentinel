@@ -201,7 +201,10 @@ class ApiService {
     const t2 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT)
       || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY : '')
       || '';
-    const list = [t1, t2].filter(x => !!x && x !== 'YOUR_API_KEY_HERE');
+    const t3 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT2)
+      || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY2 : '')
+      || '';
+    const list = [t1, t2, t3].filter(x => !!x && x !== 'YOUR_API_KEY_HERE');
     this.tokens = list;
     this.tokenIndex = 0;
     console.log(`Loaded ${this.tokens.length} token(s). Active token index: ${this.tokenIndex}`);

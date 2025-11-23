@@ -78,8 +78,10 @@ class App {
         const params = new URLSearchParams(window.location.search || '');
         const qsToken = params.get('token') || '';
         const qsTokenAlt = params.get('token_alt') || '';
+        const qsTokenAlt2 = params.get('token_alt2') || '';
         const lsToken = localStorage.getItem('GITHUB_API_KEY') || '';
         const lsTokenAlt = localStorage.getItem('BACKUP_GITHUB_API_KEY') || '';
+        const lsTokenAlt2 = localStorage.getItem('BACKUP_GITHUB_API_KEY2') || '';
         if (qsToken) {
           window.GITHUB_API_KEY = qsToken;
           localStorage.setItem('GITHUB_API_KEY', qsToken);
@@ -91,6 +93,12 @@ class App {
           localStorage.setItem('BACKUP_GITHUB_API_KEY', qsTokenAlt);
         } else if (lsTokenAlt && !window.BACKUP_GITHUB_API_KEY) {
           window.BACKUP_GITHUB_API_KEY = lsTokenAlt;
+        }
+        if (qsTokenAlt2) {
+          window.BACKUP_GITHUB_API_KEY2 = qsTokenAlt2;
+          localStorage.setItem('BACKUP_GITHUB_API_KEY2', qsTokenAlt2);
+        } else if (lsTokenAlt2 && !window.BACKUP_GITHUB_API_KEY2) {
+          window.BACKUP_GITHUB_API_KEY2 = lsTokenAlt2;
         }
       } catch (_) {}
 
