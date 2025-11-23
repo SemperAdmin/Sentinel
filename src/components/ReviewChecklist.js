@@ -78,7 +78,6 @@ export class ReviewChecklist {
       <div class="dialog-overlay">
         <div class="dialog-content">
           <h3>Review Checklist — ${this.escape(this.app.id)}</h3>
-          <div id="review-summary" style="margin: .5rem 0; color: #aaa; font-size: .85rem;"></div>
           <div id="review-body"></div>
           <div class="dialog-actions" style="margin-top: 1rem;">
             <button class="btn btn-secondary" id="cancel-review">Cancel</button>
@@ -91,7 +90,6 @@ export class ReviewChecklist {
     this.element = dialog
     this.renderChecklist()
     this.attachEvents()
-    this.updateSummary()
   }
 
   renderChecklist() {
@@ -151,7 +149,11 @@ export class ReviewChecklist {
     })
     this.element.querySelector('#save-progress').addEventListener('click', async () => {
       await this.save(false)
-      this.flash('#save-progress','✅ Saved')
+      const btn = this.element.querySelector('#save-progress')
+      const original = btn.innerHTML
+      btn.innerHTML = '✅ Saved'
+      btn.disabled = true
+      setTimeout(() => { btn.innerHTML = original; btn.disabled = false }, 1500)
     })
     this.element.querySelector('#complete-review').addEventListener('click', async () => {
       await this.save(true)
@@ -181,6 +183,7 @@ export class ReviewChecklist {
     })
     const comp = totals.total > 0 ? (((totals.pass + totals.fail + totals.na) / totals.total) * 100).toFixed(1) : '0.0'
     const el = this.element.querySelector('#review-summary')
+    if (!el) return
     el.textContent = `Items: ${totals.total} · Completed: ${comp}% · Pass: ${totals.pass} · Fail: ${totals.fail} · Pending: ${totals.pending}`
   }
 
