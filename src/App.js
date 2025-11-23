@@ -114,16 +114,18 @@ class App {
       } catch (_) {}
       try {
         const res = await fetch(`${apiService.baseUrl}/health`, { method: 'GET' });
-        if (res && res.ok) {
-          const j = await res.json();
-          const rr = j && j.rateLimit ? j.rateLimit : null;
-          if (rr) {
-            console.log(`API token active=${j.hasToken}; core used=${rr.used}; remaining=${rr.remaining}/${rr.limit}`);
+        if (res.ok) {
+          const healthInfo = await res.json();
+          const rateLimit = healthInfo?.rateLimit;
+          if (rateLimit) {
+            console.log(`API token active=${healthInfo.hasToken}; core used=${rateLimit.used}; remaining=${rateLimit.remaining}/${rateLimit.limit}`);
           } else {
-            console.log(`API token active=${j && j.hasToken}`);
+            console.log(`API token active=${healthInfo.hasToken}`);
           }
         }
-      } catch (_) {}
+      } catch (error) {
+        console.warn('Could not fetch API health status:', error);
+      }
 
       await this.loadInitialData();
       

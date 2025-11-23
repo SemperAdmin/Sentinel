@@ -9,6 +9,7 @@ const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute in milliseconds
 
 const port = Number(process.env.PORT || DEFAULT_API_PORT)
 const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SECONDS)
+const tokenRegex = /^(ghp_[a-zA-Z0-9_]{20,}|github_pat_[a-zA-Z0-9_]{40,})$/
 
 /**
  * Validate GitHub token format (relaxed)
@@ -17,9 +18,7 @@ const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SEC
 const validateToken = (token) => {
   if (!token) return null
   const trimmed = token.trim()
-  const classic = /^ghp_[a-zA-Z0-9_]{20,}$/
-  const fine = /^github_pat_[a-zA-Z0-9_]{40,}$/
-  if (!(classic.test(trimmed) || fine.test(trimmed))) {
+  if (!tokenRegex.test(trimmed)) {
     console.error('Invalid GitHub token format detected')
     return null
   }
@@ -45,7 +44,7 @@ const getAuthHeader = () => {
 const send = (res, status, headers, body) => {
   const baseHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-GitHub-Api-Version, Accept, Authorization',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
   }
   const out = { ...baseHeaders, ...headers }
