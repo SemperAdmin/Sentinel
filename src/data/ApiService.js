@@ -195,16 +195,18 @@ class ApiService {
   }
 
   loadTokensFromEnv() {
-    const t1 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY)
+    const sanitize = (t) => String(t || '').trim();
+    const looksLikeToken = (t) => /^ghp_[A-Za-z0-9_]+|^github_pat_[A-Za-z0-9_]+/.test(t);
+    const t1 = sanitize((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY)
       || (typeof window !== 'undefined' ? window.GITHUB_API_KEY : '')
-      || '';
-    const t2 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT)
+      || '');
+    const t2 = sanitize((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT)
       || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY : '')
-      || '';
-    const t3 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT2)
+      || '');
+    const t3 = sanitize((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT2)
       || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY2 : '')
-      || '';
-    const list = [t1, t2, t3].filter(x => !!x && x !== 'YOUR_API_KEY_HERE');
+      || '');
+    const list = [t1, t2, t3].filter(x => !!x && x !== 'YOUR_API_KEY_HERE').filter(looksLikeToken);
     this.tokens = list;
     this.tokenIndex = 0;
     console.log(`Loaded ${this.tokens.length} token(s). Active token index: ${this.tokenIndex}`);
