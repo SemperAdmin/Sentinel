@@ -128,7 +128,6 @@ class AppState {
     this.isNotifying = false;
     this.pendingNotify = false;
     this.batchTimeout = null;
-    this.batchedUpdates = null;
   }
 
   /**
@@ -537,23 +536,22 @@ class AppState {
    * @returns {void}
    */
   batchUpdates(updateFn) {
-    const originalSetState = this.setState.bind(this);
-    const batchedUpdates = {};
-
-    // Override setState to collect updates
-    this.setState = (updates) => {
-      Object.assign(batchedUpdates, updates);
+    // Temporarily prevent notifications, but keep track if one is needed
+    const originalNotify = this.notify;
+    let needsNotify = false;
+    this.notify = () => {
+      needsNotify = true;
     };
 
     try {
       updateFn();
     } finally {
-      // Restore original setState
-      this.setState = originalSetState;
+      // Restore the original notify function
+      this.notify = originalNotify;
 
-      // Apply all batched updates at once
-      if (Object.keys(batchedUpdates).length > 0) {
-        originalSetState(batchedUpdates);
+      // If any of the updates triggered a notification, trigger a single one now
+      if (needsNotify) {
+        this.notify();
       }
     }
   }

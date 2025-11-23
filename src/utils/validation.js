@@ -48,8 +48,21 @@ export function isValidUrl(url) {
  */
 export function isValidISODate(dateString) {
   if (!dateString || typeof dateString !== 'string') return false;
-  const date = new Date(dateString);
-  return !isNaN(date.getTime()) && dateString === date.toISOString().split('T')[0];
+  const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = dateString.match(isoDateRegex);
+  if (!match) return false;
+
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+
+  // Create a date in UTC to avoid timezone issues
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  // Check if the constructed date matches the input parts
+  return date.getUTCFullYear() === year &&
+         date.getUTCMonth() === month - 1 &&
+         date.getUTCDate() === day;
 }
 
 /**
@@ -105,7 +118,9 @@ export function hasRequiredKeys(obj, requiredKeys) {
  */
 export function sanitizeString(str) {
   if (!str || typeof str !== 'string') return '';
-  return str.replace(/<[^>]*>/g, '').trim();
+  const temp = document.createElement('div');
+  temp.innerHTML = str;
+  return (temp.textContent || temp.innerText || '').trim();
 }
 
 /**

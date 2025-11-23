@@ -17,26 +17,7 @@ import {
 } from '../utils/constants.js';
 
 /**
- * @typedef {Object} App
- * @property {string} id
- * @property {string} repoUrl
- * @property {string} platform
- * @property {string} status
- * @property {string|null} lastReviewDate
- * @property {string|null} nextReviewDate
- * @property {number} pendingTodos
- * @property {string} notes
- * @property {string|null} lastCommitDate
- * @property {string|null} latestTag
- * @property {number} stars
- * @property {string} language
- * @property {boolean} isPrivate
- * @property {boolean} archived
- * @property {Array} todos
- * @property {Array} improvements
- * @property {string} developerNotes
- * @property {number} improvementBudget
- * @property {string} currentSprint
+ * @typedef {import('../state/AppState.js').App} App
  */
 
 export class DataController {
@@ -85,10 +66,14 @@ export class DataController {
       // Clean up private repos and excluded repos
       const filteredPortfolio = this.filterPortfolio(portfolio);
 
-      // Save cleaned data
+      // If items were filtered out (e.g. from local storage), remove them from the data store
       if (filteredPortfolio.length !== portfolio.length) {
-        for (const app of filteredPortfolio) {
-          await dataStore.saveApp(app);
+        const filteredIds = new Set(filteredPortfolio.map(app => app.id));
+        for (const app of portfolio) {
+          if (!filteredIds.has(app.id)) {
+            console.log(`Removing filtered-out app "${app.id}" from data store.`);
+            await dataStore.removeApp(app.id);
+          }
         }
       }
 

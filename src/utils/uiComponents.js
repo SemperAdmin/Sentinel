@@ -10,39 +10,57 @@ import { ERROR_TOAST_DURATION_MS } from './constants.js';
  */
 export class ToastManager {
   constructor() {
-    this.toastElement = null;
-    this.messageElement = null;
+    this._toastElement = null;
+    this._messageElement = null;
     this.autoHideTimeout = null;
   }
 
   /**
-   * Initialize toast elements
-   * @private
+   * Lazy-load toast element
+   * @returns {HTMLElement|null}
    */
-  init() {
-    if (this.toastElement) return;
-
-    this.toastElement = document.getElementById('error-toast');
-    this.messageElement = document.getElementById('error-message');
-
-    if (!this.toastElement || !this.messageElement) {
-      console.warn('Toast elements not found in DOM');
+  get toastElement() {
+    if (!this._toastElement) {
+      this._toastElement = document.getElementById('error-toast');
+      if (!this._toastElement) {
+        console.warn('Toast element not found in DOM');
+      }
     }
+    return this._toastElement;
   }
 
   /**
-   * Show error toast
-   * @param {string} message - Error message to display
+   * Lazy-load message element
+   * @returns {HTMLElement|null}
+   */
+  get messageElement() {
+    if (!this._messageElement) {
+      this._messageElement = document.getElementById('error-message');
+      if (!this._messageElement) {
+        console.warn('Toast message element not found in DOM');
+      }
+    }
+    return this._messageElement;
+  }
+
+  /**
+   * Show toast with type
+   * @param {string} message - Message to display
+   * @param {'error'|'success'|'info'} type - Toast type
    * @param {number} [duration] - Duration in ms (optional)
    * @returns {void}
+   * @private
    */
-  showError(message, duration = ERROR_TOAST_DURATION_MS) {
-    this.init();
-
+  show(message, type = 'error', duration = ERROR_TOAST_DURATION_MS) {
     if (!this.toastElement || !this.messageElement) return;
 
     this.messageElement.textContent = message;
-    this.toastElement.classList.remove('hidden');
+
+    // Remove existing type classes
+    this.toastElement.classList.remove('toast-error', 'toast-success', 'toast-info', 'hidden');
+
+    // Add type-specific class
+    this.toastElement.classList.add(`toast-${type}`);
 
     // Clear existing timeout
     if (this.autoHideTimeout) {
@@ -56,14 +74,23 @@ export class ToastManager {
   }
 
   /**
+   * Show error toast
+   * @param {string} message - Error message to display
+   * @param {number} [duration] - Duration in ms (optional)
+   * @returns {void}
+   */
+  showError(message, duration = ERROR_TOAST_DURATION_MS) {
+    this.show(message, 'error', duration);
+  }
+
+  /**
    * Show success toast
    * @param {string} message - Success message to display
    * @param {number} [duration] - Duration in ms (optional)
    * @returns {void}
    */
   showSuccess(message, duration = ERROR_TOAST_DURATION_MS) {
-    // For now, use the same error toast but could be extended
-    this.showError(message, duration);
+    this.show(message, 'success', duration);
   }
 
   /**
@@ -73,8 +100,7 @@ export class ToastManager {
    * @returns {void}
    */
   showInfo(message, duration = ERROR_TOAST_DURATION_MS) {
-    // For now, use the same error toast but could be extended
-    this.showError(message, duration);
+    this.show(message, 'info', duration);
   }
 
   /**
@@ -82,8 +108,6 @@ export class ToastManager {
    * @returns {void}
    */
   hide() {
-    this.init();
-
     if (this.autoHideTimeout) {
       clearTimeout(this.autoHideTimeout);
       this.autoHideTimeout = null;
@@ -100,23 +124,33 @@ export class ToastManager {
  */
 export class LoadingOverlayManager {
   constructor() {
-    this.overlayElement = null;
-    this.messageElement = null;
+    this._overlayElement = null;
+    this._messageElement = null;
   }
 
   /**
-   * Initialize overlay elements
-   * @private
+   * Lazy-load overlay element
+   * @returns {HTMLElement|null}
    */
-  init() {
-    if (this.overlayElement) return;
-
-    this.overlayElement = document.getElementById('loading-overlay');
-    this.messageElement = this.overlayElement?.querySelector('p');
-
-    if (!this.overlayElement) {
-      console.warn('Loading overlay element not found in DOM');
+  get overlayElement() {
+    if (!this._overlayElement) {
+      this._overlayElement = document.getElementById('loading-overlay');
+      if (!this._overlayElement) {
+        console.warn('Loading overlay element not found in DOM');
+      }
     }
+    return this._overlayElement;
+  }
+
+  /**
+   * Lazy-load message element
+   * @returns {HTMLElement|null}
+   */
+  get messageElement() {
+    if (!this._messageElement && this.overlayElement) {
+      this._messageElement = this.overlayElement.querySelector('p');
+    }
+    return this._messageElement;
   }
 
   /**
@@ -125,8 +159,6 @@ export class LoadingOverlayManager {
    * @returns {void}
    */
   show(message = 'Loading...') {
-    this.init();
-
     if (!this.overlayElement) return;
 
     if (this.messageElement) {
@@ -141,8 +173,6 @@ export class LoadingOverlayManager {
    * @returns {void}
    */
   hide() {
-    this.init();
-
     if (this.overlayElement) {
       this.overlayElement.classList.add('hidden');
     }
@@ -153,7 +183,6 @@ export class LoadingOverlayManager {
    * @returns {boolean}
    */
   isVisible() {
-    this.init();
     return this.overlayElement && !this.overlayElement.classList.contains('hidden');
   }
 }

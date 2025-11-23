@@ -246,7 +246,8 @@ export function debounceAsync(asyncFn, delayMs) {
 }
 
 /**
- * Throttle an async function
+ * Throttle an async function, returning the last successful result during the cooldown.
+ * Note: Calls made during the throttle period will return the last cached result without executing the function again.
  * @template T
  * @param {(...args: any[]) => Promise<T>} asyncFn - Async function to throttle
  * @param {number} limitMs - Throttle limit in milliseconds
