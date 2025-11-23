@@ -1,0 +1,62 @@
+name: Sync Reviews Structure
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure review folders and files
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PORTFOLIO_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = 'SemperAdmin'
+            const repo = 'Sentinel'
+            const pathOverview = 'data/portfolio/overview.json'
+            let apps = []
+            try {
+              const { data: existing } = await github.request('GET /repos/{owner}/{repo}/contents/{path}', { owner, repo, path: pathOverview, ref: 'main' })
+              const json = JSON.parse(Buffer.from(existing.content, 'base64').toString('utf-8'))
+              if (Array.isArray(json)) apps = json.map(a => a.id).filter(Boolean)
+            } catch (e) {}
+            if (apps.length === 0) {
+              let page = 1
+              while (true) {
+                const { data } = await github.request('GET /users/{username}/repos', { username: owner, per_page: 100, sort: 'updated', direction: 'desc', page })
+                if (!data || data.length === 0) break
+                apps.push(...data.filter(r => !r.private && r.name !== 'eventcall-images').map(r => r.name.toLowerCase().replace(/[^a-z0-9]/g, '-')))
+                page++
+                if (page > 5) break
+              }
+            }
+            const ensureFile = async (p, contentStr) => {
+              try {
+                await github.request('GET /repos/{owner}/{repo}/contents/{path}', { owner, repo, path: p, ref: 'main' })
+                return false
+              } catch (e) {
+                const content = Buffer.from(contentStr).toString('base64')
+                await github.request('PUT /repos/{owner}/{repo}/contents/{path}', { owner, repo, path: p, message: `Create ${p}`, content, branch: 'main' })
+                return true
+              }
+            }
+            let created = 0
+            for (const id of Array.from(new Set(apps))) {
+              const dirGitkeep = `data/reviews/${id}/.gitkeep`
+              const fileReviews = `data/reviews/${id}/reviews.json`
+              const c1 = await ensureFile(dirGitkeep, '\n')
+              if (c1) created++
+              const c2 = await ensureFile(fileReviews, '[]\n')
+              if (c2) created++
+              await new Promise(r => setTimeout(r, 300))
+            }
+            return created
