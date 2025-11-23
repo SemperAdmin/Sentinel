@@ -965,7 +965,7 @@ class App {
       try {
         const api = (await import('./data/ApiService.js')).default;
         await api.saveIdeaYaml(idea);
-      } catch (_) {}
+} catch (err) { console.warn('Failed to save idea to YAML:', err); }
       
       this.hideIdeaForm();
     } catch (error) {
