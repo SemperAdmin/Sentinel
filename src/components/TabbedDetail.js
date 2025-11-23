@@ -1171,12 +1171,29 @@ export class TabbedDetail {
           const finished = vals.filter(v => v && v.status && v.status !== 'Pending').length;
           return total > 0 ? Math.round((finished/total)*100) : 0;
         })();
-        return `<div style="display:flex; justify-content:space-between; border:1px solid #444; padding:.5rem; margin:.25rem 0;">
+        return `<div data-review-id="${this.escapeHtml(r.id)}" style="display:flex; justify-content:space-between; align-items:center; border:1px solid #444; padding:.5rem; margin:.25rem 0;">
           <span>ID: ${this.escapeHtml(r.id)} · Started: ${r.startedAt ? new Date(r.startedAt).toLocaleDateString() : '-'}</span>
-          <span>${done ? 'Completed' : 'In Progress'} · ${comp}%</span>
+          <span style="display:flex; align-items:center; gap:.5rem;">
+            ${done ? 'Completed' : 'In Progress'} · ${comp}%
+            <button class="btn btn-secondary" data-action="open-review" data-review-id="${this.escapeHtml(r.id)}">Open</button>
+          </span>
         </div>`;
       }).join('');
       el.innerHTML = html;
+      el.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-action="open-review"][data-review-id]');
+        if (!btn) return;
+        const id = btn.getAttribute('data-review-id');
+        const api2 = (await import('../data/ApiService.js')).default;
+        const list = await api2.fetchAppReviews(this.app.id);
+        const review = Array.isArray(list) ? list.find(x => x && x.id === id) : null;
+        const mod = await import('./ReviewChecklist.js');
+        const checklist = new mod.ReviewChecklist(this.app, review, (appId) => {
+          if (this.onReviewComplete) this.onReviewComplete(appId);
+          this.loadPastReviews();
+        });
+        checklist.render();
+      });
     } catch (_) {}
   }
 
