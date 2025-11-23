@@ -394,6 +394,7 @@ class ApiService {
         techStack: idea.techStack || '',
         riskRating: idea.riskRating || '',
         dateCreated: idea.dateCreated || new Date().toISOString(),
+        initialFeatures: idea.initialFeatures || '',
       };
       const yaml = this.toYaml(payload);
       const content = this.encodeBase64(yaml);
