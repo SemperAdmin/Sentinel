@@ -5,16 +5,19 @@
 
 class ApiService {
   constructor() {
-    this.baseUrl = 'https://api.github.com';
+    this.baseUrl = (import.meta?.env?.DEV ? '/github' : 'https://api.github.com');
     this.retryAttempts = 3;
     this.retryDelay = 1000; // Start with 1 second
     this.maxDelay = 30000; // Max 30 seconds
-    
-    this.githubToken = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY) 
-      || (typeof window !== 'undefined' ? window.GITHUB_API_KEY : '') 
-      || '';
+    this.requestTimeout = 15000;
+    this.githubToken = '';
+    this.tokenValid = null;
     this.managerRepo = window.MANAGER_REPO_FULL_NAME || '';
     this.tasksCache = new Map();
+    this.tokens = [];
+    this.tokenIndex = 0;
+    this.loadTokensFromEnv();
+    this.githubToken = this.tokens[0] || '';
   }
 
   /**
@@ -76,7 +79,11 @@ class ApiService {
    * Make API request with exponential backoff retry logic
    */
   async fetchWithRetry(endpoint, params = {}) {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+    let full = `${this.baseUrl}${endpoint}`;
+    if (full.startsWith('/')) {
+      full = `${window.location.origin}${full}`;
+    }
+    const url = new URL(full);
     
     // Add query parameters
     Object.keys(params).forEach(key => {
@@ -139,25 +146,94 @@ class ApiService {
   /**
    * Make actual API request with proper headers
    */
-  async makeApiRequest(url) {
+  async makeApiRequest(url, attemptedRotation = false) {
     const headers = {
       'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'Sentinel-App-Portfolio-Manager/1.0'
+      'X-GitHub-Api-Version': '2022-11-28'
     };
 
     // Add authentication if API key is provided
     if (this.githubToken) {
-      headers['Authorization'] = `Bearer ${this.githubToken}`;
+      headers['Authorization'] = `token ${this.githubToken}`;
       console.log('Using GitHub API token for authentication');
     } else {
       console.log('No GitHub API token configured, using unauthenticated requests');
     }
 
-    return fetch(url, {
-      method: 'GET',
-      headers: headers,
-      mode: 'cors'
-    });
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), this.requestTimeout) : null;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+        mode: 'cors',
+        signal: controller ? controller.signal : undefined
+      });
+      const remaining = res.headers.get('X-RateLimit-Remaining');
+      const limit = res.headers.get('X-RateLimit-Limit');
+      const reset = res.headers.get('X-RateLimit-Reset');
+      if (remaining && limit) {
+        const resetMs = reset ? parseInt(reset, 10) * 1000 : null;
+        const resetAt = resetMs ? new Date(resetMs).toISOString() : null;
+        console.log(`GitHub rate: ${remaining}/${limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
+      }
+      if (((res.status === 403 && remaining === '0') || res.status === 401) && !attemptedRotation && this.rotateToken()) {
+        console.warn('Switching to backup token due to rate limit or unauthorized');
+        return await this.makeApiRequest(url, true);
+      }
+      return res;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  loadTokensFromEnv() {
+    const t1 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY)
+      || (typeof window !== 'undefined' ? window.GITHUB_API_KEY : '')
+      || '';
+    const t2 = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT)
+      || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY : '')
+      || '';
+    const list = [t1, t2].filter(x => !!x && x !== 'YOUR_API_KEY_HERE');
+    this.tokens = list;
+    this.tokenIndex = 0;
+    console.log(`Loaded ${this.tokens.length} token(s). Active token index: ${this.tokenIndex}`);
+  }
+
+  rotateToken() {
+    if (!Array.isArray(this.tokens) || this.tokens.length < 2) return false;
+    this.tokenIndex = (this.tokenIndex + 1) % this.tokens.length;
+    this.githubToken = this.tokens[this.tokenIndex] || '';
+    console.log(`Rotated to token index: ${this.tokenIndex}`);
+    return !!this.githubToken;
+  }
+
+  refreshTokenFromEnv() {
+    this.loadTokensFromEnv();
+    this.githubToken = this.tokens[0] || '';
+  }
+
+  async validateToken() {
+    this.refreshTokenFromEnv();
+    if (!Array.isArray(this.tokens) || this.tokens.length === 0) {
+      this.tokenValid = false;
+      this.githubToken = '';
+      return false;
+    }
+    for (let i = 0; i < this.tokens.length; i++) {
+      this.githubToken = this.tokens[i];
+      try {
+        const res = await this.makeApiRequest(`${this.baseUrl}/rate_limit`);
+        if (res && res.ok) {
+          this.tokenIndex = i;
+          this.tokenValid = true;
+          return true;
+        }
+      } catch (_) {}
+    }
+    this.tokenValid = false;
+    this.githubToken = '';
+    return false;
   }
 
   /**
@@ -170,8 +246,7 @@ class ApiService {
     }
     const headers = {
       'Accept': 'application/vnd.github+json',
-      'User-Agent': 'Sentinel-App-Portfolio-Manager/1.0',
-      'Authorization': this.githubToken ? `Bearer ${this.githubToken}` : undefined,
+      'Authorization': this.githubToken ? `token ${this.githubToken}` : undefined,
       'Content-Type': 'application/json'
     };
     const body = {
@@ -181,7 +256,7 @@ class ApiService {
         tasks_json: JSON.stringify(tasks || [])
       }
     };
-    const url = `https://api.github.com/repos/${this.managerRepo}/dispatches`;
+    const url = `${this.baseUrl}/repos/${this.managerRepo}/dispatches`;
     try {
       const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), mode: 'cors' });
       if (res && res.ok) return res;
@@ -200,7 +275,7 @@ class ApiService {
     if (this.tasksCache.has(appId)) {
       return this.tasksCache.get(appId);
     }
-    const url = `https://api.github.com/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+    const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
     const res = await this.makeApiRequest(url);
     if (!res || !res.ok) {
       return null;
@@ -227,7 +302,7 @@ class ApiService {
 
   async getFileSha(appId) {
     try {
-      const url = `https://api.github.com/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) return null;
       const data = await res.json();
@@ -240,11 +315,10 @@ class ApiService {
   async saveTasksViaContents(appId, tasks) {
     try {
       const sha = await this.getFileSha(appId);
-      const url = `https://api.github.com/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
-        'User-Agent': 'Sentinel-App-Portfolio-Manager/1.0',
-        'Authorization': this.githubToken ? `Bearer ${this.githubToken}` : undefined,
+        'Authorization': this.githubToken ? `token ${this.githubToken}` : undefined,
         'Content-Type': 'application/json'
       };
       const arr = Array.isArray(tasks) ? tasks.slice() : [];
@@ -358,7 +432,8 @@ class ApiService {
    * Check if API key is configured
    */
   isApiKeyConfigured() {
-    const configured = !!this.githubToken && this.githubToken !== 'YOUR_API_KEY_HERE';
+    this.refreshTokenFromEnv();
+    const configured = Array.isArray(this.tokens) && this.tokens.length > 0 && this.tokenValid !== false && !!this.githubToken;
     console.log('API key configured (env/window):', configured);
     return configured;
   }

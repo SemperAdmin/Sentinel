@@ -2,7 +2,7 @@
  * TabbedDetail Component - Tabbed interface for app detail view
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify } from '../utils/helpers.js';
 import appState from '../state/AppState.js';
 
 export class TabbedDetail {
@@ -292,13 +292,32 @@ export class TabbedDetail {
    * Render individual todo item
    */
   renderTodoItem(todo) {
-    const priorityClass = todo.priority ? `priority-${todo.priority.toLowerCase()}` : '';
+    const priorityClass = todo.priority ? `priority-${String(todo.priority).toLowerCase()}` : '';
     const dueDateClass = todo.dueDate && new Date(todo.dueDate) < new Date() ? 'overdue' : '';
+    const sourceKey = slugify(String(todo.source||'other').replace(/\([^)]*\)/g,'').trim());
+    const sourceClass = sourceKey ? `source-${sourceKey}` : 'source-other';
+    const pr = String(todo.priority||'medium').toLowerCase();
+    const prIcon = pr === 'high' ? '🔴' : (pr === 'medium' ? '🟠' : '🟢');
+    const bgMap = {
+      'facebook': 'rgba(24, 119, 242, 0.08)',
+      'instagram': 'rgba(225, 48, 108, 0.10)',
+      'teams': 'rgba(98, 100, 167, 0.08)',
+      'feedback-app': 'rgba(108, 117, 125, 0.10)',
+      'email': 'rgba(23, 162, 184, 0.10)',
+      'sponsor': 'rgba(40, 167, 69, 0.10)',
+      'policy': 'rgba(52, 58, 64, 0.08)',
+      'other': 'var(--gray-100)'
+    };
+    const borderMap = { 'low': '#28a745', 'medium': '#ffc107', 'high': '#dc3545' };
+    const bgColor = bgMap[sourceKey] || bgMap['other'];
+    const borderColor = borderMap[pr] || borderMap['medium'];
+    const styleStr = `background-color: ${bgColor}; border-left: 4px solid ${borderColor};`;
     
     return `
-      <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass}" data-todo-id="${todo.id}">
+      <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass}" data-todo-id="${todo.id}" style="${styleStr}">
         <div class="todo-content">
-          <div class="todo-title">${this.escapeHtml(todo.title)}</div>
+          <div class="todo-title">${prIcon} ${this.escapeHtml(todo.title)}</div>
+          
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
         </div>

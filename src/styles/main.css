@@ -465,6 +465,69 @@ body {
   border-radius: 4px;
 }
 
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+  background-color: var(--white);
+}
+
+.todo-item.priority-low { border-left: 4px solid #28a745; }
+.todo-item.priority-medium { border-left: 4px solid #ffc107; }
+.todo-item.priority-high { border-left: 4px solid #dc3545; }
+
+.todo-item.source-facebook { background-color: rgba(24, 119, 242, 0.08); border-color: rgba(24,119,242,0.3); }
+.todo-item.source-instagram { background-color: rgba(225, 48, 108, 0.10); border-color: rgba(225,48,108,0.3); }
+.todo-item.source-teams { background-color: rgba(98, 100, 167, 0.08); border-color: rgba(98,100,167,0.3); }
+.todo-item.source-feedback-app { background-color: rgba(108, 117, 125, 0.10); border-color: rgba(108,117,125,0.3); }
+.todo-item.source-email { background-color: rgba(23, 162, 184, 0.10); border-color: rgba(23,162,184,0.3); }
+.todo-item.source-sponsor { background-color: rgba(40, 167, 69, 0.10); border-color: rgba(40,167,69,0.3); }
+.todo-item.source-policy { background-color: rgba(52, 58, 64, 0.08); border-color: rgba(52,58,64,0.3); }
+.todo-item.source-other { background-color: var(--gray-100); border-color: var(--gray-300); }
+
+.todo-badges {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.priority-badge.priority-low {
+  background-color: #d4edda;
+  color: #155724;
+}
+.priority-badge.priority-medium {
+  background-color: #fff3cd;
+  color: #856404;
+}
+.priority-badge.priority-high {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.source-badge {
+  color: #fff;
+}
+.source-facebook { background-color: #1877F2; }
+.source-instagram { background-color: #E1306C; }
+.source-teams { background-color: #6264A7; }
+.source-feedback-app { background-color: #6c757d; }
+.source-email { background-color: #17a2b8; }
+.source-sponsor { background-color: #28a745; }
+.source-policy { background-color: #343a40; }
+.source-other { background-color: #adb5bd; color: #212529; }
+
 /* Ideas View */
 .ideas-content {
   display: grid;
