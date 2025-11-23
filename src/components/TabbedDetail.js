@@ -2,7 +2,7 @@
  * TabbedDetail Component - Tabbed interface for app detail view
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify, getSourceIcon } from '../utils/helpers.js';
 import appState from '../state/AppState.js';
 import { unwrapOr } from '../utils/result.js';
 
@@ -301,6 +301,7 @@ export class TabbedDetail {
     const sourceKey = slugify(String(todo.source||'other').replace(/\([^)]*\)/g,'').trim());
     const sourceClass = sourceKey ? `source-${sourceKey}` : 'source-other';
     const pr = String(todo.priority||'medium').toLowerCase();
+    const sourceIcon = getSourceIcon(todo.source);
     const prIcon = pr === 'high' ? '🔴' : (pr === 'medium' ? '🟠' : '🟢');
     const bgMap = {
       'facebook': 'rgba(24, 119, 242, 0.08)',
@@ -320,7 +321,7 @@ export class TabbedDetail {
     return `
       <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass}" data-todo-id="${todo.id}" style="${styleStr}">
         <div class="todo-content">
-          <div class="todo-title">${prIcon} ${this.escapeHtml(todo.title)}</div>
+          <div class="todo-title"><span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}</div>
           
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}

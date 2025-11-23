@@ -172,6 +172,64 @@ export function calculateNextReviewDate(lastReviewDate = null) {
 }
 
 /**
+ * Get SVG icon for task source
+ */
+export function getSourceIcon(source) {
+  const sourceKey = slugify(String(source||'other').replace(/\([^)]*\)/g,'').trim());
+  
+  const icons = {
+    'facebook': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 8.049C16 3.604 12.418 0 8 0S0 3.604 0 8.049C0 12.038 2.925 15.258 6.75 15.949V10.373H4.718V8.049h2.032V6.275c0-2.009 1.195-3.118 3.027-3.118.883 0 1.802.158 1.802.158v1.98h-1.016c-.998 0-1.309.619-1.309 1.254v1.508h2.228l-.356 2.324H9.237v5.576C13.075 15.258 16 12.038 16 8.049z" fill="#1877F2"/>
+    </svg>`,
+    
+    'instagram': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="1.5" width="13" height="13" rx="3" stroke="#E1306C" stroke-width="1.5"/>
+      <circle cx="8" cy="8" r="3" stroke="#E1306C" stroke-width="1.5"/>
+      <circle cx="12" cy="4" r="1" fill="#E1306C"/>
+    </svg>`,
+    
+    'teams': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1h3c.28 0 .5.22.5.5v3c0 .28-.22.5-.5.5h-3A.5.5 0 016.5 4.5v-3C6.5 1.22 6.72 1 7 1z" fill="#6264A7"/>
+      <path d="M12 6.5v3c0 .28-.22.5-.5.5h-3a.5.5 0 01-.5-.5v-3c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5z" fill="#6264A7"/>
+      <path d="M6.5 9.5h3c.28 0 .5.22.5.5v3c0 .28-.22.5-.5.5h-3a.5.5 0 01-.5-.5v-3c0-.28.22-.5.5-.5z" fill="#6264A7"/>
+      <path d="M3 9.5v3c0 .28.22.5.5.5h3c.28 0 .5-.22.5-.5v-3c0-.28-.22-.5-.5-.5h-3c-.28 0-.5.22-.5.5z" fill="#6264A7"/>
+    </svg>`,
+    
+    'feedback-app': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 1H2C1.4 1 1 1.4 1 2v8c0 .6.4 1 1 1h2v2c0 .4.5.7.8.4l2.4-2.4H14c.6 0 1-.4 1-1V2c0-.6-.4-1-1-1z" fill="#6c757d"/>
+      <circle cx="5.5" cy="8.5" r="1" fill="white"/>
+      <circle cx="8" cy="8.5" r="1" fill="white"/>
+      <circle cx="10.5" cy="8.5" r="1" fill="white"/>
+    </svg>`,
+    
+    'email': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="3" width="14" height="10" rx="2" stroke="#17a2b8" stroke-width="1.5"/>
+      <path d="M1 4l7 4 7-4M2 11l5-3 5 3" stroke="#17a2b8" stroke-width="1.5"/>
+    </svg>`,
+    
+    'sponsor': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="5" r="3" fill="#28a745" stroke="#28a745" stroke-width="1"/>
+      <path d="M14 14v-1c0-1.5-1-3-3-3H5c-2 0-3 1.5-3 3v1" stroke="#28a745" stroke-width="1.5" fill="none"/>
+      <path d="M11 3l1-1M5 3l-1-1" stroke="#28a745" stroke-width="1" stroke-linecap="round"/>
+      <circle cx="7" cy="5" r="1" fill="white"/>
+      <circle cx="9" cy="5" r="1" fill="white"/>
+    </svg>`,
+    
+    'policy': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="12" height="12" rx="1" stroke="#343a40" stroke-width="1.5"/>
+      <path d="M5 6h6M5 9h4M5 12h6" stroke="#343a40" stroke-width="1.5"/>
+    </svg>`,
+    
+    'other': `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="8" r="6" stroke="#6c757d" stroke-width="1.5"/>
+      <path d="M8 5v3M8 10v1" stroke="#6c757d" stroke-width="1.5"/>
+    </svg>`
+  };
+  
+  return icons[sourceKey] || icons['other'];
+}
+
+/**
  * Get the latest date between last commit and last review
  */
 export function getLatestReviewDate(lastCommitDate = null, lastReviewDate = null) {
