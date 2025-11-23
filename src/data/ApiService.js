@@ -339,6 +339,79 @@ class ApiService {
     }
   }
 
+  toYaml(obj) {
+    const lines = [];
+    const write = (key, value, indent = '') => {
+      if (value === null || value === undefined) return;
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        lines.push(`${indent}${key}:`);
+        Object.keys(value).forEach(k => write(k, value[k], indent + '  '));
+      } else if (Array.isArray(value)) {
+        lines.push(`${indent}${key}:`);
+        value.forEach(v => {
+          if (typeof v === 'object') {
+            lines.push(`${indent}  -`);
+            Object.keys(v).forEach(k => write(k, v[k], indent + '    '));
+          } else {
+            lines.push(`${indent}  - ${String(v)}`);
+          }
+        });
+      } else {
+        const s = String(value).replace(/\r?\n/g, ' ');
+        lines.push(`${indent}${key}: ${s}`);
+      }
+    };
+    Object.keys(obj).forEach(k => write(k, obj[k]));
+    return lines.join('\n') + '\n';
+  }
+
+  async getIdeaSha(ideaId) {
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas/${ideaId}.yml?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      return data.sha || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async saveIdeaYaml(idea) {
+    try {
+      const sha = await this.getIdeaSha(idea.id);
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas/${idea.id}.yml`;
+      const headers = {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': this.githubToken ? `token ${this.githubToken}` : undefined,
+        'Content-Type': 'application/json'
+      };
+      const payload = {
+        id: idea.id,
+        conceptName: idea.conceptName || idea.title || '',
+        problemSolved: idea.problemSolved || '',
+        targetAudience: idea.targetAudience || '',
+        techStack: idea.techStack || '',
+        riskRating: idea.riskRating || '',
+        dateCreated: idea.dateCreated || new Date().toISOString(),
+        initialFeatures: idea.initialFeatures || '',
+      };
+      const yaml = this.toYaml(payload);
+      const content = this.encodeBase64(yaml);
+      const body = {
+        message: `Save idea ${idea.id} as YAML`,
+        content,
+        branch: 'main',
+        sha: sha || undefined
+      };
+      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
+      return !!(res && res.ok);
+    } catch (err) {
+      console.warn('Saving idea YAML failed:', err);
+      return false;
+    }
+  }
+
   /**
    * Get comprehensive repository data including commits and tags
    */
