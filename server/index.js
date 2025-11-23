@@ -5,20 +5,21 @@ import { URL } from 'node:url'
 const DEFAULT_API_PORT = 4000
 const DEFAULT_CACHE_TTL_SECONDS = 60
 const RATE_LIMIT_MUTATIONS_PER_MINUTE = 10
+const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute in milliseconds
 
 const port = Number(process.env.PORT || DEFAULT_API_PORT)
 const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SECONDS)
 
 /**
  * Validate GitHub token format
- * Accepts classic tokens (ghp_) and fine-grained PATs (github_pat_)
+ * Accepts classic tokens (ghp_) with exactly 36 characters and fine-grained PATs (github_pat_) with exactly 84 characters
  */
 const validateToken = (token) => {
   if (!token) return null
   const trimmed = token.trim()
 
-  // Validate format - must be ghp_ or github_pat_ followed by valid characters
-  if (!trimmed.match(/^(ghp_|github_pat_)[A-Za-z0-9_]{36,}$/)) {
+  // Validate format - classic tokens have exactly 36 chars after prefix, fine-grained have exactly 84
+  if (!trimmed.match(/^(ghp_[a-zA-Z0-9_]{36}|github_pat_[a-zA-Z0-9_]{84})$/)) {
     console.error('Invalid GitHub token format detected')
     return null
   }
@@ -110,12 +111,12 @@ const checkRateLimit = (ip, method) => {
 
   const now = Date.now()
   const key = ip
-  const record = rateLimitMap.get(key) || { count: 0, resetAt: now + 60000 }
+  const record = rateLimitMap.get(key) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
 
   // Reset if window expired
   if (now > record.resetAt) {
     record.count = 0
-    record.resetAt = now + 60000
+    record.resetAt = now + RATE_LIMIT_WINDOW_MS
   }
 
   // Check limit
@@ -131,7 +132,7 @@ const checkRateLimit = (ip, method) => {
 const server = http.createServer(async (req, res) => {
   const method = req.method || 'GET'
   const url = new URL(req.url, `http://${req.headers.host}`)
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown'
+  const clientIp = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown'
 
   if (method === 'OPTIONS') {
     return send(res, 204, {}, '')
@@ -161,7 +162,7 @@ const server = http.createServer(async (req, res) => {
       cache: {
         size: cache.size,
         maxSize: cache.maxSize,
-        utilization: Math.round((cache.size / cache.maxSize) * 100) + '%'
+        utilization: cache.maxSize > 0 ? (Math.round((cache.size / cache.maxSize) * 100) + '%') : 'N/A'
       }
     }
     try {

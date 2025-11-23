@@ -81,7 +81,7 @@ export function calculateHealth(app) {
   if (app.lastCommitDate) {
     const daysSinceCommit = daysBetween(app.lastCommitDate, now);
     // Use HEALTH_THRESHOLDS for scoring
-    if (daysSinceCommit > 90) healthScore += 3;
+    if (daysSinceCommit > HEALTH_THRESHOLDS.STALE) healthScore += 3;
     else if (daysSinceCommit > HEALTH_THRESHOLDS.WARNING) healthScore += 2;
     else if (daysSinceCommit > HEALTH_THRESHOLDS.HEALTHY) healthScore += 1;
   } else {

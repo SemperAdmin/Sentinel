@@ -22,6 +22,7 @@ export const CACHE_BUST_PARAM = '__cache_bust'; // Cache busting parameter name
 export const HEALTH_THRESHOLDS = {
   HEALTHY: 30,    // Green: Recently active (< 30 days)
   WARNING: 60,    // Yellow: Needs attention (30-60 days)
+  STALE: 90,      // Red: Stale/inactive (> 90 days)
   CRITICAL: Infinity  // Red: Critical/overdue (> 60 days)
 };
 

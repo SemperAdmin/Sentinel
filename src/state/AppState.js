@@ -73,7 +73,7 @@
  * @property {string|null} ideasError - Ideas error message
  * @property {boolean} loading - Global loading state
  * @property {string|null} error - Global error message
- * @property {'overview'|'todo'|'notes'} activeTab - Active tab in detail view
+ * @property {'overview'|'todo'} activeTab - Active tab in detail view
  * @property {boolean} showIdeaForm - Whether idea form is shown
  * @property {Idea|null} editingIdea - Idea being edited
  * @property {boolean} autoRepoSync - Auto repo sync enabled
@@ -112,7 +112,7 @@ class AppState {
       error: null,
 
       // Active tab in detail view
-      activeTab: 'overview', // overview, todo, notes
+      activeTab: 'overview', // overview, todo
 
       // Form state
       showIdeaForm: false,
@@ -285,15 +285,15 @@ class AppState {
 
   /**
    * Set active tab in detail view
-   * @param {'overview'|'todo'|'notes'} tab - Tab to display
+   * @param {'overview'|'todo'} tab - Tab to display
    * @returns {void}
    */
   setActiveTab(tab) {
-    if (!['overview', 'todo', 'notes'].includes(tab)) {
+    if (!['overview', 'todo'].includes(tab)) {
       console.warn('Invalid tab:', tab);
       return;
     }
-    
+
     this.setState({ activeTab: tab });
   }
 
