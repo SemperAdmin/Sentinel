@@ -33,7 +33,7 @@
     "id": "1763853190533",
     "title": "MEMORANDUMS Type",
     "description": "A memorandum provides a less formal way to correspond within an activity/command.  Subordinates within that activity or command may use a memorandum to correspond directly with each other on routine official business or as an informal means of communication. ",
-    "priority": "medium",
+    "priority": "low",
     "dueDate": null,
     "completed": true,
     "createdAt": "2025-11-22T23:13:10.533Z",
