@@ -1,9 +1,32 @@
 import http from 'node:http'
 import { URL } from 'node:url'
 
-const port = Number(process.env.PORT || 4000)
-const token = String(process.env.GITHUB_TOKEN || '').trim()
-const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || 60)
+// Constants
+const DEFAULT_API_PORT = 4000
+const DEFAULT_CACHE_TTL_SECONDS = 60
+const RATE_LIMIT_MUTATIONS_PER_MINUTE = 10
+
+const port = Number(process.env.PORT || DEFAULT_API_PORT)
+const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SECONDS)
+
+/**
+ * Validate GitHub token format
+ * Accepts classic tokens (ghp_) and fine-grained PATs (github_pat_)
+ */
+const validateToken = (token) => {
+  if (!token) return null
+  const trimmed = token.trim()
+
+  // Validate format - must be ghp_ or github_pat_ followed by valid characters
+  if (!trimmed.match(/^(ghp_|github_pat_)[A-Za-z0-9_]{36,}$/)) {
+    console.error('Invalid GitHub token format detected')
+    return null
+  }
+
+  return trimmed
+}
+
+const token = validateToken(process.env.GITHUB_TOKEN || '')
 
 const getAuthHeader = () => {
   if (!token) return undefined
@@ -24,15 +47,49 @@ const send = (res, status, headers, body) => {
 }
 
 const cache = new Map()
+const rateLimitMap = new Map() // Track mutations per IP
 
 const cacheKey = (method, url) => `${method}:${url}`
+
+/**
+ * Simple rate limiting for mutations
+ * Allows max mutations per minute per IP (configurable via constant)
+ */
+const checkRateLimit = (ip, method) => {
+  if (['GET', 'HEAD'].includes(method)) return true
+
+  const now = Date.now()
+  const key = ip
+  const record = rateLimitMap.get(key) || { count: 0, resetAt: now + 60000 }
+
+  // Reset if window expired
+  if (now > record.resetAt) {
+    record.count = 0
+    record.resetAt = now + 60000
+  }
+
+  // Check limit
+  if (record.count >= RATE_LIMIT_MUTATIONS_PER_MINUTE) {
+    return false
+  }
+
+  record.count++
+  rateLimitMap.set(key, record)
+  return true
+}
 
 const server = http.createServer(async (req, res) => {
   const method = req.method || 'GET'
   const url = new URL(req.url, `http://${req.headers.host}`)
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown'
 
   if (method === 'OPTIONS') {
     return send(res, 204, {}, '')
+  }
+
+  // Rate limiting check for mutations
+  if (!checkRateLimit(clientIp, method)) {
+    return send(res, 429, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'rate_limit_exceeded' }))
   }
 
   if (url.pathname === '/health' || url.pathname === '/healthz') {

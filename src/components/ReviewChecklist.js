@@ -1,5 +1,6 @@
 import apiService from '../data/ApiService.js'
 import { formatDate } from '../utils/helpers.js'
+import { unwrapOr } from '../utils/result.js'
 
 export class ReviewChecklist {
   constructor(app, initialReview, onComplete) {
@@ -164,7 +165,8 @@ export class ReviewChecklist {
 
   async save(complete) {
     if (complete) this.review.completedAt = new Date().toISOString()
-    const all = await apiService.fetchAppReviews(this.app.id)
+    const allResult = await apiService.fetchAppReviews(this.app.id)
+    const all = unwrapOr(allResult, [])
     const idx = all.findIndex(r => r.id === this.review.id)
     const next = [...all]
     if (idx >= 0) next[idx] = this.review
