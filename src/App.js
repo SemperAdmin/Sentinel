@@ -68,12 +68,29 @@ class App {
         if (envToken) {
           window.GITHUB_API_KEY = envToken;
         }
+        const envTokenAlt = import.meta?.env?.VITE_GITHUB_API_KEY_ALT || '';
+        if (envTokenAlt) {
+          window.BACKUP_GITHUB_API_KEY = envTokenAlt;
+        }
       } catch (e) {}
 
       // Subscribe to state changes
       this.subscribeToState();
       
-      // Load initial data
+      const valid = await apiService.validateToken();
+      if (!valid) {
+        window.GITHUB_API_KEY = '';
+        apiService.refreshTokenFromEnv();
+      }
+      try {
+        const rl = await apiService.getRateLimitStatus();
+        if (rl && rl.resources && rl.resources.core) {
+          const r = rl.resources.core;
+          const resetAt = r.reset ? new Date(r.reset * 1000).toISOString() : null;
+          console.log(`GitHub rate (core): ${r.remaining}/${r.limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
+        }
+      } catch (_) {}
+
       await this.loadInitialData();
       
       // Set initial view
@@ -450,7 +467,12 @@ class App {
         repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
       } else {
         console.log('Fetching user repositories from GitHub...');
-        repos = await apiService.fetchUserRepos();
+        try {
+          repos = await apiService.fetchUserRepos();
+        } catch (err) {
+          console.warn('Authenticated repo fetch failed, falling back to public repos:', err);
+          repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
+        }
       }
       
       // Filter to only public repositories and exclude image/asset repos
@@ -484,8 +506,8 @@ class App {
       console.log(`Successfully fetched ${apps.length} repositories from GitHub`);
       return apps;
     } catch (error) {
-      console.error('Failed to fetch user repositories:', error);
-      throw new Error('Failed to fetch repositories from GitHub: ' + error.message);
+      console.error('Failed to fetch user repositories, proceeding with empty portfolio:', error);
+      return [];
     }
   }
 
