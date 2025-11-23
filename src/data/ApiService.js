@@ -15,7 +15,7 @@ import {
 
 class ApiService {
   constructor() {
-    this.baseUrl = (import.meta?.env?.VITE_API_BASE_URL || '/api');
+    this.baseUrl = window.API_BASE_URL || (import.meta?.env?.VITE_API_BASE_URL || '/api');
     this.retryAttempts = GITHUB_API_RETRY_ATTEMPTS;
     this.retryDelay = GITHUB_API_RETRY_BASE_DELAY;
     this.maxDelay = GITHUB_API_MAX_RETRY_DELAY;
