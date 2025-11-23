@@ -823,7 +823,7 @@ class App {
         async (updatedApp) => {
           await this.saveAppData(state.currentApp.id, updatedApp);
           try {
-            const api = new (await import('./data/ApiService.js')).default();
+            const api = (await import('./data/ApiService.js')).default;
             const appId = state.currentApp.id;
             const tasks = updatedApp.todos || state.currentApp.todos || [];
             await api.triggerSaveTasks(appId, tasks);

@@ -1025,7 +1025,7 @@ export class TabbedDetail {
       saveTasksRepoBtn.addEventListener('click', async () => {
         try {
           const apiModule = await import('../data/ApiService.js');
-          const api = new apiModule.default();
+          const api = apiModule.default;
           const res = await api.triggerSaveTasks(this.app.id, this.app.todos || []);
           const original = saveTasksRepoBtn.innerHTML;
           if (res && res.ok) {
