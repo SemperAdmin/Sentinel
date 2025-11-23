@@ -14,5 +14,18 @@
     "effortEstimate": "Small",
     "completionDate": null,
     "rejectionReason": ""
+  },
+  {
+    "id": "1763936064155",
+    "title": "Correct UI of Create account ranks",
+    "description": "The below need to update the color format as it is not aligned with app\n<optgroup label=\"Officer\">\n<optgroup label=\"Warrant Officer\">\n<optgroup label=\"Enlisted\">",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-23T22:14:24.155Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
