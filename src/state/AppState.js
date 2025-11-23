@@ -3,51 +3,142 @@
  * Manages application state and provides methods for state mutations
  */
 
+/**
+ * @typedef {Object} App
+ * @property {string} id - Unique identifier for the app
+ * @property {string} repoUrl - GitHub repository URL
+ * @property {string} platform - Platform (Web, iOS, Android, etc.)
+ * @property {string} status - Status (Active, Archived, etc.)
+ * @property {string|null} lastReviewDate - ISO date of last review
+ * @property {string|null} nextReviewDate - ISO date of next scheduled review
+ * @property {number} pendingTodos - Count of pending todos
+ * @property {string} notes - Description or notes
+ * @property {string|null} lastCommitDate - ISO date of last commit
+ * @property {string|null} latestTag - Latest git tag
+ * @property {number} stars - GitHub stars count
+ * @property {string} language - Primary programming language
+ * @property {boolean} isPrivate - Whether repo is private
+ * @property {boolean} archived - Whether repo is archived
+ * @property {Array<Todo>} todos - Array of todos
+ * @property {Array<Improvement>} improvements - Array of improvements
+ * @property {string} developerNotes - Developer notes
+ * @property {number} improvementBudget - Budget percentage for improvements
+ * @property {string} currentSprint - Current sprint identifier
+ */
+
+/**
+ * @typedef {Object} Todo
+ * @property {string} id - Unique identifier
+ * @property {string} title - Todo title
+ * @property {string} description - Todo description
+ * @property {string} priority - Priority level (low, medium, high)
+ * @property {string|null} dueDate - ISO date string
+ * @property {boolean} completed - Completion status
+ * @property {string} createdAt - ISO date of creation
+ * @property {string} status - Status (Draft, Active, Completed, Rejected)
+ */
+
+/**
+ * @typedef {Object} Improvement
+ * @property {string} id - Unique identifier
+ * @property {string} title - Improvement title
+ * @property {string} description - Improvement description
+ * @property {number} effort - Effort estimate (1-5)
+ * @property {number} impact - Impact estimate (1-5)
+ * @property {string} status - Status (Pending, In Progress, Completed)
+ */
+
+/**
+ * @typedef {Object} Idea
+ * @property {string} id - Unique identifier
+ * @property {string} conceptName - Name of the idea
+ * @property {string} problemSolved - Problem this idea solves
+ * @property {string} targetAudience - Target audience
+ * @property {string} techStack - Technology stack
+ * @property {string} riskRating - Risk rating (Low, Medium, High)
+ * @property {string} dateCreated - ISO date of creation
+ */
+
+/**
+ * @typedef {Object} State
+ * @property {'dashboard'|'detail'|'ideas'} currentView - Current view
+ * @property {App[]} portfolio - Portfolio of apps
+ * @property {boolean} portfolioLoading - Portfolio loading state
+ * @property {string|null} portfolioError - Portfolio error message
+ * @property {App|null} currentApp - Currently selected app
+ * @property {boolean} currentAppLoading - Current app loading state
+ * @property {string|null} currentAppError - Current app error message
+ * @property {Idea[]} ideas - Array of ideas
+ * @property {boolean} ideasLoading - Ideas loading state
+ * @property {string|null} ideasError - Ideas error message
+ * @property {boolean} loading - Global loading state
+ * @property {string|null} error - Global error message
+ * @property {'overview'|'todo'|'notes'} activeTab - Active tab in detail view
+ * @property {boolean} showIdeaForm - Whether idea form is shown
+ * @property {Idea|null} editingIdea - Idea being edited
+ * @property {boolean} autoRepoSync - Auto repo sync enabled
+ * @property {'alphabetical'|'lastReviewed'|'nextReview'|'activeTodo'} sortOrder - Sort order
+ */
+
+/**
+ * @callback StateListener
+ * @param {State} state - Current state
+ * @returns {void}
+ */
+
 class AppState {
   constructor() {
     this.state = {
       // Current view state
       currentView: 'dashboard', // dashboard, detail, ideas
-      
+
       // Portfolio data
       portfolio: [],
       portfolioLoading: false,
       portfolioError: null,
-      
+
       // Current app detail
       currentApp: null,
       currentAppLoading: false,
       currentAppError: null,
-      
+
       // Ideas data
       ideas: [],
       ideasLoading: false,
       ideasError: null,
-      
+
       // UI state
       loading: false,
       error: null,
-      
+
       // Active tab in detail view
       activeTab: 'overview', // overview, todo, notes
-      
+
       // Form state
       showIdeaForm: false,
       editingIdea: null,
       autoRepoSync: false
       ,sortOrder: 'alphabetical'
     };
-    
+
     this.listeners = new Set();
     this.initialized = false;
+
+    // Race condition prevention
+    this.isNotifying = false;
+    this.pendingNotify = false;
+    this.batchTimeout = null;
+    this.batchedUpdates = null;
   }
 
   /**
    * Subscribe to state changes
+   * @param {StateListener} listener - Callback function to invoke on state changes
+   * @returns {Function} Unsubscribe function
    */
   subscribe(listener) {
     this.listeners.add(listener);
-    
+
     // Return unsubscribe function
     return () => {
       this.listeners.delete(listener);
@@ -56,19 +147,40 @@ class AppState {
 
   /**
    * Notify all listeners of state changes
+   * Prevents re-entrant notifications to avoid race conditions
+   * @returns {void}
    */
   notify() {
-    this.listeners.forEach(listener => {
-      try {
-        listener(this.state);
-      } catch (error) {
-        console.error('Error in state listener:', error);
+    // Prevent re-entrant notifications
+    if (this.isNotifying) {
+      this.pendingNotify = true;
+      return;
+    }
+
+    this.isNotifying = true;
+
+    try {
+      this.listeners.forEach(listener => {
+        try {
+          listener(this.state);
+        } catch (error) {
+          console.error('Error in state listener:', error);
+        }
+      });
+    } finally {
+      this.isNotifying = false;
+
+      // If a notification was requested during processing, trigger it now
+      if (this.pendingNotify) {
+        this.pendingNotify = false;
+        this.notify();
       }
-    });
+    }
   }
 
   /**
    * Get current state
+   * @returns {State} Copy of current state
    */
   getState() {
     return { ...this.state };
@@ -76,19 +188,76 @@ class AppState {
 
   /**
    * Set state (immutable update)
+   * @param {Partial<State>} updates - State updates to apply
+   * @param {boolean} [batch=false] - Whether to batch this update
+   * @returns {void}
    */
-  setState(updates) {
+  setState(updates, batch = false) {
     const prevState = this.state;
     this.state = { ...this.state, ...updates };
-    
-    // Only notify if state actually changed
-    if (JSON.stringify(prevState) !== JSON.stringify(this.state)) {
-      this.notify();
+
+    // Check if state actually changed using shallow comparison for performance
+    const hasChanged = this.hasStateChanged(prevState, this.state, updates);
+
+    if (hasChanged) {
+      if (batch) {
+        this.scheduleBatchedNotify();
+      } else {
+        this.notify();
+      }
     }
   }
 
   /**
+   * Check if state has changed using shallow comparison on updated keys
+   * More efficient than JSON.stringify for simple updates
+   * @param {State} prevState - Previous state
+   * @param {State} newState - New state
+   * @param {Partial<State>} updates - Keys that were updated
+   * @returns {boolean} True if state changed
+   * @private
+   */
+  hasStateChanged(prevState, newState, updates) {
+    // For array and object updates, use JSON comparison
+    for (const key in updates) {
+      const prevValue = prevState[key];
+      const newValue = newState[key];
+
+      // For arrays and objects, use JSON comparison
+      if (Array.isArray(newValue) || (typeof newValue === 'object' && newValue !== null)) {
+        if (JSON.stringify(prevValue) !== JSON.stringify(newValue)) {
+          return true;
+        }
+      } else {
+        // For primitives, use direct comparison
+        if (prevValue !== newValue) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Schedule a batched notification (debounced)
+   * Prevents excessive re-renders from rapid state updates
+   * @private
+   */
+  scheduleBatchedNotify() {
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout);
+    }
+
+    this.batchTimeout = setTimeout(() => {
+      this.batchTimeout = null;
+      this.notify();
+    }, 0); // Execute on next tick
+  }
+
+  /**
    * Set current view
+   * @param {'dashboard'|'detail'|'ideas'} view - View to display
+   * @returns {void}
    */
   setView(view) {
     if (!['dashboard', 'detail', 'ideas'].includes(view)) {
@@ -104,16 +273,20 @@ class AppState {
 
   /**
    * Set current app for detail view
+   * @param {App|null} app - App to display in detail view
+   * @returns {void}
    */
   setCurrentApp(app) {
-    this.setState({ 
+    this.setState({
       currentApp: app,
-      currentAppError: null 
+      currentAppError: null
     });
   }
 
   /**
    * Set active tab in detail view
+   * @param {'overview'|'todo'|'notes'} tab - Tab to display
+   * @returns {void}
    */
   setActiveTab(tab) {
     if (!['overview', 'todo', 'notes'].includes(tab)) {
@@ -177,6 +350,8 @@ class AppState {
 
   /**
    * Set portfolio data - filter to only public repositories
+   * @param {App[]} portfolio - Array of apps
+   * @returns {void}
    */
   setPortfolio(portfolio) {
     // Filter out private repositories and eventcall-images
@@ -192,9 +367,11 @@ class AppState {
 
   /**
    * Update a single app in portfolio
+   * @param {App} updatedApp - Updated app data
+   * @returns {void}
    */
   updateApp(updatedApp) {
-    const portfolio = this.state.portfolio.map(app => 
+    const portfolio = this.state.portfolio.map(app =>
       app.id === updatedApp.id ? updatedApp : app
     );
     this.setState({ portfolio });
@@ -202,6 +379,8 @@ class AppState {
 
   /**
    * Add new app to portfolio
+   * @param {App} newApp - New app to add
+   * @returns {void}
    */
   addApp(newApp) {
     const portfolio = [...this.state.portfolio, newApp];
@@ -335,6 +514,8 @@ class AppState {
 
   /**
    * Get app by ID
+   * @param {string} appId - App identifier
+   * @returns {App|undefined} App if found, undefined otherwise
    */
   getAppById(appId) {
     return this.state.portfolio.find(app => app.id === appId);
@@ -342,15 +523,52 @@ class AppState {
 
   /**
    * Get idea by ID
+   * @param {string} ideaId - Idea identifier
+   * @returns {Idea|undefined} Idea if found, undefined otherwise
    */
   getIdeaById(ideaId) {
     return this.state.ideas.find(idea => idea.id === ideaId);
   }
 
   /**
+   * Batch multiple state updates together
+   * Useful for updating multiple pieces of state without triggering multiple renders
+   * @param {Function} updateFn - Function that performs multiple setState calls
+   * @returns {void}
+   */
+  batchUpdates(updateFn) {
+    const originalSetState = this.setState.bind(this);
+    const batchedUpdates = {};
+
+    // Override setState to collect updates
+    this.setState = (updates) => {
+      Object.assign(batchedUpdates, updates);
+    };
+
+    try {
+      updateFn();
+    } finally {
+      // Restore original setState
+      this.setState = originalSetState;
+
+      // Apply all batched updates at once
+      if (Object.keys(batchedUpdates).length > 0) {
+        originalSetState(batchedUpdates);
+      }
+    }
+  }
+
+  /**
    * Reset state to initial values
+   * @returns {void}
    */
   reset() {
+    // Clear any pending batch timeout
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout);
+      this.batchTimeout = null;
+    }
+
     this.state = {
       currentView: 'dashboard',
       portfolio: [],
