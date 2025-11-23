@@ -44,7 +44,7 @@ const getAuthHeader = () => {
 const send = (res, status, headers, body) => {
   const baseHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-GitHub-Api-Version, Accept, Authorization',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
   }
   const out = { ...baseHeaders, ...headers }
