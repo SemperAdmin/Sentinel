@@ -1,0 +1,7 @@
+id: idea-1763857833013-kn2ov6cib
+conceptName: Legal Flow
+problemSolved: The primary challenge units face in processing Non-Judicial Punishment (NJP) cases is the reliance on manual, paper-based workflows that are time-consuming, prone to critical errors, and difficult to audit, potentially jeopardizing the legal integrity and timeliness required by the Uniform Code of Military Justice (UCMJ). This outdated process burdens administrative staff and commanding officers with managing numerous service-specific forms, tracking multiple strict regulatory deadlines, and manually maintaining a complete chain of custody for all documentation, leading to unnecessary delays and a lack of real-time visibility into the status of ongoing disciplinary actions. The NJP Tracker is designed to solve this by digitizing the entire process, ensuring compliance through automated document generation and creating an immutable, step-by-step audit trail from initiation to final disposition.
+targetAudience: Administrators and Legal
+techStack: Web
+riskRating: Medium
+dateCreated: 2025-11-23T00:30:33.013Z
