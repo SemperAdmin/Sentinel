@@ -2,6 +2,7 @@
  * AppState - Centralized state management for Sentinel
  * Manages application state and provides methods for state mutations
  */
+import { EXCLUDED_REPO_NAMES } from '../utils/constants.js'
 
 /**
  * @typedef {Object} App
@@ -353,15 +354,9 @@ class AppState {
    * @returns {void}
    */
   setPortfolio(portfolio) {
-    // Filter out private repositories and eventcall-images
-    const publicRepos = (portfolio || []).filter(app => !app.isPrivate && app.id !== 'eventcall-images');
+    const publicRepos = (portfolio || []).filter(app => !app.isPrivate && !EXCLUDED_REPO_NAMES.includes(app.id));
     console.log(`Setting portfolio with ${publicRepos.length} public repositories (filtered from ${portfolio?.length || 0} total)`);
-    
-    this.setState({ 
-      portfolio: publicRepos,
-      portfolioLoading: false,
-      portfolioError: null 
-    });
+    this.setState({ portfolio: publicRepos, portfolioLoading: false, portfolioError: null });
   }
 
   /**

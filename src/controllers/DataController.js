@@ -13,7 +13,8 @@ import {
   GITHUB_API_DELAY_MS,
   MAX_CONCURRENT_API_REQUESTS,
   IMPROVEMENT_BUDGET_PERCENT,
-  DEFAULT_GITHUB_USER
+  DEFAULT_GITHUB_USER,
+  EXCLUDED_REPO_NAMES
 } from '../utils/constants.js';
 
 /**
@@ -92,7 +93,7 @@ export class DataController {
   filterPortfolio(portfolio) {
     if (!portfolio || portfolio.length === 0) return [];
 
-    const filtered = portfolio.filter(app => !app.isPrivate && app.id !== 'eventcall-images');
+    const filtered = portfolio.filter(app => !app.isPrivate && !EXCLUDED_REPO_NAMES.includes(app.id));
     const removedCount = portfolio.length - filtered.length;
 
     if (removedCount > 0) {
@@ -123,7 +124,7 @@ export class DataController {
       }
 
       // Filter to only public repositories and exclude image/asset repos
-      const publicRepos = repos.filter(repo => !repo.private && repo.name !== 'eventcall-images');
+      const publicRepos = repos.filter(repo => !repo.private && !EXCLUDED_REPO_NAMES.includes(repo.name));
       console.log(`Filtering ${repos.length} total repos to ${publicRepos.length} public repos (excluded eventcall-images)`);
 
       // Convert GitHub repositories to app format
