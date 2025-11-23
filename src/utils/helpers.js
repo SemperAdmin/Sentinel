@@ -3,6 +3,8 @@
  * Date formatting, health calculations, and other utility functions
  */
 
+import { HEALTH_THRESHOLDS, HEALTH_COLORS } from './constants.js';
+
 /**
  * Format date to readable string
  */
@@ -71,20 +73,21 @@ export function isOverdue(dateString) {
  */
 export function calculateHealth(app) {
   if (!app) return 'warning';
-  
+
   let healthScore = 0;
   const now = new Date();
-  
+
   // Check last commit date
   if (app.lastCommitDate) {
     const daysSinceCommit = daysBetween(app.lastCommitDate, now);
+    // Use HEALTH_THRESHOLDS for scoring
     if (daysSinceCommit > 90) healthScore += 3;
-    else if (daysSinceCommit > 60) healthScore += 2;
-    else if (daysSinceCommit > 30) healthScore += 1;
+    else if (daysSinceCommit > HEALTH_THRESHOLDS.WARNING) healthScore += 2;
+    else if (daysSinceCommit > HEALTH_THRESHOLDS.HEALTHY) healthScore += 1;
   } else {
     healthScore += 2; // Penalty for no commit data
   }
-  
+
   // Check review status
   if (app.nextReviewDate) {
     const daysUntilReview = daysBetween(now, app.nextReviewDate);
@@ -94,11 +97,11 @@ export function calculateHealth(app) {
   } else {
     healthScore += 1; // Penalty for no review date
   }
-  
+
   // Check pending todos
   if (app.pendingTodos > 5) healthScore += 2;
   else if (app.pendingTodos > 2) healthScore += 1;
-  
+
   // Determine health level
   if (healthScore >= 6) return 'critical';
   if (healthScore >= 3) return 'warning';
@@ -110,11 +113,11 @@ export function calculateHealth(app) {
  */
 export function getHealthColor(health) {
   const colors = {
-    good: '#28a745',      // Green
-    warning: '#ffc107',   // Orange
-    critical: '#dc3545'   // Red
+    good: HEALTH_COLORS.HEALTHY,
+    warning: HEALTH_COLORS.WARNING,
+    critical: HEALTH_COLORS.CRITICAL
   };
-  return colors[health] || colors.warning;
+  return colors[health] || HEALTH_COLORS.UNKNOWN;
 }
 
 /**

@@ -4,6 +4,7 @@
 
 import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify } from '../utils/helpers.js';
 import appState from '../state/AppState.js';
+import { unwrapOr } from '../utils/result.js';
 
 export class TabbedDetail {
   constructor(app, onNotesSave, onTabChange, onReviewComplete) {
@@ -1139,7 +1140,8 @@ export class TabbedDetail {
   startReviewChecklist() {
     (async () => {
       const mod = await import('./ReviewChecklist.js');
-      const reviews = await (await import('../data/ApiService.js')).default.fetchAppReviews(this.app.id);
+      const reviewsResult = await (await import('../data/ApiService.js')).default.fetchAppReviews(this.app.id);
+      const reviews = unwrapOr(reviewsResult, []);
       let current = null;
       if (Array.isArray(reviews) && reviews.length > 0) {
         const last = reviews[reviews.length - 1];
@@ -1156,7 +1158,8 @@ export class TabbedDetail {
   async loadPastReviews() {
     try {
       const api = (await import('../data/ApiService.js')).default;
-      const arr = await api.fetchAppReviews(this.app.id);
+      const arrResult = await api.fetchAppReviews(this.app.id);
+      const arr = unwrapOr(arrResult, []);
       const el = this.element.querySelector('#past-reviews');
       if (!el) return;
       if (!arr || arr.length === 0) {
@@ -1186,7 +1189,8 @@ export class TabbedDetail {
         if (!btn) return;
         const id = btn.getAttribute('data-review-id');
         const api2 = (await import('../data/ApiService.js')).default;
-        const list = await api2.fetchAppReviews(this.app.id);
+        const listResult = await api2.fetchAppReviews(this.app.id);
+        const list = unwrapOr(listResult, []);
         const review = Array.isArray(list) ? list.find(x => x && x.id === id) : null;
         const mod = await import('./ReviewChecklist.js');
         const checklist = new mod.ReviewChecklist(this.app, review, (appId) => {

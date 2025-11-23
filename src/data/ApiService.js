@@ -3,14 +3,24 @@
  * Handles external API calls for repository metadata
  */
 
+import { ok, err } from '../utils/result.js';
+import {
+  GITHUB_API_RETRY_ATTEMPTS,
+  GITHUB_API_RETRY_BASE_DELAY,
+  GITHUB_API_MAX_RETRY_DELAY,
+  GITHUB_API_REQUEST_TIMEOUT,
+  DEFAULT_MANAGER_REPO,
+  DEFAULT_REPOS_PER_PAGE
+} from '../utils/constants.js';
+
 class ApiService {
   constructor() {
     this.baseUrl = (import.meta?.env?.VITE_API_BASE_URL || '/api');
-    this.retryAttempts = 3;
-    this.retryDelay = 1000; // Start with 1 second
-    this.maxDelay = 30000; // Max 30 seconds
-    this.requestTimeout = 15000;
-    this.managerRepo = window.MANAGER_REPO_FULL_NAME || '';
+    this.retryAttempts = GITHUB_API_RETRY_ATTEMPTS;
+    this.retryDelay = GITHUB_API_RETRY_BASE_DELAY;
+    this.maxDelay = GITHUB_API_MAX_RETRY_DELAY;
+    this.requestTimeout = GITHUB_API_REQUEST_TIMEOUT;
+    this.managerRepo = window.MANAGER_REPO_FULL_NAME || DEFAULT_MANAGER_REPO;
     this.tasksCache = new Map();
   }
 
@@ -201,26 +211,26 @@ class ApiService {
   }
 
   async fetchRepoTasks(appId) {
-    if (!this.managerRepo || !appId) {
-      return null;
-    }
-    if (this.tasksCache.has(appId)) {
-      return this.tasksCache.get(appId);
-    }
-    const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
-    const res = await this.makeApiRequest(url);
-    if (!res || !res.ok) {
-      return null;
-    }
-    const data = await res.json();
-    const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
     try {
+      if (!this.managerRepo || !appId) {
+        return err('Manager repo or app ID not configured');
+      }
+      if (this.tasksCache.has(appId)) {
+        return ok(this.tasksCache.get(appId));
+      }
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) {
+        return err('Failed to fetch tasks', res?.status);
+      }
+      const data = await res.json();
+      const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
       const parsed = JSON.parse(content);
       const tasks = Array.isArray(parsed) ? parsed : [];
       this.tasksCache.set(appId, tasks);
-      return tasks;
-    } catch (_) {
-      return null;
+      return ok(tasks);
+    } catch (error) {
+      return err(error);
     }
   }
 
@@ -236,13 +246,20 @@ class ApiService {
     try {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/portfolio/overview.json?ref=main`;
       const res = await this.makeApiRequest(url);
-      if (!res || !res.ok) return null;
+      if (!res || !res.ok) {
+        return err('Failed to fetch portfolio overview', res?.status);
+      }
       const data = await res.json();
       const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
       const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed : null;
-    } catch (_) {
-      return null;
+
+      if (!Array.isArray(parsed)) {
+        return err('Invalid portfolio data format');
+      }
+
+      return ok(parsed);
+    } catch (error) {
+      return err(error);
     }
   }
 
@@ -250,13 +267,16 @@ class ApiService {
     try {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
       const res = await this.makeApiRequest(url);
-      if (!res || !res.ok) return [];
+      if (!res || !res.ok) {
+        return err('Failed to fetch reviews', res?.status);
+      }
       const data = await res.json();
       const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
       const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (_) {
-      return [];
+      const reviews = Array.isArray(parsed) ? parsed : [];
+      return ok(reviews);
+    } catch (error) {
+      return err(error);
     }
   }
 
@@ -468,15 +488,15 @@ class ApiService {
    */
   async fetchUserRepos() {
     console.log('Fetching public user repositories from GitHub...');
-    
+
     // Fetch only public repositories
-    const repos = await this.fetchWithRetry('/user/repos', { 
-      per_page: 100, 
-      sort: 'updated', 
+    const repos = await this.fetchWithRetry('/user/repos', {
+      per_page: DEFAULT_REPOS_PER_PAGE,
+      sort: 'updated',
       direction: 'desc',
       visibility: 'public'  // Only fetch public repositories
     });
-    
+
     console.log(`Found ${repos.length} public repositories`);
     return repos;
   }
@@ -486,7 +506,7 @@ class ApiService {
   async fetchPublicReposForUser(username) {
     console.log(`Fetching public repositories for user: ${username}`);
     const repos = await this.fetchWithRetry(`/users/${username}/repos`, {
-      per_page: 100,
+      per_page: DEFAULT_REPOS_PER_PAGE,
       sort: 'updated',
       direction: 'desc'
     });
