@@ -20,6 +20,13 @@ class ApiService {
     this.githubToken = this.tokens[0] || '';
   }
 
+  getAuthHeader() {
+    if (!this.githubToken) return undefined;
+    const token = String(this.githubToken);
+    const isFineGrained = token.startsWith('github_pat_');
+    return `${isFineGrained ? 'Bearer' : 'token'} ${token}`;
+  }
+
   /**
    * Fetch repository data with exponential backoff retry logic
    */
@@ -154,7 +161,7 @@ class ApiService {
 
     // Add authentication if API key is provided
     if (this.githubToken) {
-      headers['Authorization'] = `token ${this.githubToken}`;
+      headers['Authorization'] = this.getAuthHeader();
       console.log('Using GitHub API token for authentication');
     } else {
       console.log('No GitHub API token configured, using unauthenticated requests');
@@ -246,7 +253,7 @@ class ApiService {
     }
     const headers = {
       'Accept': 'application/vnd.github+json',
-      'Authorization': this.githubToken ? `token ${this.githubToken}` : undefined,
+      'Authorization': this.getAuthHeader(),
       'Content-Type': 'application/json'
     };
     const body = {
@@ -318,7 +325,7 @@ class ApiService {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
-        'Authorization': this.githubToken ? `token ${this.githubToken}` : undefined,
+        'Authorization': this.getAuthHeader(),
         'Content-Type': 'application/json'
       };
       const arr = Array.isArray(tasks) ? tasks.slice() : [];
@@ -383,7 +390,7 @@ class ApiService {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas/${idea.id}.yml`;
       const headers = {
         'Accept': 'application/vnd.github+json',
-        'Authorization': this.githubToken ? `token ${this.githubToken}` : undefined,
+        'Authorization': this.getAuthHeader(),
         'Content-Type': 'application/json'
       };
       const payload = {
