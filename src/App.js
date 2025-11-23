@@ -3,6 +3,12 @@
  * Coordinates all components, state management, and data operations
  */
 
+/**
+ * @typedef {import('./state/AppState.js').App} App
+ * @typedef {import('./state/AppState.js').Idea} Idea
+ * @typedef {import('./state/AppState.js').State} State
+ */
+
 import dataStore from './data/DataStore.js';
 import apiService from './data/ApiService.js';
 import appState from './state/AppState.js';
@@ -24,6 +30,7 @@ import {
 import { batchProcess } from './utils/batchProcessor.js';
 import errorHandler, { ErrorType, ErrorSeverity, RecoveryStrategies } from './utils/errorHandler.js';
 import { LoadingStateManager } from './utils/loadingState.js';
+import DataController from './controllers/DataController.js';
 
 class App {
   constructor() {
@@ -33,6 +40,7 @@ class App {
     this.initialized = false;
     this.DEFAULT_GITHUB_USER = DEFAULT_GITHUB_USER;
     this.loadingManager = new LoadingStateManager();
+    this.dataController = new DataController();
   }
 
   /**
@@ -397,103 +405,27 @@ class App {
 
   /**
    * Load initial data from data store and GitHub API
+   * @returns {Promise<void>}
    */
   async loadInitialData() {
     try {
-      // Prefer scheduled overview JSON with fallback to local storage
-      const portfolio = await RecoveryStrategies.withFallback(
-        // Primary: fetch from repo
-        async () => {
-          const portfolioResult = await (await import('./data/ApiService.js')).default.fetchPortfolioOverview();
-          const data = unwrapOr(portfolioResult, []);
-          if (!Array.isArray(data) || data.length === 0) {
-            throw new Error('No portfolio data in repo');
-          }
-          console.log('Loaded portfolio overview from repo JSON');
-          // Save to local store
-          for (const app of data) {
-            await dataStore.saveApp(app);
-          }
-          return data;
-        },
-        // Fallback: load from local storage
-        async () => {
-          console.log('Falling back to local portfolio data');
-          const localData = await dataStore.getPortfolio();
-          if (!localData || localData.length === 0) {
-            throw new Error('No local portfolio data available');
-          }
-          return localData;
-        }
-      ).catch(async (error) => {
-        // Ultimate fallback: fetch fresh from GitHub
-        errorHandler.logError(ErrorType.DATA, ErrorSeverity.HIGH, 'Failed to load portfolio from all sources', error);
-        console.log('Attempting to fetch fresh data from GitHub...');
-        return await this.fetchUserRepositories();
-      });
+      // Load portfolio using DataController
+      const portfolio = await this.dataController.loadPortfolioData();
 
-      // Clean up any private repositories and image repos from existing data
-      if (portfolio && portfolio.length > 0) {
-        const filteredApps = portfolio.filter(app => !app.isPrivate && app.id !== 'eventcall-images');
-        const removedCount = portfolio.length - filteredApps.length;
-        if (removedCount > 0) {
-          console.log(`Removing ${removedCount} repositories (private or eventcall-images) from existing data`);
-
-          // Specifically remove eventcall-images if it exists
-          const hasEventCallImages = portfolio.some(app => app.id === 'eventcall-images');
-          if (hasEventCallImages) {
-            console.log('Removing eventcall-images from data store...');
-            await dataStore.removeApp('eventcall-images');
-          }
-
-          // Save cleaned data back to store
-          for (const app of filteredApps) {
-            await dataStore.saveApp(app);
-          }
-          finalPortfolio = filteredApps;
-        } else {
-          finalPortfolio = portfolio;
-        }
-      } else {
-        finalPortfolio = portfolio;
-      }
-
-      appState.setPortfolio(finalPortfolio);
+      appState.setPortfolio(portfolio);
 
       // Debug: log the final portfolio
-      console.log('Final portfolio being set:', finalPortfolio.map(app => ({ id: app.id, name: app.id })));
+      console.log('Final portfolio being set:', portfolio.map(app => ({ id: app.id, name: app.id })));
 
-      // Load ideas
-      const ideas = await dataStore.getIdeas();
+      // Load ideas using DataController
+      const ideas = await this.dataController.loadIdeas();
       appState.setIdeas(ideas);
-      try {
-        const api = (await import('./data/ApiService.js')).default;
-        const remoteIdeas = await api.fetchIdeasFromRepo();
-        if (Array.isArray(remoteIdeas) && remoteIdeas.length > 0) {
-          const byId = new Map((ideas||[]).map(i => [i.id, i]));
-          const merged = [...(ideas||[])];
-          for (const ri of remoteIdeas) {
-            if (!byId.has(ri.id)) {
-              merged.push({
-                id: ri.id,
-                conceptName: ri.conceptName || ri.id,
-                problemSolved: ri.problemSolved || '',
-                targetAudience: ri.targetAudience || '',
-                techStack: ri.techStack || 'Web',
-                riskRating: ri.riskRating || 'Medium',
-                dateCreated: ri.dateCreated || new Date().toISOString()
-              });
-            }
-          }
-          appState.setIdeas(merged);
-        }
-      } catch (_) {}
 
       // If overview JSON is present, skip live GitHub calls
-      const overviewCheck = await (await import('./data/ApiService.js')).default.fetchPortfolioOverview();
+      const overviewCheck = await apiService.fetchPortfolioOverview();
       const hasOverview = unwrapOr(overviewCheck, []).length > 0;
       if (!hasOverview) {
-        this.fetchGitHubDataForApps(finalPortfolio);
+        this.fetchGitHubDataForApps(portfolio);
       }
     } catch (error) {
       errorHandler.logError(ErrorType.DATA, ErrorSeverity.CRITICAL, 'Failed to load initial data', error);
@@ -504,122 +436,28 @@ class App {
 
   /**
    * Fetch user's repositories from GitHub API
+   * Delegates to DataController
+   * @returns {Promise<App[]>} Array of apps from GitHub
    */
   async fetchUserRepositories() {
-    try {
-      // Check if API key is configured
-      let repos;
-      if (!apiService.isApiKeyConfigured()) {
-        repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
-      } else {
-        console.log('Fetching user repositories from GitHub...');
-        try {
-          repos = await apiService.fetchUserRepos();
-        } catch (err) {
-          console.warn('Authenticated repo fetch failed, falling back to public repos:', err);
-          repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
-        }
-      }
-      
-      // Filter to only public repositories and exclude image/asset repos
-      const publicRepos = repos.filter(repo => !repo.private && repo.name !== 'eventcall-images');
-      console.log(`Filtering ${repos.length} total repos to ${publicRepos.length} public repos (excluded eventcall-images)`);
-      
-      // Convert GitHub repositories to app format
-      const apps = publicRepos.map(repo => ({
-        id: repo.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        repoUrl: repo.html_url,
-        platform: 'Web', // Default to Web since your apps are web-based
-        status: 'Active',
-        lastReviewDate: null,
-        nextReviewDate: this.calculateNextReviewDate(repo.updated_at, null),
-        pendingTodos: 0,
-        notes: repo.description || 'No description available',
-        lastCommitDate: repo.updated_at,
-        latestTag: null, // Will be fetched later
-        stars: repo.stargazers_count,
-        language: repo.language,
-        isPrivate: repo.private,
-        archived: repo.archived,
-        // New fields for todos, improvements, and developer notes
-        todos: [],
-        improvements: [],
-        developerNotes: '',
-        improvementBudget: IMPROVEMENT_BUDGET_PERCENT,
-        currentSprint: 'Q1 2025'
-      }));
-      
-      console.log(`Successfully fetched ${apps.length} repositories from GitHub`);
-      return apps;
-    } catch (error) {
-      console.error('Failed to fetch user repositories, attempting public fallback:', error);
-      try {
-        const repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
-        const publicRepos = repos.filter(repo => !repo.private && repo.name !== 'eventcall-images');
-        const apps = publicRepos.map(repo => ({
-          id: repo.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-          repoUrl: repo.html_url,
-          platform: 'Web',
-          status: 'Active',
-          lastReviewDate: null,
-          nextReviewDate: this.calculateNextReviewDate(repo.updated_at, null),
-          pendingTodos: 0,
-          notes: repo.description || 'No description available',
-          lastCommitDate: repo.updated_at,
-          latestTag: null,
-          stars: repo.stargazers_count,
-          language: repo.language,
-          isPrivate: repo.private,
-          archived: repo.archived,
-          todos: [],
-          improvements: [],
-          developerNotes: '',
-          improvementBudget: IMPROVEMENT_BUDGET_PERCENT,
-          currentSprint: 'Q1 2025'
-        }));
-        console.log(`Fallback fetched ${apps.length} repositories from GitHub`);
-        return apps;
-      } catch (fallbackErr) {
-        console.error('Public fallback also failed:', fallbackErr);
-        // Provide a minimal placeholder so the UI is not empty
-        return [];
-      }
-    }
+    return await this.dataController.fetchUserRepositories();
   }
 
   /**
    * Calculate next review date based on review cycle from the latest date
-   * (either last commit or last review)
+   * Delegates to DataController
+   * @param {string|null} lastCommitDate - ISO date of last commit
+   * @param {string|null} lastReviewDate - ISO date of last review
+   * @returns {string} ISO date string for next review
    */
   calculateNextReviewDate(lastCommitDate = null, lastReviewDate = null) {
-    const reviewDate = new Date();
-
-    // Determine the latest date between last commit and last review
-    let baseDate = null;
-    if (lastCommitDate && lastReviewDate) {
-      const commitDate = new Date(lastCommitDate);
-      const reviewDateObj = new Date(lastReviewDate);
-      baseDate = commitDate > reviewDateObj ? lastCommitDate : lastReviewDate;
-    } else if (lastCommitDate) {
-      baseDate = lastCommitDate;
-    } else if (lastReviewDate) {
-      baseDate = lastReviewDate;
-    }
-
-    if (baseDate) {
-      // If we have a base date, set review to REVIEW_CYCLE_DAYS after that
-      reviewDate.setTime(new Date(baseDate).getTime());
-      reviewDate.setDate(reviewDate.getDate() + REVIEW_CYCLE_DAYS);
-    } else {
-      // If no base date, default to REVIEW_CYCLE_DAYS from now
-      reviewDate.setDate(reviewDate.getDate() + REVIEW_CYCLE_DAYS);
-    }
-
-    return reviewDate.toISOString().split('T')[0];
+    return this.dataController.calculateNextReviewDate(lastCommitDate, lastReviewDate);
   }
 
   /**
    * Mark app as reviewed - updates last review date and calculates next review
+   * @param {string} appId - App identifier
+   * @returns {Promise<void>}
    */
   async markAppAsReviewed(appId) {
     try {
@@ -651,59 +489,17 @@ class App {
 
   /**
    * Fetch GitHub data for all apps using batch processing with concurrency control
+   * Delegates to DataController
    */
   async fetchGitHubDataForApps(apps) {
     if (!apps || apps.length === 0) return;
 
-    // Check if API backend is configured
-    console.log('Checking if API backend is configured...');
-    if (!apiService.isApiKeyConfigured()) {
-      console.warn('API backend not configured. Cannot fetch live data.');
-      return;
-    }
-    console.log('API backend is configured. Proceeding with batch API calls.');
-
-    // Filter to only public repos with valid URLs
-    const shouldProcess = (app) => {
-      return !app.isPrivate && app.repoUrl && isValidGitHubUrl(app.repoUrl);
-    };
-
-    // Process function for each app
-    const processApp = async (app) => {
-      const repoData = await apiService.getComprehensiveRepoData(app.repoUrl);
-
-      // Update app with GitHub data and recalculate review date
-      const updatedApp = {
-        ...app,
-        lastCommitDate: repoData.lastCommitDate,
-        latestTag: repoData.latestTag,
-        description: repoData.description || app.description,
-        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate)
-      };
-
-      // Save to data store and update state
-      await dataStore.saveApp(updatedApp);
+    // Delegate to DataController with state update callback
+    const result = await this.dataController.fetchGitHubDataForApps(apps, (updatedApp) => {
       appState.updateApp(updatedApp);
-
-      return updatedApp;
-    };
-
-    // Batch process with concurrency control
-    const results = await batchProcess(apps, processApp, {
-      concurrency: MAX_CONCURRENT_API_REQUESTS,
-      delayMs: GITHUB_API_DELAY_MS / 2, // Reduce delay since we're batching
-      shouldProcess
     });
 
-    // Log results
-    const successCount = results.filter(r => !r.error).length;
-    const errorCount = results.filter(r => r.error).length;
-    console.log(`GitHub data fetch complete: ${successCount} apps updated, ${errorCount} errors`);
-
-    // Log errors for debugging
-    results.filter(r => r.error).forEach(({ item, error }) => {
-      console.warn(`Failed to fetch GitHub data for ${item?.id}:`, error.message);
-    });
+    return result;
   }
 
   /**
@@ -958,6 +754,8 @@ class App {
 
   /**
    * Show app detail view
+   * @param {App} app - App to display
+   * @returns {void}
    */
   showAppDetail(app) {
     console.log('🎯 APP CLICKED:', app.id);
@@ -969,6 +767,9 @@ class App {
 
   /**
    * Save developer notes
+   * @param {string} appId - App identifier
+   * @param {string} notes - Developer notes
+   * @returns {Promise<void>}
    */
   async saveDeveloperNotes(appId, notes) {
     try {
@@ -986,6 +787,9 @@ class App {
 
   /**
    * Save all app data (todos, improvements, notes, etc.)
+   * @param {string} appId - App identifier
+   * @param {Partial<App>} updatedAppData - Updated app data
+   * @returns {Promise<void>}
    */
   async saveAppData(appId, updatedAppData) {
     try {
