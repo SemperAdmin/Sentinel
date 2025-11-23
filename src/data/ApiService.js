@@ -307,6 +307,20 @@ class ApiService {
     }
   }
 
+  async fetchPortfolioOverview() {
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/portfolio/overview.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async getFileSha(appId) {
     try {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
