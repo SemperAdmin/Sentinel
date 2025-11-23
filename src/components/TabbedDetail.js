@@ -1054,8 +1054,8 @@ export class TabbedDetail {
     
     // Removed Work Management and Improvement listeners as those sections were removed
     
-    // Todo checkbox and action listeners (using event delegation)
-    this.element.addEventListener('click', (e) => {
+    if (this._boundElementClick) this.element.removeEventListener('click', this._boundElementClick);
+    this._boundElementClick = (e) => {
       // Todo action buttons
       if (e.target.matches('[data-action="edit"][data-todo-id]')) {
         const todoId = e.target.dataset.todoId;
@@ -1087,7 +1087,8 @@ export class TabbedDetail {
         this.convertImprovementToTodo(improvementId);
       }
       // Related task deletion removed with section
-    });
+    };
+    this.element.addEventListener('click', this._boundElementClick);
     
     // Add improvement button
     const addImprovementBtn = this.element.querySelector('#add-improvement-btn');
