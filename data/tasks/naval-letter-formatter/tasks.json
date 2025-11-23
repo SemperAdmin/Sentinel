@@ -62,14 +62,17 @@
     "id": "1763853273812",
     "title": "EXECUTIVE CORRESPONDENCE type",
     "description": "This section provides specific guidance on the internal and external written communication particular to the Headquarters, Department of the Navy (HqDON).  When forwarding correspondence to the Office of the Secretary of Defense (OSD), the Military Departments, the Office of the Chairman of the Joint Chiefs of Staff and the Joint Staff, the Defense Agencies, the Department of Defense (DoD) Field Activities, and all other organizational entities within the DoD and HqDON, every effort should be made to strictly adhere to prescribed formats, as deviation could unnecessarily delay processing for administrative action or complete restaffing. ",
-    "priority": "medium",
+    "priority": "high",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-22T23:14:33.812Z",
     "source": "Facebook",
     "feedbackSummary": "Any plans to add functionality to generate Ch. 12 formatted products?",
     "submittedBy": "Justin Millsap",
-    "status": "Draft"
+    "status": "Draft",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763853473349",
