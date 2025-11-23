@@ -35,6 +35,11 @@ const server = http.createServer(async (req, res) => {
     return send(res, 204, {}, '')
   }
 
+  if (url.pathname === '/health' || url.pathname === '/healthz') {
+    const info = { ok: true, time: new Date().toISOString() }
+    return send(res, 200, { 'Content-Type': 'application/json' }, Buffer.from(JSON.stringify(info)))
+  }
+
   if (!url.pathname.startsWith('/api/')) {
     return send(res, 404, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'not_found' }))
   }
