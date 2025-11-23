@@ -5,26 +5,13 @@
 
 class ApiService {
   constructor() {
-    this.baseUrl = (import.meta?.env?.DEV ? '/github' : 'https://api.github.com');
+    this.baseUrl = (import.meta?.env?.VITE_API_BASE_URL || '/api');
     this.retryAttempts = 3;
     this.retryDelay = 1000; // Start with 1 second
     this.maxDelay = 30000; // Max 30 seconds
     this.requestTimeout = 15000;
-    this.githubToken = '';
-    this.tokenValid = null;
     this.managerRepo = window.MANAGER_REPO_FULL_NAME || '';
     this.tasksCache = new Map();
-    this.tokens = [];
-    this.tokenIndex = 0;
-    this.loadTokensFromEnv();
-    this.githubToken = this.tokens[0] || '';
-  }
-
-  getAuthHeader() {
-    if (!this.githubToken) return undefined;
-    const token = String(this.githubToken);
-    const isFineGrained = token.startsWith('github_pat_');
-    return `${isFineGrained ? 'Bearer' : 'token'} ${token}`;
   }
 
   /**
@@ -159,14 +146,6 @@ class ApiService {
       'X-GitHub-Api-Version': '2022-11-28'
     };
 
-    // Add authentication if API key is provided
-    if (this.githubToken) {
-      headers['Authorization'] = this.getAuthHeader();
-      console.log('Using GitHub API token for authentication');
-    } else {
-      console.log('No GitHub API token configured, using unauthenticated requests');
-    }
-
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timeoutId = controller ? setTimeout(() => controller.abort(), this.requestTimeout) : null;
     try {
@@ -184,68 +163,10 @@ class ApiService {
         const resetAt = resetMs ? new Date(resetMs).toISOString() : null;
         console.log(`GitHub rate: ${remaining}/${limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
       }
-      if (((res.status === 403 && remaining === '0') || res.status === 401) && !attemptedRotation && this.rotateToken()) {
-        console.warn('Switching to backup token due to rate limit or unauthorized');
-        return await this.makeApiRequest(url, true);
-      }
       return res;
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
     }
-  }
-
-  loadTokensFromEnv() {
-    const sanitize = (t) => String(t || '').trim();
-    const looksLikeToken = (t) => /^ghp_[A-Za-z0-9_]+|^github_pat_[A-Za-z0-9_]+/.test(t);
-    const t1 = sanitize((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY)
-      || (typeof window !== 'undefined' ? window.GITHUB_API_KEY : '')
-      || '');
-    const t2 = sanitize((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT)
-      || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY : '')
-      || '');
-    const t3 = sanitize((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_API_KEY_ALT2)
-      || (typeof window !== 'undefined' ? window.BACKUP_GITHUB_API_KEY2 : '')
-      || '');
-    const list = [t1, t2, t3].filter(x => !!x && x !== 'YOUR_API_KEY_HERE').filter(looksLikeToken);
-    this.tokens = list;
-    this.tokenIndex = 0;
-    console.log(`Loaded ${this.tokens.length} token(s). Active token index: ${this.tokenIndex}`);
-  }
-
-  rotateToken() {
-    if (!Array.isArray(this.tokens) || this.tokens.length < 2) return false;
-    this.tokenIndex = (this.tokenIndex + 1) % this.tokens.length;
-    this.githubToken = this.tokens[this.tokenIndex] || '';
-    console.log(`Rotated to token index: ${this.tokenIndex}`);
-    return !!this.githubToken;
-  }
-
-  refreshTokenFromEnv() {
-    this.loadTokensFromEnv();
-    this.githubToken = this.tokens[0] || '';
-  }
-
-  async validateToken() {
-    this.refreshTokenFromEnv();
-    if (!Array.isArray(this.tokens) || this.tokens.length === 0) {
-      this.tokenValid = false;
-      this.githubToken = '';
-      return false;
-    }
-    for (let i = 0; i < this.tokens.length; i++) {
-      this.githubToken = this.tokens[i];
-      try {
-        const res = await this.makeApiRequest(`${this.baseUrl}/rate_limit`);
-        if (res && res.ok) {
-          this.tokenIndex = i;
-          this.tokenValid = true;
-          return true;
-        }
-      } catch (_) {}
-    }
-    this.tokenValid = false;
-    this.githubToken = '';
-    return false;
   }
 
   /**
@@ -258,7 +179,6 @@ class ApiService {
     }
     const headers = {
       'Accept': 'application/vnd.github+json',
-      'Authorization': this.getAuthHeader(),
       'Content-Type': 'application/json'
     };
     const body = {
@@ -358,7 +278,6 @@ class ApiService {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
-        'Authorization': this.getAuthHeader(),
         'Content-Type': 'application/json'
       };
       const pretty = JSON.stringify(Array.isArray(reviews) ? reviews : [], null, 2) + "\n";
@@ -394,7 +313,6 @@ class ApiService {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
-        'Authorization': this.getAuthHeader(),
         'Content-Type': 'application/json'
       };
       const arr = Array.isArray(tasks) ? tasks.slice() : [];
@@ -459,7 +377,6 @@ class ApiService {
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas/${idea.id}.yml`;
       const headers = {
         'Accept': 'application/vnd.github+json',
-        'Authorization': this.getAuthHeader(),
         'Content-Type': 'application/json'
       };
       const payload = {
@@ -581,9 +498,8 @@ class ApiService {
    * Check if API key is configured
    */
   isApiKeyConfigured() {
-    this.refreshTokenFromEnv();
-    const configured = Array.isArray(this.tokens) && this.tokens.length > 0 && this.tokenValid !== false && !!this.githubToken;
-    console.log('API key configured (env/window):', configured);
+    const configured = !!this.baseUrl;
+    console.log('API backend configured:', configured);
     return configured;
   }
 
@@ -690,7 +606,7 @@ class ApiService {
     return {
       owner: match[1],
       repo: match[2].replace(/\.git$/, ''),
-      apiUrl: `https://api.github.com/repos/${match[1]}/${match[2].replace(/\.git$/, '')}`
+      apiUrl: `${this.baseUrl}/repos/${match[1]}/${match[2].replace(/\.git$/, '')}`
     };
   }
 }

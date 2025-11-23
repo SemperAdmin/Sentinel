@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: sentinel-api
+    env: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CACHE_TTL_SECONDS
+        value: "60"
+      - key: NODE_VERSION
+        value: "18.20.8"
+
+  - type: static_site
+    name: sentinel-frontend
+    plan: free
+    buildCommand: npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://sentinel-api.onrender.com/api

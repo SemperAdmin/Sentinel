@@ -62,54 +62,12 @@ class App {
       // Set up event listeners
       this.setupEventListeners();
       
-      // Hydrate API key from Vite env
-      try {
-        const envToken = import.meta?.env?.VITE_GITHUB_API_KEY || '';
-        if (envToken) {
-          window.GITHUB_API_KEY = envToken;
-        }
-        const envTokenAlt = import.meta?.env?.VITE_GITHUB_API_KEY_ALT || '';
-        if (envTokenAlt) {
-          window.BACKUP_GITHUB_API_KEY = envTokenAlt;
-        }
-      } catch (e) {}
-
-      try {
-        const params = new URLSearchParams(window.location.search || '');
-        const qsToken = params.get('token') || '';
-        const qsTokenAlt = params.get('token_alt') || '';
-        const qsTokenAlt2 = params.get('token_alt2') || '';
-        const lsToken = localStorage.getItem('GITHUB_API_KEY') || '';
-        const lsTokenAlt = localStorage.getItem('BACKUP_GITHUB_API_KEY') || '';
-        const lsTokenAlt2 = localStorage.getItem('BACKUP_GITHUB_API_KEY2') || '';
-        if (qsToken) {
-          window.GITHUB_API_KEY = qsToken;
-          localStorage.setItem('GITHUB_API_KEY', qsToken);
-        } else if (lsToken && !window.GITHUB_API_KEY) {
-          window.GITHUB_API_KEY = lsToken;
-        }
-        if (qsTokenAlt) {
-          window.BACKUP_GITHUB_API_KEY = qsTokenAlt;
-          localStorage.setItem('BACKUP_GITHUB_API_KEY', qsTokenAlt);
-        } else if (lsTokenAlt && !window.BACKUP_GITHUB_API_KEY) {
-          window.BACKUP_GITHUB_API_KEY = lsTokenAlt;
-        }
-        if (qsTokenAlt2) {
-          window.BACKUP_GITHUB_API_KEY2 = qsTokenAlt2;
-          localStorage.setItem('BACKUP_GITHUB_API_KEY2', qsTokenAlt2);
-        } else if (lsTokenAlt2 && !window.BACKUP_GITHUB_API_KEY2) {
-          window.BACKUP_GITHUB_API_KEY2 = lsTokenAlt2;
-        }
-      } catch (_) {}
+      
 
       // Subscribe to state changes
       this.subscribeToState();
       
-      const valid = await apiService.validateToken();
-      if (!valid) {
-        window.GITHUB_API_KEY = '';
-        apiService.refreshTokenFromEnv();
-      }
+      
       try {
         const rl = await apiService.getRateLimitStatus();
         if (rl && rl.resources && rl.resources.core) {
@@ -129,9 +87,7 @@ class App {
       
       console.log('Sentinel initialized successfully');
       
-      // Add debug helper to check API key
-      window.checkGitHubApiKey = () => {
-        console.log('window.GITHUB_API_KEY:', window.GITHUB_API_KEY);
+      window.checkApiBackend = () => {
         console.log('apiService.isApiKeyConfigured():', apiService.isApiKeyConfigured());
       };
       
