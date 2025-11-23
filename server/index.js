@@ -9,7 +9,8 @@ const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute in milliseconds
 
 const port = Number(process.env.PORT || DEFAULT_API_PORT)
 const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SECONDS)
-const tokenRegex = /^(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{84})$/
+const tokenRegex = /^(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})$/
+const USER_AGENT = 'Sentinel-App'
 
 /**
  * Validate GitHub token format (relaxed)
@@ -18,10 +19,8 @@ const tokenRegex = /^(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{84})$/
 const validateToken = (token) => {
   if (!token) return null
   const trimmed = token.trim()
-  
-  // Validate format using the secure regex pattern
+  // Relaxed validation: if it matches known prefixes and reasonable length, accept
   if (!tokenRegex.test(trimmed)) {
-    console.error('Invalid GitHub token format detected')
     return null
   }
   return trimmed
@@ -30,17 +29,62 @@ const validateToken = (token) => {
 const findTokenFromEnv = () => {
   for (const key of Object.keys(process.env)) {
     const t = validateToken(process.env[key] || '')
-    if (t) return t
+    if (t) return { token: t, sourceKey: key }
   }
-  return null
+  return { token: null, sourceKey: null }
 }
 
-const token = validateToken(process.env.GITHUB_TOKEN || '') || findTokenFromEnv()
+const resolveTokensDetails = () => {
+  const out = []
+  const list = (process.env.GITHUB_TOKENS || '').split(/[\n,;]+/).map(s => s.trim()).filter(Boolean)
+  list.forEach((v, i) => out.push({ token: v, sourceKey: `GITHUB_TOKENS[${i}]` }))
+  const keys = ['GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_PAT', 'RENDER_GITHUB_TOKEN']
+  keys.forEach(k => {
+    const v = (process.env[k] || '').trim()
+    if (v) out.push({ token: v, sourceKey: k })
+  })
+  Object.keys(process.env).forEach(k => {
+    if (/^GITHUB_TOKEN_\d+$/.test(k)) {
+      const v = (process.env[k] || '').trim()
+      if (v) out.push({ token: v, sourceKey: k })
+    }
+  })
+  if (out.length === 0) {
+    const found = findTokenFromEnv()
+    if (found.token) out.push(found)
+  }
+  return out
+}
 
-const getAuthHeader = () => {
-  if (!token) return undefined
-  const isFineGrained = token.startsWith('github_pat_')
-  return `${isFineGrained ? 'Bearer' : 'token'} ${token}`
+const tokensDetails = resolveTokensDetails()
+let currentTokenIndex = 0
+const tokenStatuses = new Map()
+
+const getAuthHeaderForIndex = (idx) => {
+  const item = tokensDetails[idx]
+  if (!item || !item.token) return undefined
+  return `token ${item.token}`
+}
+
+const pickTokenIndex = () => {
+  if (tokensDetails.length === 0) return -1
+  const now = Date.now()
+  for (let i = 0; i < tokensDetails.length; i++) {
+    const s = tokenStatuses.get(i)
+    if (!s) return i
+    if ((s.remaining || 0) > 0 && (!s.resetAt || s.resetAt > now)) return i
+  }
+  currentTokenIndex = (currentTokenIndex + 1) % tokensDetails.length
+  return currentTokenIndex
+}
+
+const updateTokenStatusFromResponse = (idx, ghRes) => {
+  if (idx < 0) return
+  const remaining = Number(ghRes.headers.get('X-RateLimit-Remaining') || '0')
+  const reset = Number(ghRes.headers.get('X-RateLimit-Reset') || '0')
+  const limit = Number(ghRes.headers.get('X-RateLimit-Limit') || '0')
+  const resetAt = reset ? reset * 1000 : 0
+  tokenStatuses.set(idx, { remaining, resetAt, limit })
 }
 
 const send = (res, status, headers, body) => {
@@ -166,7 +210,7 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       time: new Date().toISOString(),
       node: process.version,
-      hasToken: !!token,
+      hasToken: tokensDetails.length > 0,
       cache: {
         size: cache.size,
         maxSize: cache.maxSize,
@@ -176,9 +220,11 @@ const server = http.createServer(async (req, res) => {
     try {
       const headers = {
         'Accept': 'application/vnd.github.v3+json',
-        'X-GitHub-Api-Version': '2022-11-28'
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': USER_AGENT
       }
-      const auth = getAuthHeader()
+      const idx = pickTokenIndex()
+      const auth = getAuthHeaderForIndex(idx)
       if (auth) headers['Authorization'] = auth
       const r = await fetch('https://api.github.com/rate_limit', { headers })
       if (r.ok) {
@@ -198,6 +244,17 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { 'Content-Type': 'application/json' }, Buffer.from(JSON.stringify(info)))
   }
 
+  if (url.pathname === '/api/token_status') {
+    const info = {
+      ok: true,
+      time: new Date().toISOString(),
+      node: process.version,
+      hasToken: tokensDetails.length > 0,
+      sourceKeys: tokensDetails.map(t => t.sourceKey)
+    }
+    return send(res, 200, { 'Content-Type': 'application/json' }, Buffer.from(JSON.stringify(info)))
+  }
+
   const path = url.pathname.replace(/^\/api/, '')
   const target = new URL(`https://api.github.com${path}`)
   url.searchParams.forEach((v, k) => target.searchParams.set(k, v))
@@ -209,14 +266,13 @@ const server = http.createServer(async (req, res) => {
     body = Buffer.concat(chunks)
   }
 
-  const headers = {
+  const headersBase = {
     'Accept': 'application/vnd.github.v3+json',
-    'X-GitHub-Api-Version': '2022-11-28'
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': USER_AGENT
   }
-  const auth = getAuthHeader()
-  if (auth) headers['Authorization'] = auth
   const ct = req.headers['content-type']
-  if (ct) headers['Content-Type'] = ct
+  if (ct) headersBase['Content-Type'] = ct
 
   try {
     // Simple cache for GET requests
@@ -227,9 +283,20 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, h, existing.body)
     }
 
-    if (existing?.etag) headers['If-None-Match'] = existing.etag
+    if (existing?.etag) headersBase['If-None-Match'] = existing.etag
 
-    const ghRes = await fetch(target, { method, headers, body })
+    let ghRes
+    let attempts = Math.max(1, tokensDetails.length)
+    for (let a = 0; a < attempts; a++) {
+      const idx = pickTokenIndex()
+      const headers = { ...headersBase }
+      const auth = getAuthHeaderForIndex(idx)
+      if (auth) headers['Authorization'] = auth
+      ghRes = await fetch(target, { method, headers, body })
+      updateTokenStatusFromResponse(idx, ghRes)
+      const rlRem = ghRes.headers.get('X-RateLimit-Remaining')
+      if (!(ghRes.status === 403 && rlRem === '0')) break
+    }
     const buf = Buffer.from(await ghRes.arrayBuffer())
     const outHeaders = {
       'Content-Type': ghRes.headers.get('Content-Type') || 'application/json',
