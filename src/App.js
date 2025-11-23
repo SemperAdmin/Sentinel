@@ -962,6 +962,10 @@ class App {
       } else {
         appState.addIdea(idea);
       }
+      try {
+        const api = (await import('./data/ApiService.js')).default;
+        await api.saveIdeaYaml(idea);
+      } catch (_) {}
       
       this.hideIdeaForm();
     } catch (error) {
@@ -984,6 +988,19 @@ class App {
       const newApp = await dataStore.activateIdea(ideaId, repoUrl);
       appState.removeIdea(ideaId);
       appState.addApp(newApp);
+      try {
+        const api = (await import('./data/ApiService.js')).default;
+        const idea = {
+          id: ideaId,
+          conceptName: newApp.id,
+          problemSolved: newApp.notes || '',
+          techStack: newApp.platform || 'Web',
+          riskRating: 'Medium',
+          targetAudience: 'Unknown',
+          dateCreated: new Date().toISOString()
+        };
+        await api.saveIdeaYaml(idea);
+      } catch (_) {}
       
       // Fetch GitHub data for the new app
       this.fetchGitHubDataForApps([newApp]);

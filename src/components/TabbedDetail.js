@@ -311,7 +311,7 @@ export class TabbedDetail {
     const borderMap = { 'low': '#28a745', 'medium': '#ffc107', 'high': '#dc3545' };
     const bgColor = bgMap[sourceKey] || bgMap['other'];
     const borderColor = borderMap[pr] || borderMap['medium'];
-    const styleStr = `background-color: ${bgColor}; border-left: 4px solid ${borderColor};`;
+    const styleStr = `background-color: ${bgColor}; border: 4px solid ${borderColor}; padding: 4px 12px;`;
     
     return `
       <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass}" data-todo-id="${todo.id}" style="${styleStr}">
@@ -536,8 +536,22 @@ export class TabbedDetail {
       const completionDate = dialog.querySelector('#todo-completion-date').value || null;
       const rejectionReason = dialog.querySelector('#todo-rejection-reason').value || '';
       const status = dialog.querySelector('#todo-status').value;
-
-      const updated = { ...todo, title, description, source, feedbackSummary, submittedBy, priority, dueDate, effortEstimate, completionDate, rejectionReason, status };
+      const completed = status === 'Complete' ? true : false;
+      const updated = { 
+        ...todo, 
+        title, 
+        description, 
+        source, 
+        feedbackSummary, 
+        submittedBy, 
+        priority, 
+        dueDate, 
+        effortEstimate, 
+        completionDate: status === 'Complete' ? completionDate : null, 
+        rejectionReason: status === 'Rejected' ? rejectionReason : '', 
+        status, 
+        completed 
+      };
       this.app.todos = this.app.todos.map(t => t.id === todo.id ? updated : t);
       if (this.onNotesSave) this.onNotesSave(this.app);
       (async () => {
