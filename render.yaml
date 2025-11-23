@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: npm ci
     startCommand: npm start
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: GITHUB_TOKEN
@@ -23,4 +23,6 @@ services:
     autoDeploy: true
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://sentinel-api.onrender.com/api
+        value: https://sentinel-bfhj.onrender.com/api
+      - key: VITE_BASE_PATH
+        value: /

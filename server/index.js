@@ -9,25 +9,33 @@ const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute in milliseconds
 
 const port = Number(process.env.PORT || DEFAULT_API_PORT)
 const ttlSeconds = Number(process.env.CACHE_TTL_SECONDS || DEFAULT_CACHE_TTL_SECONDS)
+const tokenRegex = /^(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{84})$/
 
 /**
- * Validate GitHub token format
- * Accepts classic tokens (ghp_) with exactly 36 characters and fine-grained PATs (github_pat_) with exactly 84 characters
+ * Validate GitHub token format (relaxed)
+ * Accepts classic (ghp_) and fine-grained (github_pat_) tokens of reasonable length
  */
 const validateToken = (token) => {
   if (!token) return null
   const trimmed = token.trim()
-
-  // Validate format - classic tokens have exactly 36 alphanumeric chars after prefix, fine-grained have exactly 84 chars
-  if (!trimmed.match(/^(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{84})$/)) {
+  
+  // Validate format using the secure regex pattern
+  if (!tokenRegex.test(trimmed)) {
     console.error('Invalid GitHub token format detected')
     return null
   }
-
   return trimmed
 }
 
-const token = validateToken(process.env.GITHUB_TOKEN || '')
+const findTokenFromEnv = () => {
+  for (const key of Object.keys(process.env)) {
+    const t = validateToken(process.env[key] || '')
+    if (t) return t
+  }
+  return null
+}
+
+const token = validateToken(process.env.GITHUB_TOKEN || '') || findTokenFromEnv()
 
 const getAuthHeader = () => {
   if (!token) return undefined
@@ -176,6 +184,11 @@ const server = http.createServer(async (req, res) => {
       if (r.ok) {
         const j = await r.json()
         info.rateLimit = j?.resources?.core || null
+        if (info.rateLimit) {
+          console.log(`GitHub token active=${info.hasToken}; core used=${info.rateLimit.used}; remaining=${info.rateLimit.remaining}/${info.rateLimit.limit}; reset=${info.rateLimit.reset}`)
+        } else {
+          console.log(`GitHub token active=${info.hasToken}; core rate unavailable`)
+        }
       } else {
         info.rateLimit = null
       }

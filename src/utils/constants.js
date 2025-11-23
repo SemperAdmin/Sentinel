@@ -81,6 +81,7 @@ export const TECH_STACKS = [
 // Default values
 export const DEFAULT_GITHUB_USER = 'SemperAdmin';
 export const DEFAULT_MANAGER_REPO = 'SemperAdmin/Sentinel';
+export const EXCLUDED_REPO_NAMES = ['eventcall-images'];
 
 // Rate limiting
 export const RATE_LIMIT_MUTATIONS_PER_MINUTE = 10;
@@ -118,6 +119,7 @@ export default {
   TECH_STACKS,
   DEFAULT_GITHUB_USER,
   DEFAULT_MANAGER_REPO,
+  EXCLUDED_REPO_NAMES,
   RATE_LIMIT_MUTATIONS_PER_MINUTE,
   RATE_LIMIT_WINDOW_MS,
   DEFAULT_API_PORT,

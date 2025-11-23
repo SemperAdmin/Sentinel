@@ -112,6 +112,20 @@ class App {
           console.log(`GitHub rate (core): ${r.remaining}/${r.limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
         }
       } catch (_) {}
+      try {
+        const res = await fetch(`${apiService.baseUrl}/health`, { method: 'GET' });
+        if (res.ok) {
+          const healthInfo = await res.json();
+          const rateLimit = healthInfo?.rateLimit;
+          if (rateLimit) {
+            console.log(`API token active=${healthInfo.hasToken}; core used=${rateLimit.used}; remaining=${rateLimit.remaining}/${rateLimit.limit}`);
+          } else {
+            console.log(`API token active=${healthInfo.hasToken}`);
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch API health status:', error);
+      }
 
       await this.loadInitialData();
       

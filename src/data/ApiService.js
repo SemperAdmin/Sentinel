@@ -15,7 +15,13 @@ import {
 
 class ApiService {
   constructor() {
-    this.baseUrl = window.API_BASE_URL || (import.meta?.env?.VITE_API_BASE_URL || '/api');
+    const envBase = import.meta?.env?.VITE_API_BASE_URL || '';
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    let base = envBase || '/api';
+    if (!envBase && host.endsWith('github.io')) {
+      base = 'https://sentinel-bfhj.onrender.com/api';
+    }
+    this.baseUrl = base;
     this.retryAttempts = GITHUB_API_RETRY_ATTEMPTS;
     this.retryDelay = GITHUB_API_RETRY_BASE_DELAY;
     this.maxDelay = GITHUB_API_MAX_RETRY_DELAY;
@@ -518,7 +524,9 @@ class ApiService {
    * Check if API key is configured
    */
   isApiKeyConfigured() {
-    const configured = !!this.baseUrl;
+    const url = this.baseUrl || '';
+    const onGhPages = typeof window !== 'undefined' ? window.location.hostname.endsWith('github.io') : false;
+    const configured = url.startsWith('http') || (!onGhPages && url.startsWith('/'));
     console.log('API backend configured:', configured);
     return configured;
   }

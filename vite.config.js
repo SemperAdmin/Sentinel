@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/Sentinel/' : '/',
+  base: process.env.VITE_BASE_PATH || '/',
   server: {
     proxy: {
       '/api': {
