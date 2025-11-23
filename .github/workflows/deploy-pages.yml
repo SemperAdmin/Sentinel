@@ -36,6 +36,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_API_BASE_URL: https://sentinel-bfhj.onrender.com/api
+          VITE_BASE_PATH: /Sentinel/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
