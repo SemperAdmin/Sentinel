@@ -527,6 +527,57 @@ class ApiService {
     }
   }
 
+  parseSimpleYaml(text) {
+    const obj = {};
+    const lines = String(text || '').split(/\r?\n/);
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;
+      const idx = line.indexOf(':');
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim();
+      obj[key] = val;
+    }
+    return obj;
+  }
+
+  async listIdeaFiles() {
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return [];
+      const arr = await res.json();
+      return Array.isArray(arr) ? arr.filter(f => /\.ya?ml$/i.test(f.name)) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async fetchIdeaYamlByPath(path) {
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/${path}?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
+      return this.parseSimpleYaml(content);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async fetchIdeasFromRepo() {
+    if (!this.managerRepo) return [];
+    const files = await this.listIdeaFiles();
+    const results = [];
+    for (const f of files) {
+      const idea = await this.fetchIdeaYamlByPath(`data/ideas/${f.name}`);
+      if (idea && idea.id) results.push(idea);
+    }
+    return results;
+  }
+
   /**
    * Delay utility function
    */

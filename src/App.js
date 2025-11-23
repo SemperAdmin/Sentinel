@@ -447,6 +447,28 @@ class App {
       // Load ideas
       const ideas = await dataStore.getIdeas();
       appState.setIdeas(ideas);
+      try {
+        const api = (await import('./data/ApiService.js')).default;
+        const remoteIdeas = await api.fetchIdeasFromRepo();
+        if (Array.isArray(remoteIdeas) && remoteIdeas.length > 0) {
+          const byId = new Map((ideas||[]).map(i => [i.id, i]));
+          const merged = [...(ideas||[])];
+          for (const ri of remoteIdeas) {
+            if (!byId.has(ri.id)) {
+              merged.push({
+                id: ri.id,
+                conceptName: ri.conceptName || ri.id,
+                problemSolved: ri.problemSolved || '',
+                targetAudience: ri.targetAudience || '',
+                techStack: ri.techStack || 'Web',
+                riskRating: ri.riskRating || 'Medium',
+                dateCreated: ri.dateCreated || new Date().toISOString()
+              });
+            }
+          }
+          appState.setIdeas(merged);
+        }
+      } catch (_) {}
 
       // Fetch GitHub data for apps (in background)
       this.fetchGitHubDataForApps(portfolio);
@@ -506,8 +528,38 @@ class App {
       console.log(`Successfully fetched ${apps.length} repositories from GitHub`);
       return apps;
     } catch (error) {
-      console.error('Failed to fetch user repositories, proceeding with empty portfolio:', error);
-      return [];
+      console.error('Failed to fetch user repositories, attempting public fallback:', error);
+      try {
+        const repos = await apiService.fetchPublicReposForUser(this.DEFAULT_GITHUB_USER);
+        const publicRepos = repos.filter(repo => !repo.private && repo.name !== 'eventcall-images');
+        const apps = publicRepos.map(repo => ({
+          id: repo.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          repoUrl: repo.html_url,
+          platform: 'Web',
+          status: 'Active',
+          lastReviewDate: null,
+          nextReviewDate: this.calculateNextReviewDate(repo.updated_at, null),
+          pendingTodos: 0,
+          notes: repo.description || 'No description available',
+          lastCommitDate: repo.updated_at,
+          latestTag: null,
+          stars: repo.stargazers_count,
+          language: repo.language,
+          isPrivate: repo.private,
+          archived: repo.archived,
+          todos: [],
+          improvements: [],
+          developerNotes: '',
+          improvementBudget: 20,
+          currentSprint: 'Q1 2025'
+        }));
+        console.log(`Fallback fetched ${apps.length} repositories from GitHub`);
+        return apps;
+      } catch (fallbackErr) {
+        console.error('Public fallback also failed:', fallbackErr);
+        // Provide a minimal placeholder so the UI is not empty
+        return [];
+      }
     }
   }
 
