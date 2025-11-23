@@ -226,10 +226,9 @@ export class DataController {
     const processApp = async (app) => {
       const repoData = await apiService.getComprehensiveRepoData(app.repoUrl);
 
-      // If fetch failed, skip update
+      // If fetch failed, throw error for proper failure tracking
       if (!repoData) {
-        console.warn(`Failed to fetch GitHub data for ${app.id}, keeping existing data`);
-        return null;
+        throw new Error(`Failed to fetch GitHub data for ${app.id}`);
       }
 
       // Update app with GitHub data
