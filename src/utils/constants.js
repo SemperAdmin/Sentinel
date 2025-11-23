@@ -43,7 +43,7 @@ export const TODO_EFFORT_ESTIMATES = ['Small', 'Medium', 'Large'];
 export const IMPROVEMENT_BUDGET_PERCENT = 20;
 
 // UI configuration
-export const ERROR_TOAST_DURATION_MS = 5000; // Auto-hide error toasts after 5s
+export const DEFAULT_TOAST_DURATION_MS = 5000; // Auto-hide toasts after 5s
 export const LOADING_DEBOUNCE_MS = 100; // Debounce loading states
 export const AUTO_SAVE_DEBOUNCE_MS = 500; // Debounce auto-save operations
 
@@ -105,7 +105,7 @@ export default {
   TODO_STATUS_VALUES,
   TODO_EFFORT_ESTIMATES,
   IMPROVEMENT_BUDGET_PERCENT,
-  ERROR_TOAST_DURATION_MS,
+  DEFAULT_TOAST_DURATION_MS,
   LOADING_DEBOUNCE_MS,
   AUTO_SAVE_DEBOUNCE_MS,
   DEFAULT_REPOS_PER_PAGE,

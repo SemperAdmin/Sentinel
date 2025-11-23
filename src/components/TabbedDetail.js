@@ -135,7 +135,8 @@ export class TabbedDetail {
     const isOverdue = this.app.nextReviewDate && new Date(this.app.nextReviewDate) < new Date();
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
     const appUrl = this.getAppUrl(this.app.repoUrl);
-    
+    const improvements = this.app.improvements || [];
+
     return `
       <div id="overview-tab" class="tab-pane active">
         <div class="detail-section">
@@ -217,12 +218,12 @@ export class TabbedDetail {
 
         <div class="detail-section">
           <h3>Improvement Tracker</h3>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div class="improvement-tracker-header">
             <span>Improvement Budget: ${this.app.improvementBudget || 20}%</span>
             <button class="btn btn-primary" id="add-improvement-btn">+ Add Improvement</button>
           </div>
           <div id="improvements-list" class="improvements-list">
-            ${(this.app.improvements || []).length > 0 ? (this.app.improvements || []).map(imp => this.renderImprovementItem(imp)).join('') : '<p style="color: #6c757d;">No improvements tracked</p>'}
+            ${improvements.length > 0 ? improvements.map(imp => this.renderImprovementItem(imp)).join('') : '<p class="text-muted">No improvements tracked</p>'}
           </div>
         </div>
       </div>
@@ -740,8 +741,8 @@ export class TabbedDetail {
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
-    
-    this.activeTab = 'notes';
+
+    this.activeTab = 'overview';
     this.render();
   }
 
@@ -764,8 +765,8 @@ export class TabbedDetail {
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
-    
-    this.activeTab = 'notes';
+
+    this.activeTab = 'overview';
     this.render();
   }
 

@@ -3,15 +3,15 @@
  * Provides consistent UI patterns across the application
  */
 
-import { ERROR_TOAST_DURATION_MS } from './constants.js';
+import { DEFAULT_TOAST_DURATION_MS } from './constants.js';
 
 /**
  * Toast notification manager
  */
 export class ToastManager {
   constructor() {
-    this._toastElement = null;
-    this._messageElement = null;
+    this._toastElement = undefined;
+    this._messageElement = undefined;
     this.autoHideTimeout = null;
   }
 
@@ -20,7 +20,7 @@ export class ToastManager {
    * @returns {HTMLElement|null}
    */
   get toastElement() {
-    if (!this._toastElement) {
+    if (this._toastElement === undefined) {
       this._toastElement = document.getElementById('error-toast');
       if (!this._toastElement) {
         console.warn('Toast element not found in DOM');
@@ -34,7 +34,7 @@ export class ToastManager {
    * @returns {HTMLElement|null}
    */
   get messageElement() {
-    if (!this._messageElement) {
+    if (this._messageElement === undefined) {
       this._messageElement = document.getElementById('error-message');
       if (!this._messageElement) {
         console.warn('Toast message element not found in DOM');
@@ -51,7 +51,7 @@ export class ToastManager {
    * @returns {void}
    * @private
    */
-  show(message, type = 'error', duration = ERROR_TOAST_DURATION_MS) {
+  show(message, type = 'error', duration = DEFAULT_TOAST_DURATION_MS) {
     if (!this.toastElement || !this.messageElement) return;
 
     this.messageElement.textContent = message;
@@ -79,7 +79,7 @@ export class ToastManager {
    * @param {number} [duration] - Duration in ms (optional)
    * @returns {void}
    */
-  showError(message, duration = ERROR_TOAST_DURATION_MS) {
+  showError(message, duration = DEFAULT_TOAST_DURATION_MS) {
     this.show(message, 'error', duration);
   }
 
@@ -89,7 +89,7 @@ export class ToastManager {
    * @param {number} [duration] - Duration in ms (optional)
    * @returns {void}
    */
-  showSuccess(message, duration = ERROR_TOAST_DURATION_MS) {
+  showSuccess(message, duration = DEFAULT_TOAST_DURATION_MS) {
     this.show(message, 'success', duration);
   }
 
@@ -99,7 +99,7 @@ export class ToastManager {
    * @param {number} [duration] - Duration in ms (optional)
    * @returns {void}
    */
-  showInfo(message, duration = ERROR_TOAST_DURATION_MS) {
+  showInfo(message, duration = DEFAULT_TOAST_DURATION_MS) {
     this.show(message, 'info', duration);
   }
 
@@ -124,8 +124,8 @@ export class ToastManager {
  */
 export class LoadingOverlayManager {
   constructor() {
-    this._overlayElement = null;
-    this._messageElement = null;
+    this._overlayElement = undefined;
+    this._messageElement = undefined;
   }
 
   /**
@@ -133,7 +133,7 @@ export class LoadingOverlayManager {
    * @returns {HTMLElement|null}
    */
   get overlayElement() {
-    if (!this._overlayElement) {
+    if (this._overlayElement === undefined) {
       this._overlayElement = document.getElementById('loading-overlay');
       if (!this._overlayElement) {
         console.warn('Loading overlay element not found in DOM');
@@ -147,8 +147,9 @@ export class LoadingOverlayManager {
    * @returns {HTMLElement|null}
    */
   get messageElement() {
-    if (!this._messageElement && this.overlayElement) {
-      this._messageElement = this.overlayElement.querySelector('p');
+    if (this._messageElement === undefined) {
+      const overlay = this.overlayElement;
+      this._messageElement = overlay ? overlay.querySelector('p') : null;
     }
     return this._messageElement;
   }
