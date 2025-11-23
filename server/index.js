@@ -46,7 +46,57 @@ const send = (res, status, headers, body) => {
   else res.end()
 }
 
-const cache = new Map()
+// LRU Cache implementation with size limits
+class LRUCache {
+  constructor(maxSize = 100) {
+    this.maxSize = maxSize
+    this.cache = new Map()
+  }
+
+  get(key) {
+    if (!this.cache.has(key)) return undefined
+
+    // Move to end (most recently used)
+    const value = this.cache.get(key)
+    this.cache.delete(key)
+    this.cache.set(key, value)
+
+    return value
+  }
+
+  set(key, value) {
+    // Delete if exists (to reinsert at end)
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    }
+
+    // Evict oldest if at capacity
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value
+      this.cache.delete(firstKey)
+    }
+
+    this.cache.set(key, value)
+  }
+
+  has(key) {
+    return this.cache.has(key)
+  }
+
+  delete(key) {
+    return this.cache.delete(key)
+  }
+
+  clear() {
+    this.cache.clear()
+  }
+
+  get size() {
+    return this.cache.size
+  }
+}
+
+const cache = new LRUCache(100) // Keep last 100 responses
 const rateLimitMap = new Map() // Track mutations per IP
 
 const cacheKey = (method, url) => `${method}:${url}`
@@ -108,6 +158,11 @@ const server = http.createServer(async (req, res) => {
       time: new Date().toISOString(),
       node: process.version,
       hasToken: !!token,
+      cache: {
+        size: cache.size,
+        maxSize: cache.maxSize,
+        utilization: Math.round((cache.size / cache.maxSize) * 100) + '%'
+      }
     }
     try {
       const headers = {
