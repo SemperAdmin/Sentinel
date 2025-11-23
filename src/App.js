@@ -112,6 +112,18 @@ class App {
           console.log(`GitHub rate (core): ${r.remaining}/${r.limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
         }
       } catch (_) {}
+      try {
+        const res = await fetch(`${apiService.baseUrl}/health`, { method: 'GET' });
+        if (res && res.ok) {
+          const j = await res.json();
+          const rr = j && j.rateLimit ? j.rateLimit : null;
+          if (rr) {
+            console.log(`API token active=${j.hasToken}; core used=${rr.used}; remaining=${rr.remaining}/${rr.limit}`);
+          } else {
+            console.log(`API token active=${j && j.hasToken}`);
+          }
+        }
+      } catch (_) {}
 
       await this.loadInitialData();
       

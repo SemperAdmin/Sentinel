@@ -176,6 +176,11 @@ const server = http.createServer(async (req, res) => {
       if (r.ok) {
         const j = await r.json()
         info.rateLimit = j?.resources?.core || null
+        if (info.rateLimit) {
+          console.log(`GitHub token active=${info.hasToken}; core used=${info.rateLimit.used}; remaining=${info.rateLimit.remaining}/${info.rateLimit.limit}; reset=${info.rateLimit.reset}`)
+        } else {
+          console.log(`GitHub token active=${info.hasToken}; core rate unavailable`)
+        }
       } else {
         info.rateLimit = null
       }
