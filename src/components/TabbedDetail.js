@@ -135,7 +135,6 @@ export class TabbedDetail {
     const isOverdue = this.app.nextReviewDate && new Date(this.app.nextReviewDate) < new Date();
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
     const appUrl = this.getAppUrl(this.app.repoUrl);
-    const improvements = this.app.improvements || [];
 
     return `
       <div id="overview-tab" class="tab-pane active">
@@ -214,17 +213,6 @@ export class TabbedDetail {
         <div class="detail-section">
           <h3>Past Reviews</h3>
           <div id="past-reviews" style="color:#6c757d;">Loading...</div>
-        </div>
-
-        <div class="detail-section">
-          <h3>Improvement Tracker</h3>
-          <div class="improvement-tracker-header">
-            <span>Improvement Budget: ${this.app.improvementBudget || 20}%</span>
-            <button class="btn btn-primary" id="add-improvement-btn">+ Add Improvement</button>
-          </div>
-          <div id="improvements-list" class="improvements-list">
-            ${improvements.length > 0 ? improvements.map(imp => this.renderImprovementItem(imp)).join('') : '<p class="text-muted">No improvements tracked</p>'}
-          </div>
         </div>
       </div>
     `;
@@ -695,213 +683,6 @@ export class TabbedDetail {
     return tasks;
   }
 
-  /**
-   * Render improvement item
-   */
-  renderImprovementItem(improvement) {
-    const statusClass = improvement.status ? `status-${improvement.status.toLowerCase()}` : '';
-    const effortClass = improvement.effort ? `effort-${improvement.effort.toLowerCase()}` : '';
-    const isConverted = improvement.status === 'converted-to-todo';
-    
-    return `
-      <div class="improvement-item ${statusClass} ${effortClass} ${isConverted ? 'converted' : ''}" data-improvement-id="${improvement.id}">
-        <div class="improvement-header">
-          <div class="improvement-title">${this.escapeHtml(improvement.title)} ${isConverted ? '✅' : ''}</div>
-          <div class="improvement-badges">
-            <span class="badge effort">${improvement.effort || 'Medium'}</span>
-            <span class="badge status">${improvement.status === 'converted-to-todo' ? 'Converted to Todo' : (improvement.status || 'Planned')}</span>
-          </div>
-        </div>
-        ${improvement.description ? `<div class="improvement-description">${this.escapeHtml(improvement.description)}</div>` : ''}
-        <div class="improvement-actions">
-          ${!isConverted ? `<button class="btn-icon" data-action="convert-to-todo" data-improvement-id="${improvement.id}" title="Convert to Todo">➕</button>` : ''}
-          ${!isConverted ? `<button class="btn-icon" data-action="edit-improvement" data-improvement-id="${improvement.id}">✏️</button>` : ''}
-          <button class="btn-icon" data-action="delete-improvement" data-improvement-id="${improvement.id}">🗑️</button>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Add new improvement
-   */
-  addImprovement(title, description = '', effort = 'Medium', status = 'Planned') {
-    const improvement = {
-      id: Date.now().toString(),
-      title,
-      description,
-      effort,
-      status,
-      createdAt: new Date().toISOString()
-    };
-    
-    if (!this.app.improvements) this.app.improvements = [];
-    this.app.improvements.push(improvement);
-    
-    if (this.onNotesSave) {
-      this.onNotesSave(this.app);
-    }
-
-    this.activeTab = 'overview';
-    this.render();
-  }
-
-  /**
-   * Edit improvement (placeholder for future implementation)
-   */
-  editImprovement(improvementId) {
-    console.log('Edit improvement clicked:', improvementId);
-    alert('Edit improvement functionality coming soon! For now, you can delete and re-add the improvement.');
-  }
-
-  /**
-   * Delete improvement
-   */
-  deleteImprovement(improvementId) {
-    if (!this.app.improvements) return;
-    
-    this.app.improvements = this.app.improvements.filter(imp => imp.id !== improvementId);
-    
-    if (this.onNotesSave) {
-      this.onNotesSave(this.app);
-    }
-
-    this.activeTab = 'overview';
-    this.render();
-  }
-
-  /**
-   * Convert improvement to todo
-   */
-  convertImprovementToTodo(improvementId) {
-    if (!this.app.improvements) return;
-    
-    const improvement = this.app.improvements.find(imp => imp.id === improvementId);
-    if (!improvement) return;
-    
-    // Confirm conversion
-    if (!confirm(`Convert improvement "${improvement.title}" to a todo task?`)) {
-      return;
-    }
-    
-    // Create todo from improvement
-    const todo = {
-      id: Date.now().toString(),
-      title: improvement.title,
-      description: improvement.description || '',
-      priority: this.mapEffortToPriority(improvement.effort),
-      dueDate: null,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      source: 'improvement',
-      sourceId: improvementId
-    };
-    
-    // Add todo to the list
-    if (!this.app.todos) this.app.todos = [];
-    this.app.todos.push(todo);
-    
-    // Update improvement status to indicate it's been converted
-    improvement.status = 'converted-to-todo';
-    
-    if (this.onNotesSave) {
-      this.onNotesSave(this.app);
-    }
-    
-    // Switch to todo tab to show the new todo
-    this.activeTab = 'todo';
-    this.render();
-    
-    console.log(`Converted improvement "${improvement.title}" to todo`);
-  }
-
-  /**
-   * Map effort level to priority
-   */
-  mapEffortToPriority(effort) {
-    const effortPriorityMap = {
-      'low': 'low',
-      'medium': 'medium', 
-      'high': 'high'
-    };
-    return effortPriorityMap[effort] || 'medium';
-  }
-
-  /**
-   * Show add improvement dialog
-   */
-  showAddImprovementDialog() {
-    console.log('Opening add improvement dialog...');
-    const dialog = document.createElement('div');
-    dialog.className = 'todo-dialog';
-    dialog.innerHTML = `
-      <div class="dialog-overlay">
-        <div class="dialog-content">
-          <h3>Add New Improvement</h3>
-          <form id="add-improvement-form">
-            <div class="form-group">
-              <label>Title *</label>
-              <input type="text" id="improvement-title" required>
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="improvement-description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Effort Level</label>
-              <select id="improvement-effort">
-                <option value="Low">Low</option>
-                <option value="Medium" selected>Medium</option>
-                <option value="High">High</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Status</label>
-              <select id="improvement-status">
-                <option value="Planned" selected>Planned</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-                <option value="On Hold">On Hold</option>
-              </select>
-            </div>
-            <div class="dialog-actions">
-              <button type="button" class="btn btn-secondary" id="cancel-improvement">Cancel</button>
-              <button type="submit" class="btn btn-primary">Add Improvement</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(dialog);
-    console.log('Improvement dialog added to DOM');
-    
-    // Handle form submission
-    dialog.querySelector('#add-improvement-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      console.log('Improvement form submitted');
-      const title = dialog.querySelector('#improvement-title').value;
-      const description = dialog.querySelector('#improvement-description').value;
-      const effort = dialog.querySelector('#improvement-effort').value;
-      const status = dialog.querySelector('#improvement-status').value;
-      
-      console.log('Adding improvement:', { title, description, effort, status });
-      this.addImprovement(title, description, effort, status);
-      document.body.removeChild(dialog);
-    });
-    
-    // Handle cancel
-    dialog.querySelector('#cancel-improvement').addEventListener('click', () => {
-      document.body.removeChild(dialog);
-    });
-    
-    // Handle overlay click
-    dialog.querySelector('.dialog-overlay').addEventListener('click', (e) => {
-      if (e.target === dialog.querySelector('.dialog-overlay')) {
-        document.body.removeChild(dialog);
-      }
-    });
-  }
 
   /**
    * Attach event listeners
@@ -1016,34 +797,8 @@ export class TabbedDetail {
         }
       }
       
-      // Improvement action buttons
-      if (e.target.matches('[data-action="edit-improvement"][data-improvement-id]')) {
-        const improvementId = e.target.dataset.improvementId;
-        this.editImprovement(improvementId);
-      }
-      
-      if (e.target.matches('[data-action="delete-improvement"][data-improvement-id]')) {
-        const improvementId = e.target.dataset.improvementId;
-        if (confirm('Delete this improvement?')) {
-          this.deleteImprovement(improvementId);
-        }
-      }
-      
-      if (e.target.matches('[data-action="convert-to-todo"][data-improvement-id]')) {
-        const improvementId = e.target.dataset.improvementId;
-        this.convertImprovementToTodo(improvementId);
-      }
-      // Related task deletion removed with section
     };
     this.element.addEventListener('click', this._boundElementClick);
-    
-    // Add improvement button
-    const addImprovementBtn = this.element.querySelector('#add-improvement-btn');
-    if (addImprovementBtn) {
-      addImprovementBtn.addEventListener('click', () => {
-        this.showAddImprovementDialog();
-      });
-    }
 
     this.loadPastReviews();
   }
