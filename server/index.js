@@ -26,7 +26,15 @@ const validateToken = (token) => {
   return trimmed
 }
 
-const token = validateToken(process.env.GITHUB_TOKEN || '')
+const findTokenFromEnv = () => {
+  for (const key of Object.keys(process.env)) {
+    const t = validateToken(process.env[key] || '')
+    if (t) return t
+  }
+  return null
+}
+
+const token = validateToken(process.env.GITHUB_TOKEN || '') || findTokenFromEnv()
 
 const getAuthHeader = () => {
   if (!token) return undefined
