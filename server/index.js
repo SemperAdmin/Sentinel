@@ -18,8 +18,8 @@ const validateToken = (token) => {
   if (!token) return null
   const trimmed = token.trim()
 
-  // Validate format - classic tokens have exactly 36 chars after prefix, fine-grained have exactly 84
-  if (!trimmed.match(/^(ghp_[a-zA-Z0-9_]{36}|github_pat_[a-zA-Z0-9_]{84})$/)) {
+  // Validate format - classic tokens have exactly 36 alphanumeric chars after prefix, fine-grained have exactly 84 chars
+  if (!trimmed.match(/^(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{84})$/)) {
     console.error('Invalid GitHub token format detected')
     return null
   }
@@ -38,7 +38,7 @@ const getAuthHeader = () => {
 const send = (res, status, headers, body) => {
   const baseHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-GitHub-Api-Version, Accept, Authorization',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
   }
   const out = { ...baseHeaders, ...headers }
