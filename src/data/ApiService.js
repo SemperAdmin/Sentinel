@@ -477,7 +477,7 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Failed to get comprehensive repo data:', error);
-      return this.getFallbackData();
+      return null;
     }
   }
 
