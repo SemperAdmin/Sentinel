@@ -61,7 +61,7 @@
     "id": "1763950005893",
     "title": "Attendance Stats text color",
     "description": "Need to adjust the font color to be lighter to not blend with teh background.\n\n<h3 style=\"margin-bottom:0.5rem\">Attendance Breakdown</h3>\n<label for=\"time-range\">Time range</label>\n<h3 style=\"margin-bottom:0.5rem\">Responses Over Time</h3>",
-    "priority": "medium",
+    "priority": "low",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:06:45.893Z",
@@ -76,7 +76,7 @@
   {
     "id": "1763950117093",
     "title": "Attendee List Search function not working",
-    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"🔍 Search attendees...\" class=\"search-input\" type=\"text\">",
+    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"\ud83d\udd0d Search attendees...\" class=\"search-input\" type=\"text\">",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
@@ -115,7 +115,7 @@
   {
     "id": "1763950318805",
     "title": "Export Seating Chart not working",
-    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        📥 Export Seating Chart\n                    </button>",
+    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        \ud83d\udce5 Export Seating Chart\n                    </button>",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
