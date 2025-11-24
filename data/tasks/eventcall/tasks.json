@@ -77,14 +77,17 @@
     "id": "1763950117093",
     "title": "Attendee List Search function not working",
     "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"\ud83d\udd0d Search attendees...\" class=\"search-input\" type=\"text\">",
-    "priority": "medium",
+    "priority": "high",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:08:37.093Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Large",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763950187152",
