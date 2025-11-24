@@ -43,5 +43,18 @@
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
+  },
+  {
+    "id": "1763944363275",
+    "title": "Email generation",
+    "description": "Enable email generation to all already added as in guest list but have not RSVPed. They should be in a BCC line by default.",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T00:32:43.275Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
