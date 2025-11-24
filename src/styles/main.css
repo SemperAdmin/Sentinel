@@ -174,29 +174,6 @@ body {
   border-color: var(--gray-400);
 }
 
-/* Specific button color overrides */
-#clear-completed-btn {
-  background-color: var(--danger-red);
-  color: var(--white);
-  border-color: var(--danger-red);
-}
-
-#clear-completed-btn:hover {
-  background-color: #b52a3b;
-  border-color: #b52a3b;
-}
-
-#export-todos-btn {
-  background-color: var(--success-green);
-  color: var(--white);
-  border-color: var(--success-green);
-}
-
-#export-todos-btn:hover {
-  background-color: #1f7a33;
-  border-color: #1f7a33;
-}
-
 /* App Grid */
 .app-grid {
   display: grid;
