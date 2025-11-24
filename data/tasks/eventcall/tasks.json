@@ -14,5 +14,18 @@
     "effortEstimate": "Small",
     "completionDate": null,
     "rejectionReason": ""
+  },
+  {
+    "id": "1763947763364",
+    "title": "Login form not fit to screen",
+    "description": "Need to ensure that the login card it set to fit the screen.\n\n<div class=\"auth auth__card\"> ",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T01:29:23.364Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
