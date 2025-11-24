@@ -85,5 +85,18 @@
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
+  },
+  {
+    "id": "1763945087371",
+    "title": "Attendee list search not working",
+    "description": "<input id=\"attendee-search\" placeholder=\"\ud83d\udd0d Search attendees...\" class=\"search-input\" type=\"text\">",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T00:44:47.371Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
