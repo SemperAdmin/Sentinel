@@ -21,14 +21,14 @@
     "description": "Form needs to be scrollable or able to adjust for the screen.\n<div class=\"auth auth__card\">",
     "priority": "low",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-24T02:00:34.653Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
+    "status": "Complete",
     "effortEstimate": "Small",
-    "completionDate": null,
+    "completionDate": "2025-11-23",
     "rejectionReason": ""
   },
   {
