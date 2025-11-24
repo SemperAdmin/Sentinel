@@ -5,14 +5,14 @@
     "description": "Need to ensure form fit screen properly not covered by screen.\n<div class=\"auth auth__card\">",
     "priority": "low",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-24T01:59:59.110Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
+    "status": "Complete",
     "effortEstimate": "Small",
-    "completionDate": null,
+    "completionDate": "2025-11-23",
     "rejectionReason": ""
   },
   {
@@ -82,7 +82,7 @@
   {
     "id": "1763950117093",
     "title": "Attendee List Search function not working",
-    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"🔍 Search attendees...\" class=\"search-input\" type=\"text\">",
+    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"ð Search attendees...\" class=\"search-input\" type=\"text\">",
     "priority": "high",
     "dueDate": null,
     "completed": false,
@@ -130,7 +130,7 @@
   {
     "id": "1763950318805",
     "title": "Export Seating Chart not working",
-    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        📥 Export Seating Chart\n                    </button>",
+    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        ð¥ Export Seating Chart\n                    </button>",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
