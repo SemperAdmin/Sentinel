@@ -63,15 +63,17 @@ export class TabbedDetail {
     }
     
     const headers = ['Title','Description','Priority','Due Date','Completed','Created At'];
-    const rows = [headers].concat(todos.map(t => [
-      String(t.title||'').replace(/"/g,'""'),
-      String(t.description||'').replace(/"/g,'""'),
-      String(t.priority||'').replace(/"/g,'""'),
-      String(t.dueDate||'').replace(/"/g,'""'),
-      String(t.completed||false),
-      String(t.createdAt||'').replace(/"/g,'""')
-    ].map(v => `"${v}"`)));
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const allRows = [headers, ...todos.map(t => [
+        t.title,
+        t.description,
+        t.priority,
+        t.dueDate,
+        t.completed ?? false,
+        t.createdAt
+    ])];
+    const csv = allRows.map(row =>
+        row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
     const bom = '\ufeff';
     const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
