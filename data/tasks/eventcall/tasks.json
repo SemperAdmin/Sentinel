@@ -77,30 +77,30 @@
     "id": "1763950117093",
     "title": "Attendee List Search function not working",
     "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"\u00f0\u009f\u0094\u008d Search attendees...\" class=\"search-input\" type=\"text\">",
-    "priority": "high",
+    "priority": "medium",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:08:37.093Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Large",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763950187152",
     "title": " Attendee List Filter function not working",
     "description": "Cannot filter by RSVP category. \n\n<select id=\"attendee-filter\" class=\"filter-select\">",
-    "priority": "medium",
+    "priority": "high",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:09:47.152Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763950223943",
