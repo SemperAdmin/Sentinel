@@ -47,7 +47,7 @@
   {
     "id": "1763944363275",
     "title": "Email generation",
-    "description": "Enable email generation to all already added as in guest list but have not RSVPed. They should be in a BCC line by default.",
+    "description": "Enable email generation to all already added as in guest list but have not RSVPed. They should be in a BCC line by default.\n\n<button id=\"qa-send-reminder\" class=\"btn-primary\">\u2709\ufe0f Send Reminder</button>",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
@@ -55,6 +55,9 @@
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Draft",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   }
 ]
