@@ -55,10 +55,7 @@
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763950005893",
@@ -71,7 +68,10 @@
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763950117093",
