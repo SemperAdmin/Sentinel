@@ -59,5 +59,18 @@
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
+  },
+  {
+    "id": "1763944864467",
+    "title": "Fix Seating chart export and assignment",
+    "description": "Cannot export to excel nor assign members to tables. \n\nUncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T00:41:04.467Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
