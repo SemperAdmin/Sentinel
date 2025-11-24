@@ -93,17 +93,14 @@
     "id": "1763950187152",
     "title": " Attendee List Filter function not working",
     "description": "Cannot filter by RSVP category. \n\n<select id=\"attendee-filter\" class=\"filter-select\">",
-    "priority": "high",
+    "priority": "medium",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:09:47.152Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763950223943",
