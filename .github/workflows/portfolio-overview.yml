@@ -57,6 +57,11 @@ jobs:
               } catch (e) {}
 
               let recentViews = 0;
+              let uniqueViews = 0;
+              let recentClones = 0;
+              let uniqueClones = 0;
+              let popularReferrers = [];
+              let popularPaths = [];
               try {
                 const { data: views } = await github.request('GET /repos/{owner}/{repo}/traffic/views', {
                   owner,
@@ -64,6 +69,30 @@ jobs:
                   per: 'day'
                 });
                 recentViews = views?.count || 0;
+                uniqueViews = views?.uniques || 0;
+              } catch (e) {}
+              try {
+                const { data: clones } = await github.request('GET /repos/{owner}/{repo}/traffic/clones', {
+                  owner,
+                  repo: r.name,
+                  per: 'day'
+                });
+                recentClones = clones?.count || 0;
+                uniqueClones = clones?.uniques || 0;
+              } catch (e) {}
+              try {
+                const { data: refs } = await github.request('GET /repos/{owner}/{repo}/traffic/popular/referrers', {
+                  owner,
+                  repo: r.name
+                });
+                popularReferrers = Array.isArray(refs) ? refs.slice(0, 5).map(r => ({ referrer: r.referrer, count: r.count, uniques: r.uniques })) : [];
+              } catch (e) {}
+              try {
+                const { data: paths } = await github.request('GET /repos/{owner}/{repo}/traffic/popular/paths', {
+                  owner,
+                  repo: r.name
+                });
+                popularPaths = Array.isArray(paths) ? paths.slice(0, 5).map(p => ({ path: p.path, title: p.title, count: p.count, uniques: p.uniques })) : [];
               } catch (e) {}
 
               const nextReviewDate = (() => {
@@ -87,7 +116,12 @@ jobs:
                 language: r.language,
                 isPrivate: r.private,
                 archived: r.archived,
-                recentViews
+                recentViews,
+                uniqueViews,
+                recentClones,
+                uniqueClones,
+                popularReferrers,
+                popularPaths
               });
 
               if (i % 5 === 4) await sleep(1000);
