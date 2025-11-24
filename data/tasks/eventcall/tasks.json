@@ -72,5 +72,18 @@
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
+  },
+  {
+    "id": "1763945048115",
+    "title": "Attendance list filter not working",
+    "description": "No actions happen when selecting different types of statuses\n<select id=\"attendee-filter\" class=\"filter-select\">\n                            <option value=\"all\">All People</option>\n                            <option value=\"attending\">Attending Only</option>\n                            <option value=\"declined\">Declined Only</option>\n                            <option value=\"invited\">Invited Only</option>\n                        </select>",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T00:44:08.115Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
