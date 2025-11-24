@@ -30,5 +30,18 @@
     "effortEstimate": "Small",
     "completionDate": null,
     "rejectionReason": ""
+  },
+  {
+    "id": "1763944241291",
+    "title": "Manage events tabs base text color",
+    "description": "Current color is too light for background.\n<div aria-label=\"Manage tabs\" role=\"tablist\" class=\"manage-tabs\">\n                <button id=\"tab-overview-btn\" aria-controls=\"tab-overview\" aria-selected=\"true\" role=\"tab\" class=\"tab-btn active\">Overview</button>\n                <button id=\"tab-guests-btn\" aria-controls=\"tab-guests\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Guest List</button>\n                <button id=\"tab-special-btn\" aria-controls=\"tab-special\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Special</button>\n            </div>",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T00:30:41.291Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
