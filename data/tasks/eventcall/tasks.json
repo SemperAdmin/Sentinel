@@ -136,6 +136,9 @@
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Large",
+    "completionDate": null,
+    "rejectionReason": ""
   }
 ]
