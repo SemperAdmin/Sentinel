@@ -201,7 +201,7 @@ class ApiService {
     let merged = Array.isArray(tasks) ? tasks.slice() : [];
     try {
       const remoteResult = await this.fetchRepoTasks(appId);
-      const remote = Array.isArray(remoteResult?.ok ? remoteResult.value : remoteResult) ? (remoteResult?.ok ? remoteResult.value : remoteResult) : [];
+      const remote = (remoteResult && remoteResult.success === true && Array.isArray(remoteResult.data)) ? remoteResult.data : [];
       const keyOf = (t) => (t && t.id ? String(t.id) : `${t?.title || ''}|${t?.dueDate || ''}`);
       const keys = new Set(merged.map(keyOf));
       const toAdd = remote.filter(rt => !keys.has(keyOf(rt)));
