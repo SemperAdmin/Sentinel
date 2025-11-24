@@ -8,13 +8,18 @@
     "nextReviewDate": "2026-02-22",
     "pendingTodos": 0,
     "notes": "App to manage all apps",
-    "lastCommitDate": "2025-11-24T02:32:48Z",
+    "lastCommitDate": "2025-11-24T02:49:07Z",
     "latestTag": null,
     "stars": 0,
     "language": "JavaScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "eventcall",
@@ -31,7 +36,12 @@
     "language": "JavaScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "usmc-directives-hub",
@@ -48,7 +58,12 @@
     "language": "JavaScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "eventcall-images",
@@ -65,7 +80,12 @@
     "language": null,
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "naval-letter-formatter",
@@ -82,7 +102,12 @@
     "language": "TypeScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "fitness-report-evaluator",
@@ -99,7 +124,12 @@
     "language": "JavaScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "marine-corps-directives-formatter",
@@ -116,7 +146,12 @@
     "language": "TypeScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "semper-admin-app-page",
@@ -133,7 +168,12 @@
     "language": "HTML",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "ksd",
@@ -150,7 +190,12 @@
     "language": "JavaScript",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "amhs-message-formatter",
@@ -167,7 +212,12 @@
     "language": "HTML",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "command-and-evade",
@@ -184,7 +234,12 @@
     "language": "HTML",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "pebd-calculator",
@@ -201,7 +256,12 @@
     "language": "HTML",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   },
   {
     "id": "pft-cft-calculator",
@@ -218,6 +278,11 @@
     "language": "HTML",
     "isPrivate": false,
     "archived": false,
-    "recentViews": 0
+    "recentViews": 0,
+    "uniqueViews": 0,
+    "recentClones": 0,
+    "uniqueClones": 0,
+    "popularReferrers": [],
+    "popularPaths": []
   }
 ]
