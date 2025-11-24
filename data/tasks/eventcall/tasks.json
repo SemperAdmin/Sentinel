@@ -32,32 +32,16 @@
     "rejectionReason": ""
   },
   {
-    "id": "1763944241291",
-    "title": "Manage events tabs base text color",
-    "description": "Current color is too light for background.\n<div aria-label=\"Manage tabs\" role=\"tablist\" class=\"manage-tabs\">\n                <button id=\"tab-overview-btn\" aria-controls=\"tab-overview\" aria-selected=\"true\" role=\"tab\" class=\"tab-btn active\">Overview</button>\n                <button id=\"tab-guests-btn\" aria-controls=\"tab-guests\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Guest List</button>\n                <button id=\"tab-special-btn\" aria-controls=\"tab-special\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Special</button>\n            </div>",
+    "id": "1763944464803",
+    "title": "Fix chart display",
+    "description": "Currently no charts are displaying under attendance stats.\n\n<canvas aria-label=\"Attendance breakdown chart\" id=\"attendanceChart\"></canvas>\n\n<canvas aria-label=\"Responses over time chart\" id=\"responsesOverTimeChart\"></canvas>",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
-    "createdAt": "2025-11-24T00:30:41.291Z",
+    "createdAt": "2025-11-24T00:34:24.803Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
-  },
-  {
-    "id": "1763944363275",
-    "title": "Email generation",
-    "description": "Enable email generation to all already added as in guest list but have not RSVPed. They should be in a BCC line by default.\n\n<button id=\"qa-send-reminder\" class=\"btn-primary\">\u2709\ufe0f Send Reminder</button>",
-    "priority": "medium",
-    "dueDate": null,
-    "completed": false,
-    "createdAt": "2025-11-24T00:32:43.275Z",
-    "source": "Other",
-    "feedbackSummary": "",
-    "submittedBy": "",
-    "status": "Draft",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
   }
 ]
