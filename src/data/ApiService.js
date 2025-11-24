@@ -197,11 +197,24 @@ class ApiService {
       'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json'
     };
+    // Merge remote tasks to avoid overwriting existing entries
+    let merged = Array.isArray(tasks) ? tasks.slice() : [];
+    try {
+      const remoteResult = await this.fetchRepoTasks(appId);
+      const remote = Array.isArray(remoteResult?.ok ? remoteResult.value : remoteResult) ? (remoteResult?.ok ? remoteResult.value : remoteResult) : [];
+      const keyOf = (t) => (t && t.id ? String(t.id) : `${t?.title || ''}|${t?.dueDate || ''}`);
+      const keys = new Set(merged.map(keyOf));
+      const toAdd = remote.filter(rt => !keys.has(keyOf(rt)));
+      merged = [...merged, ...toAdd];
+      merged.sort((a,b) => String(a.id||'').localeCompare(String(b.id||'')));
+    } catch (e) {
+      console.warn('Could not merge remote tasks, proceeding with local tasks only:', e);
+    }
     const body = {
       event_type: 'save_tasks',
       client_payload: {
         app_id: appId,
-        tasks_json: JSON.stringify(tasks || [])
+        tasks_json: JSON.stringify(merged)
       }
     };
     const url = `${this.baseUrl}/repos/${this.managerRepo}/dispatches`;
@@ -212,7 +225,7 @@ class ApiService {
     } catch (err) {
       console.warn('Dispatch error, falling back to direct contents API:', err);
     }
-    const fallback = await this.saveTasksViaContents(appId, tasks || []);
+    const fallback = await this.saveTasksViaContents(appId, merged);
     return { ok: fallback };
   }
 
