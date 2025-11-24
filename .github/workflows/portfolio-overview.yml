@@ -58,20 +58,17 @@ jobs:
 
               let recentViews = 0;
               try {
-                const tokenUsed = process.env['INPUT_GITHUB-TOKEN'];
-                if (tokenUsed) {
-                  const { data: views } = await github.request('GET /repos/{owner}/{repo}/traffic/views', {
-                    owner,
-                    repo: r.name,
-                    per: 'day'
-                  });
-                  recentViews = views?.count || 0;
-                }
+                const { data: views } = await github.request('GET /repos/{owner}/{repo}/traffic/views', {
+                  owner,
+                  repo: r.name,
+                  per: 'day'
+                });
+                recentViews = views?.count || 0;
               } catch (e) {}
 
               const nextReviewDate = (() => {
                 const d = new Date(lastCommitDate || Date.now());
-                d.setDate(d.getDate() + 60);
+                d.setDate(d.getDate() + 90);
                 return d.toISOString().split('T')[0];
               })();
 

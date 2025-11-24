@@ -4,7 +4,7 @@
  */
 
 // Review cycle configuration
-export const REVIEW_CYCLE_DAYS = 60; // Quarterly review interval
+export const REVIEW_CYCLE_DAYS = 90; // Quarterly review interval
 export const REVIEW_OVERDUE_WARNING_DAYS = 7; // Days before review to show warning
 
 // GitHub API configuration

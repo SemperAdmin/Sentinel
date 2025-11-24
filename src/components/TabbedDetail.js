@@ -62,25 +62,21 @@ export class TabbedDetail {
       return;
     }
     
-    const exportData = {
-      app: this.app.id,
-      exportDate: new Date().toISOString(),
-      todos: todos.map(todo => ({
-        title: todo.title,
-        description: todo.description,
-        priority: todo.priority,
-        dueDate: todo.dueDate,
-        completed: todo.completed,
-        createdAt: todo.createdAt
-      }))
-    };
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    
+    const headers = ['Title','Description','Priority','Due Date','Completed','Created At'];
+    const rows = [headers].concat(todos.map(t => [
+      String(t.title||'').replace(/"/g,'""'),
+      String(t.description||'').replace(/"/g,'""'),
+      String(t.priority||'').replace(/"/g,'""'),
+      String(t.dueDate||'').replace(/"/g,'""'),
+      String(t.completed||false),
+      String(t.createdAt||'').replace(/"/g,'""')
+    ].map(v => `"${v}"`)));
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const bom = '\ufeff';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `${this.app.id}-todos-${new Date().toISOString().split('T')[0]}.json`;
+    link.href = URL.createObjectURL(blob);
+    link.download = `${this.app.id}-todos-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   }
 
@@ -200,7 +196,7 @@ export class TabbedDetail {
               <span>${formatDate(this.app.lastReviewDate) || 'Never'}</span>
             </div>
             <div class="info-item">
-              <label>Next Due (60d from latest):</label>
+              <label>Next Due (90d from latest):</label>
               <span style="color: ${isOverdue ? '#dc3545' : 'inherit'}; font-weight: ${isOverdue ? '600' : 'normal'}">
                 ${formatDate(this.app.nextReviewDate) || 'Not scheduled'}
                 ${isOverdue ? ' (OVERDUE)' : ''}
@@ -236,7 +232,7 @@ export class TabbedDetail {
             <h3>To-Do Dashboard</h3>
             <button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 1rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
             <div class="app-card">
               <div class="app-card-header"><h4 class="app-card-title">Total</h4></div>
               <div style="font-size: 1.8rem; font-weight: 700;">${todos.length}</div>
@@ -287,7 +283,6 @@ export class TabbedDetail {
           <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
             <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
             <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
-            <button class="btn btn-secondary" id="save-tasks-repo-btn">💾 Save Tasks to Repo</button>
           </div>
         </div>
       </div>
@@ -759,38 +754,7 @@ export class TabbedDetail {
       });
     }
 
-    const saveTasksRepoBtn = this.element.querySelector('#save-tasks-repo-btn');
-    if (saveTasksRepoBtn) {
-      saveTasksRepoBtn.addEventListener('click', async () => {
-        try {
-          const apiModule = await import('../data/ApiService.js');
-          const api = apiModule.default;
-          const appId = this.app.id;
-          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-          const res = await api.triggerSaveTasks(appId, todos);
-          const original = saveTasksRepoBtn.innerHTML;
-          if (res && res.ok) {
-            saveTasksRepoBtn.innerHTML = '✅ Saved to Repo';
-          } else {
-            saveTasksRepoBtn.innerHTML = '⚠️ Save Failed';
-          }
-          saveTasksRepoBtn.disabled = true;
-          setTimeout(() => {
-            saveTasksRepoBtn.innerHTML = original;
-            saveTasksRepoBtn.disabled = false;
-          }, 2000);
-        } catch (err) {
-          const original = saveTasksRepoBtn.innerHTML;
-          saveTasksRepoBtn.innerHTML = '⚠️ Save Error';
-          saveTasksRepoBtn.disabled = true;
-          setTimeout(() => {
-            saveTasksRepoBtn.innerHTML = original;
-            saveTasksRepoBtn.disabled = false;
-          }, 2000);
-          console.warn('Error dispatching save_tasks workflow:', err);
-        }
-      });
-    }
+    
 
     
     // Removed Work Management and Improvement listeners as those sections were removed

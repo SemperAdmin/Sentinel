@@ -44,7 +44,7 @@ export class AppCard {
         </div>
         
         <div class="metric-item">
-          <span class="metric-label">Activity (14d):</span>
+          <span class="metric-label">Visitors (14d):</span>
           <span class="metric-value">${this.app.recentViews || 0} views</span>
         </div>
         
