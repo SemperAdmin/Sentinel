@@ -61,17 +61,14 @@
     "id": "1763950005893",
     "title": "Attendance Stats text color",
     "description": "Need to adjust the font color to be lighter to not blend with teh background.\n\n<h3 style=\"margin-bottom:0.5rem\">Attendance Breakdown</h3>\n<label for=\"time-range\">Time range</label>\n<h3 style=\"margin-bottom:0.5rem\">Responses Over Time</h3>",
-    "priority": "low",
+    "priority": "medium",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:06:45.893Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763950117093",
@@ -84,10 +81,7 @@
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763950187152",
@@ -100,7 +94,10 @@
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763950223943",
