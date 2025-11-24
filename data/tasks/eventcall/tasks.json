@@ -17,16 +17,19 @@
   },
   {
     "id": "1763949634653",
-    "title": "Create account form display",
+    "title": "Correct account form display",
     "description": "Form needs to be scrollable or able to adjust for the screen.\n<div class=\"auth auth__card\">",
-    "priority": "medium",
+    "priority": "low",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:00:34.653Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763949832237",
