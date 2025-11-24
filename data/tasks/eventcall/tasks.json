@@ -24,5 +24,18 @@
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
+  },
+  {
+    "id": "1763949634653",
+    "title": "Create account form display",
+    "description": "Form needs to be scrollable or able to adjust for the screen.\n<div class=\"auth auth__card\">",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-24T02:00:34.653Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
