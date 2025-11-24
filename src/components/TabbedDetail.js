@@ -40,7 +40,9 @@ export class TabbedDetail {
         try {
           const apiModule = await import('../data/ApiService.js');
           const api = apiModule.default;
-          await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+          const appId = this.app.id;
+          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
+          await api.triggerSaveTasks(appId, todos);
         } catch (_) {}
       })();
       
@@ -360,7 +362,9 @@ export class TabbedDetail {
       try {
         const apiModule = await import('../data/ApiService.js');
         const api = apiModule.default;
-        await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+        const appId = this.app.id;
+        const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
+        await api.triggerSaveTasks(appId, todos);
       } catch (_) {}
     })();
     
@@ -386,7 +390,9 @@ export class TabbedDetail {
         try {
           const apiModule = await import('../data/ApiService.js');
           const api = apiModule.default;
-          await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+          const appId = this.app.id;
+          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
+          await api.triggerSaveTasks(appId, todos);
         } catch (_) {}
       })();
       
@@ -420,7 +426,9 @@ export class TabbedDetail {
       try {
         const apiModule = await import('../data/ApiService.js');
         const api = apiModule.default;
-        await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+        const appId = this.app.id;
+        const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
+        await api.triggerSaveTasks(appId, todos);
       } catch (_) {}
     })();
     
@@ -563,7 +571,9 @@ export class TabbedDetail {
         try {
           const apiModule = await import('../data/ApiService.js');
           const api = apiModule.default;
-          await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+          const appId = this.app.id;
+          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
+          await api.triggerSaveTasks(appId, todos);
         } catch (_) {}
       })();
       this.activeTab = 'todo';
@@ -755,7 +765,9 @@ export class TabbedDetail {
         try {
           const apiModule = await import('../data/ApiService.js');
           const api = apiModule.default;
-          const res = await api.triggerSaveTasks(this.app.id, this.app.todos || []);
+          const appId = this.app.id;
+          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
+          const res = await api.triggerSaveTasks(appId, todos);
           const original = saveTasksRepoBtn.innerHTML;
           if (res && res.ok) {
             saveTasksRepoBtn.innerHTML = '✅ Saved to Repo';
