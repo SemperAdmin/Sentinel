@@ -1,16 +1,19 @@
 [
   {
     "id": "1763949599110",
-    "title": "Create account form display",
+    "title": "Correct account form display",
     "description": "Need to ensure form fit screen properly not covered by screen.\n<div class=\"auth auth__card\">",
-    "priority": "medium",
+    "priority": "low",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T01:59:59.110Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763949634653",
