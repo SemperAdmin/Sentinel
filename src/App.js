@@ -566,7 +566,7 @@ class App {
       const activeCount = (app) => (Array.isArray(app.todos)? app.todos:[])
         .filter(t => {
           const s = String(t.status||'');
-          return !t.completed && s !== 'Draft' && s !== 'Rejected';
+          return !t.completed && s !== 'Rejected';
         }).length;
       if (order === 'alphabetical') apps.sort(byAlpha);
       else if (order === 'lastReviewed') apps.sort((a,b) => {
