@@ -35,17 +35,14 @@
     "id": "1763949832237",
     "title": "Create form Rank options color",
     "description": "Need to fix the main section ranks for the optional rank for a new account so that it matches and fits properly with existing colors.\n<optgroup label=\"Officer\">\n<optgroup label=\"Warrant Officer\">\n<optgroup label=\"Enlisted\">",
-    "priority": "low",
+    "priority": "medium",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:03:52.237Z",
-    "source": "Other",
+    "source": "Facebook",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763949933501",
