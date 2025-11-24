@@ -29,33 +29,27 @@
     "id": "1763945492691",
     "title": "Correct logout return to rs login page",
     "description": "When you log out of the dashboard and try to log back into the RS dashboard it brings you to a blank page without the proper login form.",
-    "priority": "high",
+    "priority": "medium",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T00:51:32.691Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Medium",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763945562795",
     "title": "Occasion type info button not populating ",
     "description": "Info should show on click or hover.\n\n<button type=\"button\" class=\"info-icon\" onclick=\"showTooltip(event, 'occasion-setup-tooltip')\" title=\"What does Occasion mean?\">\u2139\ufe0f</button>",
-    "priority": "low",
+    "priority": "medium",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T00:52:42.795Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
-    "effortEstimate": "Small",
-    "completionDate": null,
-    "rejectionReason": ""
+    "status": "Draft"
   },
   {
     "id": "1763945657603",
@@ -70,17 +64,4 @@
     "submittedBy": "",
     "status": "Draft"
   },
-  {
-    "id": "1763946291395",
-    "title": "test",
-    "description": "test",
-    "priority": "medium",
-    "dueDate": null,
-    "completed": false,
-    "createdAt": "2025-11-24T01:04:51.395Z",
-    "source": "Policy",
-    "feedbackSummary": "",
-    "submittedBy": "",
-    "status": "Draft"
-  }
 ]
