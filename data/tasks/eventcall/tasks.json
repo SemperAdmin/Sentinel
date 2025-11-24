@@ -35,14 +35,17 @@
     "id": "1763949832237",
     "title": "Create form Rank options color",
     "description": "Need to fix the main section ranks for the optional rank for a new account so that it matches and fits properly with existing colors.\n<optgroup label=\"Officer\">\n<optgroup label=\"Warrant Officer\">\n<optgroup label=\"Enlisted\">",
-    "priority": "medium",
+    "priority": "low",
     "dueDate": null,
     "completed": false,
     "createdAt": "2025-11-24T02:03:52.237Z",
-    "source": "Facebook",
+    "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Submitted",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   },
   {
     "id": "1763949933501",
@@ -76,7 +79,7 @@
   {
     "id": "1763950117093",
     "title": "Attendee List Search function not working",
-    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"🔍 Search attendees...\" class=\"search-input\" type=\"text\">",
+    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"\u00f0\u009f\u0094\u008d Search attendees...\" class=\"search-input\" type=\"text\">",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
@@ -118,7 +121,7 @@
   {
     "id": "1763950318805",
     "title": "Export Seating Chart not working",
-    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        📥 Export Seating Chart\n                    </button>",
+    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        \u00f0\u009f\u0093\u00a5 Export Seating Chart\n                    </button>",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
