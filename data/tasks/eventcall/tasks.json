@@ -117,14 +117,14 @@
     "description": "Need to ensure on click that the member is assigned to a table.\n<select id=\"table-select-6b54428c-9a3b-481f-85e8-39eb7adfb11b\" class=\"table-select\">",
     "priority": "high",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-24T02:10:23.943Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "In Development",
+    "status": "Complete",
     "effortEstimate": "Medium",
-    "completionDate": null,
+    "completionDate": "2025-11-24",
     "rejectionReason": ""
   },
   {
