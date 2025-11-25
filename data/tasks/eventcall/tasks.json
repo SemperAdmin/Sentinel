@@ -145,18 +145,18 @@
   },
   {
     "id": "1763950459877",
-    "title": "Email generation",
-    "description": "Need to ensure that when Send Reminder is clicked that a local email is opened with all the loaded RSVP people who have not been RSVPed yet email in the BCC line. ",
+    "title": "Email generation by RSVP",
+    "description": "Need to ensure that when Send Reminder is clicked that a local email is opened with all the loaded RSVP info. ",
     "priority": "medium",
-    "dueDate": null,
-    "completed": false,
+    "dueDate": "2025-11-24",
+    "completed": true,
     "createdAt": "2025-11-24T02:14:19.877Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Submitted",
+    "status": "Complete",
     "effortEstimate": "Large",
-    "completionDate": null,
+    "completionDate": "2025-11-24",
     "rejectionReason": ""
   }
 ]
