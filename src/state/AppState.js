@@ -62,7 +62,7 @@ import { EXCLUDED_REPO_NAMES } from '../utils/constants.js'
 
 /**
  * @typedef {Object} State
- * @property {'dashboard'|'detail'|'ideas'} currentView - Current view
+ * @property {'dashboard'|'detail'|'ideas'|'login'|'feedback'} currentView - Current view
  * @property {App[]} portfolio - Portfolio of apps
  * @property {boolean} portfolioLoading - Portfolio loading state
  * @property {string|null} portfolioError - Portfolio error message
@@ -79,6 +79,9 @@ import { EXCLUDED_REPO_NAMES } from '../utils/constants.js'
  * @property {Idea|null} editingIdea - Idea being edited
  * @property {boolean} autoRepoSync - Auto repo sync enabled
  * @property {'alphabetical'|'lastReviewed'|'nextReview'|'activeTodo'} sortOrder - Sort order
+ * @property {boolean} isAuthenticated - Whether user is authenticated
+ * @property {'admin'|'public'|'guest'} userRole - Current user role
+ * @property {boolean} showLogin - Whether to show login screen
  */
 
 /**
@@ -91,7 +94,7 @@ class AppState {
   constructor() {
     this.state = {
       // Current view state
-      currentView: 'dashboard', // dashboard, detail, ideas
+      currentView: 'login', // login, dashboard, detail, ideas, feedback
 
       // Portfolio data
       portfolio: [],
@@ -118,8 +121,13 @@ class AppState {
       // Form state
       showIdeaForm: false,
       editingIdea: null,
-      autoRepoSync: false
-      ,sortOrder: 'alphabetical'
+      autoRepoSync: false,
+      sortOrder: 'alphabetical',
+
+      // Authentication state
+      isAuthenticated: false,
+      userRole: 'guest', // admin, public, guest
+      showLogin: true
     };
 
     this.listeners = new Set();
@@ -256,19 +264,69 @@ class AppState {
 
   /**
    * Set current view
-   * @param {'dashboard'|'detail'|'ideas'} view - View to display
+   * @param {'dashboard'|'detail'|'ideas'|'login'|'feedback'} view - View to display
    * @returns {void}
    */
   setView(view) {
-    if (!['dashboard', 'detail', 'ideas'].includes(view)) {
+    if (!['dashboard', 'detail', 'ideas', 'login', 'feedback'].includes(view)) {
       console.warn('Invalid view:', view);
       return;
     }
-    
-    this.setState({ 
+
+    this.setState({
       currentView: view,
-      error: null 
+      error: null
     });
+  }
+
+  /**
+   * Set authentication state
+   * @param {'admin'|'public'|'guest'} role - User role
+   * @returns {void}
+   */
+  setAuthentication(role) {
+    const validRoles = ['admin', 'public', 'guest'];
+    if (!validRoles.includes(role)) {
+      console.warn('Invalid role:', role);
+      return;
+    }
+
+    this.setState({
+      isAuthenticated: role !== 'guest',
+      userRole: role,
+      showLogin: role === 'guest',
+      currentView: role === 'guest' ? 'login' : 'dashboard'
+    });
+  }
+
+  /**
+   * Log out user
+   * @returns {void}
+   */
+  logout() {
+    this.setState({
+      isAuthenticated: false,
+      userRole: 'guest',
+      showLogin: true,
+      currentView: 'login',
+      currentApp: null
+    });
+  }
+
+  /**
+   * Check if current user is admin
+   * @returns {boolean}
+   */
+  isAdmin() {
+    return this.state.userRole === 'admin';
+  }
+
+  /**
+   * Check if current user is public
+   * @returns {boolean}
+   */
+  isPublic() {
+    return this.state.userRole === 'public';
   }
 
   /**
@@ -563,7 +621,7 @@ class AppState {
     }
 
     this.state = {
-      currentView: 'dashboard',
+      currentView: 'login',
       portfolio: [],
       portfolioLoading: false,
       portfolioError: null,
@@ -577,7 +635,12 @@ class AppState {
       error: null,
       activeTab: 'overview',
       showIdeaForm: false,
-      editingIdea: null
+      editingIdea: null,
+      autoRepoSync: false,
+      sortOrder: 'alphabetical',
+      isAuthenticated: false,
+      userRole: 'guest',
+      showLogin: true
     };
     this.notify();
   }
