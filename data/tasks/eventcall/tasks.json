@@ -82,7 +82,7 @@
   {
     "id": "1763950117093",
     "title": "Attendee List Search function not working",
-    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"\u00c3\u00b0\u00c2\u009f\u00c2\u0094\u00c2\u008d Search attendees...\" class=\"search-input\" type=\"text\">",
+    "description": "Need to allow the search function to find people by name or email.\n\n<input id=\"attendee-search\" placeholder=\"Ã°ÂÂÂ Search attendees...\" class=\"search-input\" type=\"text\">",
     "priority": "high",
     "dueDate": null,
     "completed": false,
@@ -130,7 +130,7 @@
   {
     "id": "1763950318805",
     "title": "Export Seating Chart not working",
-    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        \u00c3\u00b0\u00c2\u009f\u00c2\u0093\u00c2\u00a5 Export Seating Chart\n                    </button>",
+    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        Ã°ÂÂÂ¥ Export Seating Chart\n                    </button>",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
