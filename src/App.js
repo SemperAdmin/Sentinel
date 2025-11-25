@@ -33,12 +33,15 @@ import { LoadingStateManager } from './utils/loadingState.js';
 import DataController from './controllers/DataController.js';
 import { toastManager, loadingOverlay, escapeHtml } from './utils/uiComponents.js';
 import { isValidGitHubUrl } from './utils/validation.js';
+import { authService } from './auth/AuthService.js';
+import LoginForm from './components/LoginForm.js';
 
 class App {
   constructor() {
     this.appGrid = null;
     this.tabbedDetail = null;
     this.ideaForm = null;
+    this.loginForm = null;
     this.initialized = false;
     this.DEFAULT_GITHUB_USER = DEFAULT_GITHUB_USER;
     this.loadingManager = new LoadingStateManager();
@@ -94,16 +97,27 @@ class App {
         console.warn('DataStore initialization failed, using fallback storage:', dbError);
         // Continue with fallback storage - don't fail the entire app
       }
-      
+
       // Set up event listeners
       this.setupEventListeners();
-      
-      
 
       // Subscribe to state changes
       this.subscribeToState();
-      
-      
+
+      // Check authentication status
+      const sessionInfo = authService.getSessionInfo();
+      console.log('Session info:', sessionInfo);
+
+      if (sessionInfo.isAdmin) {
+        // User is authenticated as admin
+        appState.setAuthentication('admin');
+      } else {
+        // Show login screen
+        appState.setAuthentication('guest');
+        this.hideLoading();
+        return; // Don't load data until authenticated
+      }
+
       try {
         const rl = await apiService.getRateLimitStatus();
         if (rl && rl.resources && rl.resources.core) {
@@ -128,13 +142,13 @@ class App {
       }
 
       await this.loadInitialData();
-      
+
       // Set initial view
       this.showView('dashboard');
-      
+
       this.hideLoading();
       this.initialized = true;
-      
+
       console.log('Sentinel initialized successfully');
       
       window.checkApiBackend = () => {
@@ -355,6 +369,18 @@ class App {
       });
     }
 
+    // Logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to logout?')) {
+          authService.logout();
+          appState.logout();
+          location.reload(); // Reload to show login screen
+        }
+      });
+    }
+
     // Global error handler
     window.addEventListener('error', (e) => {
       console.error('Global error:', e.error);
@@ -383,6 +409,19 @@ class App {
    */
   handleStateChange(state) {
     console.log(`handleStateChange called with view: ${state.currentView}`);
+
+    // Handle login view separately
+    if (state.currentView === 'login') {
+      this.updateLoginView();
+      return;
+    }
+
+    // Show/hide logout button based on authentication status
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.style.display = state.isAuthenticated ? '' : 'none';
+    }
+
     // Update navigation active states
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === state.currentView);
@@ -417,6 +456,46 @@ class App {
         this.updateIdeasView(state);
         break;
     }
+  }
+
+  /**
+   * Update login view
+   */
+  updateLoginView() {
+    const mainContent = document.querySelector('.main-content') || document.querySelector('main') || document.body;
+
+    // Hide header and other views
+    const header = document.querySelector('.header');
+    if (header) header.style.display = 'none';
+
+    document.querySelectorAll('.view').forEach(view => {
+      view.style.display = 'none';
+    });
+
+    // Show login form
+    if (!this.loginForm) {
+      this.loginForm = new LoginForm();
+    }
+
+    this.loginForm.mount(mainContent, async (role) => {
+      console.log('Login successful with role:', role);
+
+      // Show header again
+      if (header) header.style.display = '';
+
+      // Update app state
+      appState.setAuthentication(role);
+
+      // Load data if admin
+      if (role === 'admin') {
+        this.showLoading('Loading portfolio data...');
+        await this.loadInitialData();
+        this.hideLoading();
+      }
+
+      // Show dashboard
+      this.showView('dashboard');
+    });
   }
 
   /**
