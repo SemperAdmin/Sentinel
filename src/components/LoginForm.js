@@ -4,7 +4,7 @@
  */
 
 import { authService } from '../auth/AuthService.js';
-import { showToast } from '../utils/uiComponents.js';
+import { toastManager } from '../utils/uiComponents.js';
 
 export class LoginForm {
   constructor() {
@@ -139,7 +139,7 @@ export class LoginForm {
     const password = passwordInput.value.trim();
 
     if (!password) {
-      showToast('Please enter a password', 'error');
+      toastManager.show('Please enter a password', 'error');
       return;
     }
 
@@ -153,18 +153,18 @@ export class LoginForm {
       const result = await authService.login(password);
 
       if (result.success) {
-        showToast('Login successful', 'success');
+        toastManager.show('Login successful', 'success');
         if (this.onLoginSuccess) {
           this.onLoginSuccess(result.role);
         }
       } else {
-        showToast(result.error || 'Authentication failed', 'error');
+        toastManager.show(result.error || 'Authentication failed', 'error');
         passwordInput.value = '';
         passwordInput.focus();
       }
     } catch (error) {
       console.error('Login error:', error);
-      showToast('An error occurred during login', 'error');
+      toastManager.show('An error occurred during login', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;

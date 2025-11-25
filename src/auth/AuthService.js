@@ -62,9 +62,20 @@ export class AuthService {
    * @returns {Promise<{success: boolean, role: string, error?: string}>}
    */
   async login(password) {
-    // Check against environment variable or fallback
-    // In production, ADMIN_PASSWORD should be set as environment variable
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    // Password from Render.com environment variable
+    // Set this in Render Dashboard: Environment → Environment Variables
+    // Key: VITE_ADMIN_PASSWORD
+    // Value: your_secure_password
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+
+    // Require password to be set in production
+    if (!adminPassword) {
+      console.error('VITE_ADMIN_PASSWORD environment variable is not set!');
+      return {
+        success: false,
+        error: 'Authentication not configured. Please contact administrator.'
+      };
+    }
 
     if (password === adminPassword) {
       const session = {
