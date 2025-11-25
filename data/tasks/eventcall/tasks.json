@@ -37,14 +37,14 @@
     "description": "Need to fix the main section ranks for the optional rank for a new account so that it matches and fits properly with existing colors.\n<optgroup label=\"Officer\">\n<optgroup label=\"Warrant Officer\">\n<optgroup label=\"Enlisted\">",
     "priority": "low",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-24T02:03:52.237Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "In Development",
+    "status": "Complete",
     "effortEstimate": "Small",
-    "completionDate": null,
+    "completionDate": "2025-11-23",
     "rejectionReason": ""
   },
   {
