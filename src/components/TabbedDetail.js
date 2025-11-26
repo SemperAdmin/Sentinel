@@ -17,18 +17,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Check if current user is admin
-   * @returns {boolean}
-   */
-  isAdmin() {
-    const state = appState.getState();
-    return state.userRole === 'admin';
-  }
-
-  /**
-   * Clear completed todos
+   * Clear completed todos (admin only)
    */
   clearCompletedTodos() {
+    // Security check: Only admins can clear todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     if (!this.app.todos || this.app.todos.length === 0) return;
     
     const activeTodos = this.app.todos.filter(todo => !todo.completed);
@@ -61,9 +57,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Export todos to JSON/CSV
+   * Export todos to JSON/CSV (admin only)
    */
   exportTodos() {
+    // Security check: Only admins can export todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     const todos = this.app.todos || [];
     
     if (todos.length === 0) {
@@ -214,7 +215,7 @@ export class TabbedDetail {
               </span>
             </div>
           </div>
-          ${this.isAdmin() ? `
+          ${appState.isAdmin() ? `
             <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
               ▶ Start Review Checklist
             </button>
@@ -243,7 +244,7 @@ export class TabbedDetail {
         <div class="detail-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3>To-Do Dashboard</h3>
-            ${this.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : ''}
+            ${appState.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : ''}
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
             <div class="app-card">
@@ -291,7 +292,7 @@ export class TabbedDetail {
           </div>
         </div>
 
-        ${this.isAdmin() ? `
+        ${appState.isAdmin() ? `
           <div class="detail-section">
             <h3>Quick Actions</h3>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -338,7 +339,7 @@ export class TabbedDetail {
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
         </div>
-        ${this.isAdmin() ? `
+        ${appState.isAdmin() ? `
           <div class="todo-actions">
             <button class="btn-icon" data-action="edit" data-todo-id="${todo.id}">✏️</button>
             <button class="btn-icon" data-action="delete" data-todo-id="${todo.id}">🗑️</button>
@@ -349,9 +350,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Add new todo item
+   * Add new todo item (admin only)
    */
   addTodo(title, description = '', priority = 'medium', dueDate = null, extra = {}) {
+    // Security check: Only admins can add todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     const todo = {
       id: Date.now().toString(),
       title,
@@ -424,11 +430,16 @@ export class TabbedDetail {
   }
 
   /**
-   * Delete todo item
+   * Delete todo item (admin only)
    */
   deleteTodo(todoId) {
+    // Security check: Only admins can delete todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     if (!this.app.todos) return;
-    
+
     this.app.todos = this.app.todos.filter(t => t.id !== todoId);
     
     if (this.onNotesSave) {
@@ -449,6 +460,11 @@ export class TabbedDetail {
   }
 
   showEditTodoDialog(todo) {
+    // Security check: Only admins can edit todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     const existingDialog = document.querySelector('.todo-dialog');
     if (existingDialog) existingDialog.remove();
     const dialog = document.createElement('div');
@@ -601,9 +617,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Show add todo dialog
+   * Show add todo dialog (admin only)
    */
   showAddTodoDialog() {
+    // Security check: Only admins can add todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     const existingDialog = document.querySelector('.todo-dialog');
     if (existingDialog) existingDialog.remove();
     console.log('Opening add todo dialog...');
@@ -830,9 +851,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Start review checklist
+   * Start review checklist (admin only)
    */
   startReviewChecklist() {
+    // Security check: Only admins can start review checklists
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     (async () => {
       const mod = await import('./ReviewChecklist.js');
       const reviewsResult = await (await import('../data/ApiService.js')).default.fetchAppReviews(this.app.id);
@@ -898,11 +924,16 @@ export class TabbedDetail {
   }
 
   /**
-   * Mark app as reviewed
+   * Mark app as reviewed (admin only)
    */
   markAsReviewed() {
+    // Security check: Only admins can mark as reviewed
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     console.log('Marking app as reviewed:', this.app.id);
-    
+
     if (confirm(`Mark ${this.app.name} as reviewed?\n\nThis will update the last review date to today and set the next review for 60 days from the last commit.`)) {
       // Call the parent app's markAsReviewed method
       if (this.onReviewComplete) {

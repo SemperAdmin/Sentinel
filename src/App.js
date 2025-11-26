@@ -520,8 +520,16 @@ class App {
     const cancelBtn = document.getElementById('cancel-admin-login');
     const passwordInput = document.getElementById('admin-password-input');
 
-    // Close modal function
+    // Escape key handler
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+
+    // Close modal function - cleanup all listeners
     const closeModal = () => {
+      document.removeEventListener('keydown', escapeHandler);
       modal.remove();
     };
 
@@ -555,12 +563,7 @@ class App {
     });
 
     // Close on escape key
-    document.addEventListener('keydown', function escapeHandler(e) {
-      if (e.key === 'Escape') {
-        closeModal();
-        document.removeEventListener('keydown', escapeHandler);
-      }
-    });
+    document.addEventListener('keydown', escapeHandler);
 
     // Focus password input
     setTimeout(() => passwordInput.focus(), 100);
@@ -1033,16 +1036,19 @@ class App {
 
     container.innerHTML = ideas.map(idea => this.renderIdeaItem(idea)).join('');
 
-    // Add click listeners to idea items
-    container.querySelectorAll('.idea-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const ideaId = item.dataset.ideaId;
-        const idea = appState.getIdeaById(ideaId);
-        if (idea) {
-          this.editIdea(idea);
-        }
+    // Add click listeners to idea items (admin only)
+    const isAdmin = appState.isAdmin();
+    if (isAdmin) {
+      container.querySelectorAll('.idea-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const ideaId = item.dataset.ideaId;
+          const idea = appState.getIdeaById(ideaId);
+          if (idea) {
+            this.editIdea(idea);
+          }
+        });
       });
-    });
+    }
   }
 
   /**
@@ -1155,9 +1161,15 @@ class App {
   }
 
   /**
-   * Edit existing idea
+   * Edit existing idea (admin only)
    */
   editIdea(ideaId) {
+    // Security check: Only admins can edit ideas
+    if (!appState.isAdmin()) {
+      toastManager.show('Admin access required', 'error');
+      return;
+    }
+
     const idea = appState.getIdeaById(ideaId);
     if (idea) {
       this.showIdeaForm(idea);
@@ -1189,9 +1201,15 @@ class App {
   }
 
   /**
-   * Activate idea (convert to app)
+   * Activate idea (convert to app) - admin only
    */
   async activateIdea(ideaId) {
+    // Security check: Only admins can activate ideas
+    if (!appState.isAdmin()) {
+      toastManager.show('Admin access required', 'error');
+      return;
+    }
+
     const repoUrl = prompt('Enter GitHub repository URL for this app:');
     if (!repoUrl || !isValidGitHubUrl(repoUrl)) {
       alert('Please enter a valid GitHub repository URL');
