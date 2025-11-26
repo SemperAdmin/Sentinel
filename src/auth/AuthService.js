@@ -94,12 +94,15 @@ export class AuthService {
 
     // Require password to be set in production
     if (!adminPassword) {
-      console.error('VITE_ADMIN_PASSWORD environment variable is not set!');
-      console.error('Available env:', {
-        hasImportMeta: typeof import.meta !== 'undefined',
-        hasImportMetaEnv: typeof import.meta?.env !== 'undefined',
-        envKeys: import.meta?.env ? Object.keys(import.meta.env) : []
-      });
+      // Only log error in development mode or when user explicitly tries to login
+      if (import.meta?.env?.DEV) {
+        console.error('VITE_ADMIN_PASSWORD environment variable is not set!');
+        console.error('Available env:', {
+          hasImportMeta: typeof import.meta !== 'undefined',
+          hasImportMetaEnv: typeof import.meta?.env !== 'undefined',
+          envKeys: import.meta?.env ? Object.keys(import.meta.env) : []
+        });
+      }
       return {
         success: false,
         error: 'Authentication not configured. Please contact administrator.'
