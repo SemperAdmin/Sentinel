@@ -75,13 +75,21 @@ export class AuthService {
     //   - Add: Key = VITE_ADMIN_PASSWORD, Value = your_secure_password
     //   - Vite will inject this at build time
 
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+    // Safely access import.meta.env (might be undefined in some builds)
+    let adminPassword;
+    try {
+      adminPassword = import.meta?.env?.VITE_ADMIN_PASSWORD;
+    } catch (e) {
+      console.error('Error accessing import.meta.env:', e);
+    }
 
     console.log('Environment check:', {
+      hasImportMeta: typeof import.meta !== 'undefined',
+      hasEnv: typeof import.meta?.env !== 'undefined',
       hasPassword: !!adminPassword,
-      envMode: import.meta.env.MODE,
-      isDev: import.meta.env.DEV,
-      isProd: import.meta.env.PROD
+      envMode: import.meta?.env?.MODE,
+      isDev: import.meta?.env?.DEV,
+      isProd: import.meta?.env?.PROD
     });
 
     if (!adminPassword) {
