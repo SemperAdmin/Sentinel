@@ -30,91 +30,44 @@ export class LoginForm {
    */
   renderModeSelection() {
     return `
-      <div class="login-container">
-        <div class="login-welcome">
-          <div class="login-welcome-header">
-            <h1>SENTINEL</h1>
-            <p class="login-welcome-subtitle">APP PORTFOLIO MANAGER</p>
-            <h2 class="login-welcome-mode-title">Choose Access Mode</h2>
-            <p class="login-welcome-mode-subtitle">Select how you want to use Sentinel</p>
+      <div class="login-page">
+        <div class="login-header-centered">
+          <h1>SENTINEL</h1>
+          <p class="subtitle">APP PORTFOLIO MANAGER</p>
+          <h2>Choose Access Mode</h2>
+        </div>
+
+        <div class="login-cards-container">
+          <!-- Public Mode Card -->
+          <div class="login-mode-card">
+            <div class="card-icon">👥</div>
+            <h3>PUBLIC MODE</h3>
+            <p class="card-description">Browse the portfolio and view app details without logging in</p>
+            <ul class="card-features">
+              <li>✓ Browse app portfolio</li>
+              <li>✓ View app details & metrics</li>
+              <li>✓ Submit improvement suggestions</li>
+              <li>✓ Propose new app ideas</li>
+            </ul>
+            <button id="btn-select-public" class="mode-btn mode-btn-public">
+              Continue as Guest
+            </button>
           </div>
 
-          <div class="mode-selection">
-            <div class="mode-cards">
-              <!-- Public Mode Card -->
-              <div class="mode-card">
-                <div class="mode-card-content">
-                  <div class="mode-card-back">
-                    <div class="mode-card-back-content">
-                      <div class="mode-card-icon">👥</div>
-                      <strong>PUBLIC MODE</strong>
-                      <p>Click to continue as guest</p>
-                    </div>
-                  </div>
-                  <div class="mode-card-front mode-card-front-public">
-                    <div class="mode-card-decorations">
-                      <div class="mode-circle"></div>
-                      <div class="mode-circle" id="circle-right"></div>
-                      <div class="mode-circle" id="circle-bottom"></div>
-                    </div>
-                    <div class="mode-card-front-content">
-                      <span class="mode-badge">Guest Access</span>
-                      <div class="mode-description">
-                        <div class="mode-title">
-                          <p><strong>PUBLIC MODE</strong></p>
-                        </div>
-                        <ul class="mode-features">
-                          <li>Browse app portfolio</li>
-                          <li>View app details & metrics</li>
-                          <li>Submit improvement suggestions</li>
-                          <li>Propose new app ideas</li>
-                        </ul>
-                        <button id="btn-select-public" class="mode-select-btn">
-                          Continue as Guest →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Admin Mode Card -->
-              <div class="mode-card">
-                <div class="mode-card-content">
-                  <div class="mode-card-back">
-                    <div class="mode-card-back-content">
-                      <div class="mode-card-icon">🔐</div>
-                      <strong>ADMIN MODE</strong>
-                      <p>Login required for full access</p>
-                    </div>
-                  </div>
-                  <div class="mode-card-front mode-card-front-admin">
-                    <div class="mode-card-decorations">
-                      <div class="mode-circle mode-circle-admin"></div>
-                      <div class="mode-circle mode-circle-admin" id="circle-right"></div>
-                      <div class="mode-circle mode-circle-admin" id="circle-bottom"></div>
-                    </div>
-                    <div class="mode-card-front-content">
-                      <span class="mode-badge mode-badge-admin">Admin Access</span>
-                      <div class="mode-description">
-                        <div class="mode-title">
-                          <p><strong>ADMIN MODE</strong></p>
-                        </div>
-                        <ul class="mode-features">
-                          <li>Manage apps and tasks</li>
-                          <li>Review feedback submissions</li>
-                          <li>Edit developer notes</li>
-                          <li>Archive applications</li>
-                        </ul>
-                        <button id="btn-select-admin" class="mode-select-btn mode-select-btn-admin">
-                          Login Required →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <!-- Admin Mode Card -->
+          <div class="login-mode-card">
+            <div class="card-icon">🔐</div>
+            <h3>ADMIN MODE</h3>
+            <p class="card-description">Full management access with authentication required</p>
+            <ul class="card-features">
+              <li>✓ Manage apps and tasks</li>
+              <li>✓ Review feedback submissions</li>
+              <li>✓ Edit developer notes</li>
+              <li>✓ Archive applications</li>
+            </ul>
+            <button id="btn-select-admin" class="mode-btn mode-btn-admin">
+              Login Required
+            </button>
           </div>
         </div>
       </div>
