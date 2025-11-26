@@ -464,13 +464,17 @@ class App {
   updateLoginView() {
     const mainContent = document.querySelector('.main-content') || document.querySelector('main') || document.body;
 
-    // Hide header and other views
+    // Hide header
     const header = document.querySelector('.header');
     if (header) header.style.display = 'none';
 
+    // Hide all views
     document.querySelectorAll('.view').forEach(view => {
       view.style.display = 'none';
     });
+
+    // Clear the main content container to remove any existing content
+    mainContent.innerHTML = '';
 
     // Show login form
     if (!this.loginForm) {
@@ -480,21 +484,9 @@ class App {
     this.loginForm.mount(mainContent, async (role) => {
       console.log('Login successful with role:', role);
 
-      // Show header again
-      if (header) header.style.display = '';
-
-      // Update app state
-      appState.setAuthentication(role);
-
-      // Load data if admin
-      if (role === 'admin') {
-        this.showLoading('Loading portfolio data...');
-        await this.loadInitialData();
-        this.hideLoading();
-      }
-
-      // Show dashboard
-      this.showView('dashboard');
+      // Restore main content structure by reloading the page
+      // This ensures all views are properly initialized
+      location.reload();
     });
   }
 
