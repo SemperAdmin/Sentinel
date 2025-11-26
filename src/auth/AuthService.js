@@ -62,11 +62,17 @@ export class AuthService {
    * @returns {Promise<{success: boolean, role: string, error?: string}>}
    */
   async login(password) {
+    // ⚠️ SECURITY WARNING: This is client-side authentication.
+    // The VITE_ADMIN_PASSWORD will be embedded in the production JavaScript bundle
+    // and will be visible to the public. This method is only suitable for
+    // personal or internal-only applications. For public-facing apps,
+    // authentication should be handled by a backend service.
+
     // Password from Render.com environment variable
     // Set this in Render Dashboard: Environment → Environment Variables
     // Key: VITE_ADMIN_PASSWORD
     // Value: your_secure_password
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+    const adminPassword = import.meta?.env?.VITE_ADMIN_PASSWORD;
 
     // Require password to be set in production
     if (!adminPassword) {
@@ -99,6 +105,25 @@ export class AuthService {
   }
 
   /**
+   * Set user as public (guest) user
+   * @returns {Promise<{success: boolean, role: string}>}
+   */
+  async loginAsPublic() {
+    const session = {
+      role: 'public',
+      authenticatedAt: Date.now(),
+      expiresAt: Date.now() + SESSION_DURATION
+    };
+
+    this.saveSession(session);
+
+    return {
+      success: true,
+      role: 'public'
+    };
+  }
+
+  /**
    * Log out current user
    */
   logout() {
@@ -119,6 +144,19 @@ export class AuthService {
   }
 
   /**
+   * Check if user is authenticated as public user
+   * @returns {boolean}
+   */
+  isPublicUser() {
+    if (!this.session) return false;
+    if (Date.now() > this.session.expiresAt) {
+      this.clearSession();
+      return false;
+    }
+    return this.session.role === 'public';
+  }
+
+  /**
    * Check if user is authenticated (admin or public)
    * @returns {boolean}
    */
@@ -132,15 +170,8 @@ export class AuthService {
    */
   getRole() {
     if (this.isAdmin()) return 'admin';
-    return 'public';
-  }
-
-  /**
-   * Public users are always authenticated (read-only access)
-   * @returns {boolean}
-   */
-  isPublicUser() {
-    return true; // Public access is always available
+    if (this.isPublicUser()) return 'public';
+    return 'guest';
   }
 
   /**
@@ -151,7 +182,8 @@ export class AuthService {
     return {
       role: this.getRole(),
       isAdmin: this.isAdmin(),
-      isPublic: !this.isAdmin(),
+      isPublic: this.isPublicUser(),
+      isGuest: !this.isAuthenticated(),
       expiresAt: this.session?.expiresAt || null,
       timeRemaining: this.session ? this.session.expiresAt - Date.now() : null
     };

@@ -35,8 +35,8 @@ export class LoginForm {
           <div class="login-welcome-header">
             <h1>SENTINEL</h1>
             <p class="login-welcome-subtitle">APP PORTFOLIO MANAGER</p>
-            <h2 style="margin-top: 2rem; color: var(--white); font-size: 2rem;">Choose Access Mode</h2>
-            <p style="color: var(--gray-300); margin-top: 0.5rem;">Select how you want to use Sentinel</p>
+            <h2 class="login-welcome-mode-title">Choose Access Mode</h2>
+            <p class="login-welcome-mode-subtitle">Select how you want to use Sentinel</p>
           </div>
 
           <div class="mode-selection">
@@ -181,8 +181,10 @@ export class LoginForm {
   attachModeSelectionEvents() {
     // Public mode button
     const publicBtn = document.getElementById('btn-select-public');
-    publicBtn?.addEventListener('click', () => {
-      console.log('Public mode selected');
+    publicBtn?.addEventListener('click', async () => {
+      // Save public session
+      await authService.loginAsPublic();
+
       if (this.onLoginSuccess) {
         this.onLoginSuccess('public');
       }
@@ -191,7 +193,6 @@ export class LoginForm {
     // Admin mode button
     const adminBtn = document.getElementById('btn-select-admin');
     adminBtn?.addEventListener('click', () => {
-      console.log('Admin mode selected, showing password screen');
       this.currentStep = 'admin-password';
       this.remount();
     });

@@ -111,6 +111,9 @@ class App {
       if (sessionInfo.isAdmin) {
         // User is authenticated as admin
         appState.setAuthentication('admin');
+      } else if (sessionInfo.isPublic) {
+        // User is authenticated as public user
+        appState.setAuthentication('public');
       } else {
         // Show login screen
         appState.setAuthentication('guest');
@@ -482,11 +485,48 @@ class App {
     }
 
     this.loginForm.mount(mainContent, async (role) => {
-      console.log('Login successful with role:', role);
+      // Restore the header
+      if (header) header.style.display = '';
 
-      // Restore main content structure by reloading the page
-      // This ensures all views are properly initialized
-      location.reload();
+      // Update app state
+      appState.setAuthentication(role);
+
+      // Load data for authenticated users
+      if (role === 'admin' || role === 'public') {
+        this.showLoading('Loading portfolio data...');
+
+        // Restore main content structure
+        mainContent.innerHTML = `
+          <div id="dashboard-view" class="view active">
+            <div class="view-header">
+              <h2>PORTFOLIO OVERVIEW</h2>
+              <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+                <span>Sort by</span>
+                <select id="sort-select" class="btn btn-secondary" style="padding:.25rem .5rem;">
+                  <option value="alphabetical">Alphabetical</option>
+                  <option value="lastReviewed">Last Reviewed</option>
+                  <option value="nextReview">Next Review</option>
+                  <option value="activeTodo">Active To-Dos</option>
+                </select>
+              </label>
+              <div class="view-actions">
+                <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
+              </div>
+            </div>
+            <div id="app-grid" class="app-grid"></div>
+          </div>
+        `;
+
+        // Re-setup event listeners
+        this.setupEventListeners();
+
+        // Load portfolio data
+        await this.loadInitialData();
+        this.hideLoading();
+
+        // Show dashboard
+        this.showView('dashboard');
+      }
     });
   }
 

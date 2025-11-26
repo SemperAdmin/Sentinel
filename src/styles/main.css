@@ -816,6 +816,17 @@ body {
   text-transform: uppercase;
 }
 
+.login-welcome-mode-title {
+  margin-top: 2rem;
+  color: var(--white);
+  font-size: 2rem;
+}
+
+.login-welcome-mode-subtitle {
+  color: var(--gray-300);
+  margin-top: 0.5rem;
+}
+
 /* Mode Selection */
 .mode-selection {
   background-color: var(--white);
