@@ -68,42 +68,45 @@ export class AuthService {
     // personal or internal-only applications. For public-facing apps,
     // authentication should be handled by a backend service.
 
-    // Password from Render.com environment variable
-    // Set this in Render Dashboard: Environment → Environment Variables
-    // Key: VITE_ADMIN_PASSWORD
-    // Value: your_secure_password
+    // Password from environment variable
+    // DEVELOPMENT: Set VITE_ADMIN_PASSWORD in .env file
+    // PRODUCTION (Render.com): Set VITE_ADMIN_PASSWORD in Environment Variables
+    //   - Go to Render Dashboard → Your Service → Environment
+    //   - Add: Key = VITE_ADMIN_PASSWORD, Value = your_secure_password
+    //   - Vite will inject this at build time
 
-    // Try multiple ways to get the admin password (in priority order)
-    let adminPassword;
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
 
-    // 1. Runtime config (production - set in public/config.js)
-    if (window.APP_CONFIG?.ADMIN_PASSWORD && window.APP_CONFIG.ADMIN_PASSWORD !== '${ADMIN_PASSWORD}') {
-      adminPassword = window.APP_CONFIG.ADMIN_PASSWORD;
-      console.log('Password loaded from runtime config (window.APP_CONFIG)');
-    }
+    console.log('Environment check:', {
+      hasPassword: !!adminPassword,
+      envMode: import.meta.env.MODE,
+      isDev: import.meta.env.DEV,
+      isProd: import.meta.env.PROD
+    });
 
-    // 2. Vite environment variable (development - from .env file)
-    else if (import.meta.env?.VITE_ADMIN_PASSWORD) {
-      adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
-      console.log('Password loaded from Vite environment (import.meta.env)');
-    }
-
-    // 3. Window object fallback
-    else if (window.ADMIN_PASSWORD) {
-      adminPassword = window.ADMIN_PASSWORD;
-      console.log('Password loaded from window.ADMIN_PASSWORD');
-    }
-
-    // Require password to be set
     if (!adminPassword) {
-      console.error('Admin password not configured!');
-      console.error('For development: Set VITE_ADMIN_PASSWORD in .env file');
-      console.error('For production: Edit public/config.js and set ADMIN_PASSWORD');
+      console.error('❌ VITE_ADMIN_PASSWORD not configured!');
+      console.error('');
+      console.error('For LOCAL development:');
+      console.error('  1. Create/edit .env file in project root');
+      console.error('  2. Add: VITE_ADMIN_PASSWORD=your_password');
+      console.error('  3. Restart dev server');
+      console.error('');
+      console.error('For RENDER.COM deployment:');
+      console.error('  1. Go to Render Dashboard → Your Service');
+      console.error('  2. Click "Environment" in left sidebar');
+      console.error('  3. Add environment variable:');
+      console.error('     Key:   VITE_ADMIN_PASSWORD');
+      console.error('     Value: your_secure_password');
+      console.error('  4. Save and trigger a new deploy');
+      console.error('');
       return {
         success: false,
-        error: 'Authentication not configured. Please contact administrator.'
+        error: 'Admin password not configured. Check console for setup instructions.'
       };
     }
+
+    console.log('✓ Password loaded from environment variable');
 
     console.log('Comparing passwords... (lengths)', password.length, adminPassword.length);
 
