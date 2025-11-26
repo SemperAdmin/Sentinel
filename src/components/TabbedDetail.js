@@ -5,6 +5,7 @@
 import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify, getSourceIcon } from '../utils/helpers.js';
 import appState from '../state/AppState.js';
 import { unwrapOr } from '../utils/result.js';
+import { toastManager } from '../utils/uiComponents.js';
 
 export class TabbedDetail {
   constructor(app, onNotesSave, onTabChange, onReviewComplete) {
@@ -779,7 +780,6 @@ export class TabbedDetail {
       await ApiService.updateApp(this.app);
 
       // Show success message
-      const { default: toastManager } = await import('../utils/ToastManager.js');
       toastManager.show('Thank you! Your suggestion has been submitted.', 'success');
 
       // Close dialog and refresh
