@@ -787,165 +787,315 @@ body {
 
 /* Login Welcome Screen */
 .login-welcome {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
-  max-width: 900px;
-  overflow: hidden;
+  max-width: 1000px;
 }
 
 .login-welcome-header {
-  background-color: var(--primary-dark);
+  background: linear-gradient(135deg, var(--primary-dark) 0%, #0d1419 100%);
   color: var(--white);
   padding: 3rem 2rem;
   text-align: center;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .login-welcome-header h1 {
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  letter-spacing: 3px;
+  margin: 0;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .login-welcome-subtitle {
-  font-size: 1rem;
-  color: var(--gray-300);
-  margin: 0;
-  letter-spacing: 2px;
+  font-size: 0.9rem;
+  color: var(--gray-400);
+  margin: 0.5rem 0 0 0;
+  letter-spacing: 3px;
   text-transform: uppercase;
 }
 
 /* Mode Selection */
 .mode-selection {
-  padding: 3rem 2rem;
-  text-align: center;
+  background-color: var(--white);
+  padding: 4rem 3rem;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-.mode-selection h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--gray-900);
-  margin: 0 0 0.5rem 0;
-  border-bottom: none;
-}
-
-.mode-selection-subtitle {
-  font-size: 1rem;
-  color: var(--gray-600);
-  margin: 0 0 2.5rem 0;
-}
-
-/* Mode Buttons */
-.mode-buttons {
+/* Mode Cards Grid */
+.mode-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  max-width: 800px;
+  gap: 3rem;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.mode-button {
-  background-color: var(--white);
-  border: 3px solid var(--gray-300);
-  border-radius: var(--border-radius);
-  padding: 2rem 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 400px;
-}
-
-.mode-button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-}
-
-.mode-button-public:hover {
-  border-color: var(--success-green);
-  box-shadow: 0 15px 40px rgba(40, 167, 69, 0.3);
-}
-
-.mode-button-admin:hover {
-  border-color: var(--primary-blue);
-  box-shadow: 0 15px 40px rgba(0, 123, 255, 0.3);
-}
-
-.mode-button-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.mode-button-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* Individual Card */
+.mode-card {
+  overflow: visible;
   width: 100%;
+  height: 380px;
 }
 
-.mode-button-content h3 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--gray-900);
-  margin: 0 0 0.5rem 0;
+.mode-card-content {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 400ms;
+  box-shadow: 0px 0px 15px 2px rgba(0, 0, 0, 0.3);
+  border-radius: var(--border-radius);
+}
+
+.mode-card:hover .mode-card-content {
+  transform: rotateY(180deg);
+}
+
+.mode-card-front, .mode-card-back {
+  background-color: #151515;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* Back of Card */
+.mode-card-back {
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+
+.mode-card-back::before {
+  position: absolute;
+  content: ' ';
+  display: block;
+  width: 160px;
+  height: 160%;
+  background: linear-gradient(90deg, transparent, #28a745, #28a745, #28a745, #28a745, transparent);
+  animation: rotation_card 5000ms infinite linear;
+}
+
+.mode-card-back-content {
+  position: absolute;
+  width: 98%;
+  height: 98%;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border-radius: var(--border-radius);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.mode-card-back-content strong {
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.mode-card-back-content p {
+  font-size: 0.9rem;
+  color: var(--gray-400);
+}
+
+.mode-card-icon {
+  font-size: 5rem;
+}
+
+@keyframes rotation_card {
+  0% {
+    transform: rotateZ(0deg);
+  }
+  100% {
+    transform: rotateZ(360deg);
+  }
+}
+
+/* Front of Card */
+.mode-card-front {
+  transform: rotateY(180deg);
+  color: white;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+}
+
+.mode-card-front-content {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.mode-badge {
+  background-color: rgba(40, 167, 69, 0.3);
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  backdrop-filter: blur(5px);
+  width: fit-content;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
+  border: 1px solid rgba(40, 167, 69, 0.5);
+  color: #28a745;
 }
 
-.mode-button-description {
-  font-size: 1rem;
-  color: var(--gray-600);
-  margin: 0 0 1.5rem 0;
-  font-weight: 500;
+.mode-badge-admin {
+  background-color: rgba(0, 123, 255, 0.3);
+  border-color: rgba(0, 123, 255, 0.5);
+  color: var(--primary-blue);
 }
 
-.mode-button-features {
+.mode-description {
+  box-shadow: 0px 0px 20px 8px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  padding: 1.5rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mode-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.mode-title p {
+  margin: 0;
+}
+
+.mode-features {
   list-style: none;
   padding: 0;
-  margin: 0 0 2rem 0;
-  text-align: left;
-  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+  line-height: 1.8;
 }
 
-.mode-button-features li {
-  padding: 0.75rem;
+.mode-features li {
+  padding-left: 1.5rem;
+  position: relative;
+  color: var(--gray-300);
   margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--gray-700);
-  border-left: 3px solid var(--primary-blue);
-  background-color: var(--gray-50);
-  border-radius: 4px;
 }
 
-.mode-button-features li:before {
-  content: "✓ ";
-  color: var(--success-green);
+.mode-features li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #28a745;
   font-weight: bold;
-  margin-right: 0.5rem;
 }
 
-.mode-button-action {
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 2px solid var(--gray-200);
+.mode-select-btn {
   width: 100%;
-}
-
-.mode-button-cta {
-  display: inline-block;
-  font-size: 1.1rem;
+  padding: 0.8rem;
+  margin-top: 1rem;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  border-radius: var(--border-radius);
+  color: white;
   font-weight: 600;
-  color: var(--primary-blue);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
-.mode-button-public .mode-button-cta {
-  color: var(--success-green);
+.mode-select-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.mode-select-btn-admin {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, #0056b3 100%);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.mode-select-btn-admin:hover {
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+/* Decorative Circles */
+.mode-card-decorations {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.mode-circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background-color: rgba(40, 167, 69, 0.4);
+  position: absolute;
+  filter: blur(25px);
+  animation: floating 2600ms infinite linear;
+}
+
+.mode-circle-admin {
+  background-color: rgba(0, 123, 255, 0.4);
+}
+
+#circle-bottom {
+  background-color: rgba(40, 167, 69, 0.3);
+  left: 50px;
+  top: 20px;
+  width: 150px;
+  height: 150px;
+  animation-delay: -800ms;
+}
+
+#circle-right {
+  background-color: rgba(40, 167, 69, 0.2);
+  right: 20px;
+  top: 100px;
+  width: 100px;
+  height: 100px;
+  animation-delay: -1800ms;
+}
+
+.mode-circle-admin#circle-bottom {
+  background-color: rgba(0, 123, 255, 0.3);
+}
+
+.mode-circle-admin#circle-right {
+  background-color: rgba(0, 123, 255, 0.2);
+}
+
+@keyframes floating {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(15px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 /* Login Card (Password Screen) */
@@ -1008,34 +1158,30 @@ body {
 
 /* Login Responsive */
 @media (max-width: 768px) {
-  .mode-buttons {
+  .mode-cards {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 2rem;
   }
 
-  .mode-button {
-    min-height: auto;
-    padding: 1.5rem 1rem;
-  }
-
-  .mode-button-icon {
-    font-size: 3rem;
-  }
-
-  .mode-button-content h3 {
-    font-size: 1.5rem;
+  .mode-card {
+    height: 350px;
   }
 
   .login-welcome-header h1 {
     font-size: 2.5rem;
+    letter-spacing: 2px;
+  }
+
+  .login-welcome-header h2 {
+    font-size: 1.5rem;
   }
 
   .mode-selection {
-    padding: 2rem 1rem;
+    padding: 3rem 2rem;
   }
 
-  .mode-selection h2 {
-    font-size: 1.5rem;
+  .mode-card-icon {
+    font-size: 4rem;
   }
 }
 
@@ -1062,10 +1208,35 @@ body {
 
   .login-welcome-header h1 {
     font-size: 2rem;
+    letter-spacing: 2px;
   }
 
-  .mode-button-features li {
-    font-size: 0.85rem;
-    padding: 0.6rem;
+  .login-welcome-header h2 {
+    font-size: 1.3rem;
+    margin-top: 1.5rem;
+  }
+
+  .mode-selection {
+    padding: 2rem 1rem;
+  }
+
+  .mode-features li {
+    font-size: 0.8rem;
+  }
+
+  .mode-card {
+    height: 320px;
+  }
+
+  .mode-card-icon {
+    font-size: 3.5rem;
+  }
+
+  .mode-card-back-content strong {
+    font-size: 1.2rem;
+  }
+
+  .mode-title {
+    font-size: 1rem;
   }
 }
