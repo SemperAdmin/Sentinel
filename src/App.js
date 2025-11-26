@@ -495,27 +495,8 @@ class App {
       if (role === 'admin' || role === 'public') {
         this.showLoading('Loading portfolio data...');
 
-        // Restore main content structure
-        mainContent.innerHTML = `
-          <div id="dashboard-view" class="view active">
-            <div class="view-header">
-              <h2>PORTFOLIO OVERVIEW</h2>
-              <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
-                <span>Sort by</span>
-                <select id="sort-select" class="btn btn-secondary" style="padding:.25rem .5rem;">
-                  <option value="alphabetical">Alphabetical</option>
-                  <option value="lastReviewed">Last Reviewed</option>
-                  <option value="nextReview">Next Review</option>
-                  <option value="activeTodo">Active To-Dos</option>
-                </select>
-              </label>
-              <div class="view-actions">
-                <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
-              </div>
-            </div>
-            <div id="app-grid" class="app-grid"></div>
-          </div>
-        `;
+        // Restore ALL main content views (not just dashboard)
+        mainContent.innerHTML = this.getMainContentHTML();
 
         // Re-setup event listeners
         this.setupEventListeners();
@@ -528,6 +509,168 @@ class App {
         this.showView('dashboard');
       }
     });
+  }
+
+  /**
+   * Get the full main content HTML with all views
+   * @returns {string} HTML string
+   */
+  getMainContentHTML() {
+    return `
+      <div id="dashboard-view" class="view active">
+        <div class="view-header">
+          <h2>PORTFOLIO OVERVIEW</h2>
+          <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+            <span>Sort by</span>
+            <select id="sort-select" class="btn btn-secondary" style="padding:.25rem .5rem;">
+              <option value="alphabetical">Alphabetical</option>
+              <option value="lastReviewed">Last Reviewed</option>
+              <option value="nextReview">Next Review</option>
+              <option value="activeTodo">Active To-Dos</option>
+            </select>
+          </label>
+          <div class="view-actions">
+            <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
+          </div>
+        </div>
+        <div id="app-grid" class="app-grid"></div>
+      </div>
+
+      <div id="detail-view" class="view">
+        <div class="view-header">
+          <button class="btn btn-secondary" id="back-to-dashboard">← BACK</button>
+          <h2 id="detail-app-name">APP DETAILS</h2>
+        </div>
+        <div class="detail-content">
+          <div class="tab-nav">
+            <button class="tab-btn active" data-tab="overview">OVERVIEW & SYSTEM CHECKS</button>
+            <button class="tab-btn" data-tab="todo">TO-DO & IMPROVEMENTS</button>
+          </div>
+
+          <div class="tab-content">
+            <div id="overview-tab" class="tab-pane active">
+              <div class="detail-section">
+                <h3>QUARTERLY REVIEW SCHEDULE</h3>
+                <div class="review-info">
+                  <div class="info-item">
+                    <label>LAST REVIEW:</label>
+                    <span id="last-review-date">-</span>
+                  </div>
+                  <div class="info-item">
+                    <label>NEXT DUE (60d from commit):</label>
+                    <span id="next-review-date">-</span>
+                  </div>
+                </div>
+                <button class="btn btn-primary" id="start-review-checklist">▶ START REVIEW CHECKLIST</button>
+                <button class="btn btn-secondary" id="mark-as-reviewed" style="margin-left: 1rem;">✓ MARK AS REVIEWED</button>
+              </div>
+
+              <div class="detail-section">
+                <h3>TECHNICAL STATUS</h3>
+                <div class="status-grid">
+                  <div class="status-item">
+                    <label>COMPATIBILITY STATUS:</label>
+                    <span id="compatibility-status" class="status-badge">-</span>
+                  </div>
+                  <div class="status-item">
+                    <label>DEPENDENCY AUDIT:</label>
+                    <span id="dependency-status" class="status-badge">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="todo-tab" class="tab-pane">
+              <div class="detail-section">
+                <h3>IMPROVEMENT BUDGET TRACKER</h3>
+                <div class="budget-info">
+                  <div class="budget-bar">
+                    <div class="budget-fill" id="budget-fill"></div>
+                  </div>
+                  <span id="budget-text">0% OF 20% BUDGET USED</span>
+                </div>
+              </div>
+
+              <div class="detail-section">
+                <h3>OPEN TASKS</h3>
+                <div id="task-list" class="task-list"></div>
+                <button class="btn btn-secondary" id="view-external-tracker">🔗 VIEW EXTERNAL TASK TRACKER</button>
+              </div>
+            </div>
+
+            <div id="notes-tab" class="tab-pane">
+              <div class="detail-section">
+                <h3>DEVELOPER NOTES</h3>
+                <textarea id="developer-notes" class="notes-textarea" placeholder="ADD YOUR DEVELOPMENT NOTES HERE..."></textarea>
+                <button class="btn btn-primary" id="save-notes">💾 SAVE NOTES</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ideas-view" class="view">
+        <div class="view-header">
+          <h2>Innovation Lab</h2>
+          <button class="btn btn-primary" id="new-idea-btn">+ NEW IDEA</button>
+        </div>
+        <div class="ideas-content">
+          <div id="ideas-list" class="ideas-list"></div>
+
+          <div id="idea-form-container" class="idea-form-container hidden">
+            <h3>DOCUMENT NEW CONCEPT</h3>
+            <form id="idea-form" class="idea-form">
+              <div class="form-group">
+                <label for="concept-name">CONCEPT NAME *</label>
+                <input type="text" id="concept-name" required>
+              </div>
+
+              <div class="form-group">
+                <label for="problem-solved">PROBLEM SOLVED *</label>
+                <textarea id="problem-solved" required placeholder="WHAT VALUE PROPOSITION DOES THIS IDEA OFFER?"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="target-audience">TARGET AUDIENCE *</label>
+                <input type="text" id="target-audience" required>
+              </div>
+
+              <div class="form-group">
+                <label for="initial-features">INITIAL FEATURE SET (MVP) *</label>
+                <textarea id="initial-features" required placeholder="DEFINE THE SCOPE FOR THE MINIMUM VIABLE PRODUCT"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="tech-stack">TECHNOLOGY STACK (PROPOSED) *</label>
+                <select id="tech-stack" required>
+                  <option value="">SELECT TECHNOLOGY</option>
+                  <option value="React Native">REACT NATIVE</option>
+                  <option value="Flutter">FLUTTER</option>
+                  <option value="Web">WEB</option>
+                  <option value="iOS Native">IOS NATIVE</option>
+                  <option value="Android Native">ANDROID NATIVE</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="risk-rating">RISK/COMPLEXITY RATING *</label>
+                <select id="risk-rating" required>
+                  <option value="">SELECT RATING</option>
+                  <option value="Low">LOW</option>
+                  <option value="Medium">MEDIUM</option>
+                  <option value="High">HIGH</option>
+                </select>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-idea">CANCEL</button>
+                <button type="submit" class="btn btn-primary">SAVE IDEA</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   /**

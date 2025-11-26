@@ -785,6 +785,158 @@ body {
   padding: 2rem;
 }
 
+/* Simple Login Page - New Simplified Design */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, #0d1419 100%);
+  padding: 3rem 2rem;
+}
+
+.login-header-centered {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.login-header-centered h1 {
+  font-size: 3.5rem;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.login-header-centered .subtitle {
+  font-size: 1rem;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 2rem;
+}
+
+.login-header-centered h2 {
+  font-size: 1.8rem;
+  color: var(--white);
+  margin-top: 2rem;
+  font-weight: 500;
+}
+
+/* Login Cards Container */
+.login-cards-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3rem;
+  max-width: 900px;
+  width: 100%;
+}
+
+/* Individual Mode Card */
+.login-mode-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.login-mode-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--primary-blue);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.login-mode-card .card-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.login-mode-card h3 {
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.login-mode-card .card-description {
+  color: var(--gray-400);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.login-mode-card .card-features {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.login-mode-card .card-features li {
+  color: var(--gray-300);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+/* Mode Buttons */
+.mode-btn {
+  width: 100%;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 1rem;
+}
+
+.mode-btn-public {
+  background: var(--success-green);
+  color: var(--white);
+}
+
+.mode-btn-public:hover {
+  background: #20a035;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  transform: translateY(-2px);
+}
+
+.mode-btn-admin {
+  background: var(--primary-blue);
+  color: var(--white);
+}
+
+.mode-btn-admin:hover {
+  background: #0069d9;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Responsive for Login Cards */
+@media (max-width: 768px) {
+  .login-cards-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .login-header-centered h1 {
+    font-size: 2.5rem;
+  }
+
+  .login-header-centered h2 {
+    font-size: 1.5rem;
+  }
+}
+
 /* Login Welcome Screen */
 .login-welcome {
   width: 100%;

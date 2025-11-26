@@ -72,11 +72,34 @@ export class AuthService {
     // Set this in Render Dashboard: Environment → Environment Variables
     // Key: VITE_ADMIN_PASSWORD
     // Value: your_secure_password
-    const adminPassword = import.meta?.env?.VITE_ADMIN_PASSWORD;
+
+    // Try multiple ways to get the environment variable
+    let adminPassword;
+    try {
+      // First try: Vite's import.meta.env
+      adminPassword = import.meta?.env?.VITE_ADMIN_PASSWORD;
+
+      // Second try: window object (some build processes expose it here)
+      if (!adminPassword && typeof window !== 'undefined') {
+        adminPassword = window.VITE_ADMIN_PASSWORD;
+      }
+
+      // Third try: process.env (for Node environments)
+      if (!adminPassword && typeof process !== 'undefined' && process.env) {
+        adminPassword = process.env.VITE_ADMIN_PASSWORD;
+      }
+    } catch (e) {
+      console.error('Error accessing environment variables:', e);
+    }
 
     // Require password to be set in production
     if (!adminPassword) {
       console.error('VITE_ADMIN_PASSWORD environment variable is not set!');
+      console.error('Available env:', {
+        hasImportMeta: typeof import.meta !== 'undefined',
+        hasImportMetaEnv: typeof import.meta?.env !== 'undefined',
+        envKeys: import.meta?.env ? Object.keys(import.meta.env) : []
+      });
       return {
         success: false,
         error: 'Authentication not configured. Please contact administrator.'
