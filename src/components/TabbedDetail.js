@@ -244,7 +244,9 @@ export class TabbedDetail {
         <div class="detail-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3>To-Do Dashboard</h3>
-            ${appState.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : ''}
+            <div style="display: flex; gap: 0.5rem;">
+              ${appState.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : '<button class="btn btn-success" id="suggest-improvement-btn">💡 Suggest Improvement</button>'}
+            </div>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
             <div class="app-card">
@@ -309,6 +311,7 @@ export class TabbedDetail {
    * Render individual todo item
    */
   renderTodoItem(todo) {
+    const isPublicSubmission = todo.status === 'public-submission';
     const priorityClass = todo.priority ? `priority-${String(todo.priority).toLowerCase()}` : '';
     const dueDateClass = todo.dueDate && new Date(todo.dueDate) < new Date() ? 'overdue' : '';
     const sourceKey = slugify(String(todo.source||'other').replace(/\([^)]*\)/g,'').trim());
@@ -328,16 +331,20 @@ export class TabbedDetail {
     };
     const borderMap = { 'low': '#28a745', 'medium': '#ffc107', 'high': '#dc3545' };
     const bgColor = bgMap[sourceKey] || bgMap['other'];
-    const borderColor = borderMap[pr] || borderMap['medium'];
+    const borderColor = isPublicSubmission ? 'var(--primary-blue)' : (borderMap[pr] || borderMap['medium']);
     const styleStr = `background-color: ${bgColor}; border: 4px solid ${borderColor}; padding: 4px 12px;`;
-    
+
     return `
-      <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass}" data-todo-id="${todo.id}" style="${styleStr}">
+      <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass} ${isPublicSubmission ? 'public-submission' : ''}" data-todo-id="${todo.id}" style="${styleStr}">
         <div class="todo-content">
-          <div class="todo-title"><span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}</div>
+          <div class="todo-title">
+            <span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}
+            ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;">PUBLIC FEEDBACK</span>' : ''}
+          </div>
 
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
+          ${todo.submittedBy && todo.submittedBy !== 'public' ? `<div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem;">📧 ${this.escapeHtml(todo.submittedBy)}</div>` : ''}
         </div>
         ${appState.isAdmin() ? `
           <div class="todo-actions">
@@ -694,7 +701,107 @@ export class TabbedDetail {
       document.body.removeChild(dialog);
     });
     
-    
+
+  }
+
+  /**
+   * Show public improvement suggestion dialog
+   */
+  showPublicImprovementSuggestion() {
+    // Remove any existing dialog
+    const existingDialog = document.querySelector('.todo-dialog');
+    if (existingDialog) existingDialog.remove();
+
+    const dialog = document.createElement('div');
+    dialog.className = 'todo-dialog';
+    dialog.innerHTML = `
+      <div class="dialog-overlay">
+        <div class="dialog-content" style="max-width: 600px;">
+          <h3>Suggest an Improvement</h3>
+          <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
+            Have a suggestion for improving ${this.escapeHtml(this.app.name)}? Share your feedback below!
+          </p>
+          <form id="public-improvement-form">
+            <div class="form-group">
+              <label for="improvement-title">What would you like to improve? *</label>
+              <input type="text" id="improvement-title" class="form-control"
+                     placeholder="e.g., Add dark mode, Fix login bug, etc." required />
+            </div>
+            <div class="form-group">
+              <label for="improvement-description">Describe the improvement or issue *</label>
+              <textarea id="improvement-description" class="form-control" rows="4"
+                        placeholder="Provide details about the problem or enhancement..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="improvement-email">Your Email (optional)</label>
+              <input type="email" id="improvement-email" class="form-control"
+                     placeholder="your.email@example.com" />
+            </div>
+            <div class="dialog-actions">
+              <button type="button" class="btn btn-secondary" id="cancel-improvement">Cancel</button>
+              <button type="submit" class="btn btn-success">Submit Suggestion</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    // Handle form submission
+    dialog.querySelector('#public-improvement-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = dialog.querySelector('#improvement-title').value;
+      const description = dialog.querySelector('#improvement-description').value;
+      const email = dialog.querySelector('#improvement-email').value;
+
+      // Create a todo with public submission marker
+      const todo = {
+        id: `todo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        title: title,
+        description: description,
+        priority: 'medium',
+        status: 'public-submission',
+        source: 'Public User Feedback',
+        feedbackSummary: description,
+        submittedBy: email || 'public',
+        completed: false,
+        createdAt: new Date().toISOString()
+      };
+
+      // Add todo to the app's todos
+      if (!this.app.todos) this.app.todos = [];
+      this.app.todos.push(todo);
+
+      // Save to local storage
+      const { default: ApiService } = await import('../data/ApiService.js');
+      await ApiService.updateApp(this.app);
+
+      // Show success message
+      const { default: toastManager } = await import('../utils/ToastManager.js');
+      toastManager.show('Thank you! Your suggestion has been submitted.', 'success');
+
+      // Close dialog and refresh
+      document.body.removeChild(dialog);
+      this.render();
+    });
+
+    // Handle cancel
+    dialog.querySelector('#cancel-improvement').addEventListener('click', () => {
+      document.body.removeChild(dialog);
+    });
+
+    // Handle escape key
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape') {
+        document.removeEventListener('keydown', escapeHandler);
+        if (dialog.parentNode) {
+          document.body.removeChild(dialog);
+        }
+      }
+    };
+    document.addEventListener('keydown', escapeHandler);
   }
 
   /**
@@ -775,6 +882,13 @@ export class TabbedDetail {
     if (addTodoBtn) {
       addTodoBtn.addEventListener('click', () => {
         this.showAddTodoDialog();
+      });
+    }
+
+    const suggestImprovementBtn = this.element.querySelector('#suggest-improvement-btn');
+    if (suggestImprovementBtn) {
+      suggestImprovementBtn.addEventListener('click', () => {
+        this.showPublicImprovementSuggestion();
       });
     }
     

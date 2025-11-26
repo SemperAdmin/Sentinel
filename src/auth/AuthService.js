@@ -73,47 +73,35 @@ export class AuthService {
     // Key: VITE_ADMIN_PASSWORD
     // Value: your_secure_password
 
-    // Debug: Log what we have access to
-    console.log('Login attempt - Environment check:', {
-      hasImportMeta: typeof import.meta !== 'undefined',
-      hasEnv: typeof import.meta?.env !== 'undefined',
-      envKeys: import.meta?.env ? Object.keys(import.meta.env) : [],
-      envMode: import.meta?.env?.MODE,
-      envDev: import.meta?.env?.DEV,
-      envProd: import.meta?.env?.PROD
-    });
-
-    // Try multiple ways to get the environment variable
+    // Try multiple ways to get the admin password (in priority order)
     let adminPassword;
-    try {
-      // First try: Direct access (most reliable in Vite)
-      if (import.meta.env && import.meta.env.VITE_ADMIN_PASSWORD) {
-        adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
-        console.log('Password found via import.meta.env');
-      }
 
-      // Second try: window object (some build processes expose it here)
-      if (!adminPassword && typeof window !== 'undefined' && window.VITE_ADMIN_PASSWORD) {
-        adminPassword = window.VITE_ADMIN_PASSWORD;
-        console.log('Password found via window.VITE_ADMIN_PASSWORD');
-      }
+    // 1. Runtime config (production - set in public/config.js)
+    if (window.APP_CONFIG?.ADMIN_PASSWORD && window.APP_CONFIG.ADMIN_PASSWORD !== '${ADMIN_PASSWORD}') {
+      adminPassword = window.APP_CONFIG.ADMIN_PASSWORD;
+      console.log('Password loaded from runtime config (window.APP_CONFIG)');
+    }
 
-      // Third try: process.env (for Node environments)
-      if (!adminPassword && typeof process !== 'undefined' && process.env && process.env.VITE_ADMIN_PASSWORD) {
-        adminPassword = process.env.VITE_ADMIN_PASSWORD;
-        console.log('Password found via process.env');
-      }
-    } catch (e) {
-      console.error('Error accessing environment variables:', e);
+    // 2. Vite environment variable (development - from .env file)
+    else if (import.meta.env?.VITE_ADMIN_PASSWORD) {
+      adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+      console.log('Password loaded from Vite environment (import.meta.env)');
+    }
+
+    // 3. Window object fallback
+    else if (window.ADMIN_PASSWORD) {
+      adminPassword = window.ADMIN_PASSWORD;
+      console.log('Password loaded from window.ADMIN_PASSWORD');
     }
 
     // Require password to be set
     if (!adminPassword) {
-      console.error('VITE_ADMIN_PASSWORD not found in any environment source');
-      console.error('Make sure your .env file exists and the dev server is running');
+      console.error('Admin password not configured!');
+      console.error('For development: Set VITE_ADMIN_PASSWORD in .env file');
+      console.error('For production: Edit public/config.js and set ADMIN_PASSWORD');
       return {
         success: false,
-        error: 'Authentication not configured. Check console for details.'
+        error: 'Authentication not configured. Please contact administrator.'
       };
     }
 
