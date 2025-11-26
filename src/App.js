@@ -115,10 +115,9 @@ class App {
         // User is authenticated as public user
         appState.setAuthentication('public');
       } else {
-        // Show login screen
-        appState.setAuthentication('guest');
-        this.hideLoading();
-        return; // Don't load data until authenticated
+        // No session - auto-login as public user
+        await authService.loginAsPublic();
+        appState.setAuthentication('public');
       }
 
       try {
@@ -372,14 +371,22 @@ class App {
       });
     }
 
-    // Logout button
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to logout?')) {
-          authService.logout();
-          appState.logout();
-          location.reload(); // Reload to show login screen
+    // Auth button (Login/Logout toggle)
+    const authBtn = document.getElementById('auth-btn');
+    if (authBtn) {
+      authBtn.addEventListener('click', () => {
+        const currentRole = appState.getState().userRole;
+
+        if (currentRole === 'admin') {
+          // Logout from admin mode, return to public mode
+          if (confirm('Logout from admin mode? You will return to public view.')) {
+            authService.logout();
+            authService.loginAsPublic();
+            appState.setAuthentication('public');
+          }
+        } else {
+          // Show login modal for admin access
+          this.showAdminLoginModal();
         }
       });
     }
@@ -413,16 +420,16 @@ class App {
   handleStateChange(state) {
     console.log(`handleStateChange called with view: ${state.currentView}`);
 
-    // Handle login view separately
-    if (state.currentView === 'login') {
-      this.updateLoginView();
-      return;
-    }
-
-    // Show/hide logout button based on authentication status
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-      logoutBtn.style.display = state.isAuthenticated ? '' : 'none';
+    // Update login/logout button text and behavior
+    const authBtn = document.getElementById('auth-btn');
+    if (authBtn) {
+      if (state.userRole === 'admin') {
+        authBtn.textContent = '🚪 LOGOUT';
+        authBtn.title = 'Logout from admin mode';
+      } else {
+        authBtn.textContent = '🔐 LOGIN';
+        authBtn.title = 'Login as admin';
+      }
     }
 
     // Update navigation active states
@@ -462,53 +469,94 @@ class App {
   }
 
   /**
-   * Update login view
+   * Show admin login modal
    */
-  updateLoginView() {
-    const mainContent = document.querySelector('.main-content') || document.querySelector('main') || document.body;
+  showAdminLoginModal() {
+    // Create modal HTML
+    const modalHTML = `
+      <div class="admin-modal-overlay" id="admin-modal">
+        <div class="admin-modal">
+          <div class="admin-modal-header">
+            <h3>Admin Login</h3>
+            <button class="admin-modal-close" id="close-admin-modal">&times;</button>
+          </div>
+          <div class="admin-modal-body">
+            <form id="admin-login-form">
+              <div class="form-group">
+                <label for="admin-password-input">Admin Password</label>
+                <input
+                  type="password"
+                  id="admin-password-input"
+                  class="form-control"
+                  placeholder="Enter admin password"
+                  required
+                  autofocus
+                />
+              </div>
+              <div class="admin-modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-admin-login">Cancel</button>
+                <button type="submit" class="btn btn-primary">Login</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
 
-    // Hide header
-    const header = document.querySelector('.header');
-    if (header) header.style.display = 'none';
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Hide all views
-    document.querySelectorAll('.view').forEach(view => {
-      view.style.display = 'none';
-    });
+    // Get elements
+    const modal = document.getElementById('admin-modal');
+    const form = document.getElementById('admin-login-form');
+    const closeBtn = document.getElementById('close-admin-modal');
+    const cancelBtn = document.getElementById('cancel-admin-login');
+    const passwordInput = document.getElementById('admin-password-input');
 
-    // Clear the main content container to remove any existing content
-    mainContent.innerHTML = '';
+    // Close modal function
+    const closeModal = () => {
+      modal.remove();
+    };
 
-    // Show login form
-    if (!this.loginForm) {
-      this.loginForm = new LoginForm();
-    }
+    // Handle form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    this.loginForm.mount(mainContent, async (role) => {
-      // Restore the header
-      if (header) header.style.display = '';
+      const password = passwordInput.value;
+      const result = await authService.login(password);
 
-      // Update app state
-      appState.setAuthentication(role);
-
-      // Load data for authenticated users
-      if (role === 'admin' || role === 'public') {
-        this.showLoading('Loading portfolio data...');
-
-        // Restore ALL main content views (not just dashboard)
-        mainContent.innerHTML = this.getMainContentHTML();
-
-        // Re-setup event listeners
-        this.setupEventListeners();
-
-        // Load portfolio data
-        await this.loadInitialData();
-        this.hideLoading();
-
-        // Show dashboard
-        this.showView('dashboard');
+      if (result.success) {
+        appState.setAuthentication('admin');
+        toastManager.show('Successfully logged in as admin', 'success');
+        closeModal();
+      } else {
+        toastManager.show(result.error || 'Invalid password', 'error');
+        passwordInput.value = '';
+        passwordInput.focus();
       }
     });
+
+    // Close button
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', function escapeHandler(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    });
+
+    // Focus password input
+    setTimeout(() => passwordInput.focus(), 100);
   }
 
   /**
@@ -520,9 +568,9 @@ class App {
       <div id="dashboard-view" class="view active">
         <div class="view-header">
           <h2>PORTFOLIO OVERVIEW</h2>
-          <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+          <label class="view-header-sort-label">
             <span>Sort by</span>
-            <select id="sort-select" class="btn btn-secondary" style="padding:.25rem .5rem;">
+            <select id="sort-select" class="btn btn-secondary view-header-sort-select">
               <option value="alphabetical">Alphabetical</option>
               <option value="lastReviewed">Last Reviewed</option>
               <option value="nextReview">Next Review</option>
@@ -562,7 +610,7 @@ class App {
                   </div>
                 </div>
                 <button class="btn btn-primary" id="start-review-checklist">▶ START REVIEW CHECKLIST</button>
-                <button class="btn btn-secondary" id="mark-as-reviewed" style="margin-left: 1rem;">✓ MARK AS REVIEWED</button>
+                <button class="btn btn-secondary btn-mark-reviewed" id="mark-as-reviewed">✓ MARK AS REVIEWED</button>
               </div>
 
               <div class="detail-section">
