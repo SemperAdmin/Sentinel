@@ -18,7 +18,7 @@ This guide explains how to deploy the Sentinel App Manager to Render.com with pr
 
 ## Step 2: Set Environment Variables
 
-⚠️ **CRITICAL**: You must set the admin password as an environment variable for authentication to work.
+⚠️ **CRITICAL**: You must set the admin password as an environment variable **BEFORE** deploying, or trigger a new deploy after adding it.
 
 1. In your Render service dashboard, click **"Environment"** in the left sidebar
 2. Click **"Add Environment Variable"**
@@ -32,6 +32,11 @@ This guide explains how to deploy the Sentinel App Manager to Render.com with pr
    ⚠️ Replace `YOUR_SECURE_PASSWORD_HERE` with your actual admin password.
 
 4. Click **"Save Changes"**
+
+**IMPORTANT**: If you already deployed before adding the environment variable:
+- Environment variables are injected at **build time**, not runtime
+- You MUST trigger a **new deploy** after adding/changing environment variables
+- The variable won't work until the app is rebuilt
 
 ### Optional Environment Variables
 

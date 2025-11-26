@@ -1104,6 +1104,71 @@
                 font-style: italic;
             }
         }
+
+        /* Admin Login Modal Overlay */
+        .admin-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+
+        .admin-modal {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            max-width: 450px;
+            width: 90%;
+            overflow: hidden;
+        }
+
+        .admin-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+        }
+
+        .admin-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--gray-900);
+        }
+
+        .admin-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-600);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: var(--transition);
+        }
+
+        .admin-modal-close:hover {
+            color: var(--gray-900);
+        }
+
+        .admin-modal-body {
+            padding: 2rem 1.5rem;
+        }
+
+        .admin-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
     </style>
 </head>
 <body>
