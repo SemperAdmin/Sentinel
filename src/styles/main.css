@@ -1484,3 +1484,19 @@ body {
 .btn-mark-reviewed {
   margin-left: 1rem;
 }
+
+/* Public Submission Highlighting */
+.idea-item.public-submission {
+  border-left: 4px solid var(--primary-blue);
+  background: rgba(0, 123, 255, 0.05);
+}
+
+.btn-success {
+  background-color: var(--success-green);
+  color: var(--white);
+}
+
+.btn-success:hover {
+  background-color: #20a035;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
