@@ -432,6 +432,13 @@ class App {
       }
     }
 
+    // Show/hide admin-only elements
+    const isAdmin = state.userRole === 'admin';
+    const newIdeaBtn = document.getElementById('new-idea-btn');
+    if (newIdeaBtn) {
+      newIdeaBtn.style.display = isAdmin ? '' : 'none';
+    }
+
     // Update navigation active states
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === state.currentView);
@@ -1048,6 +1055,8 @@ class App {
       'High': '#dc3545'
     }[idea.riskRating] || '#6c757d';
 
+    const isAdmin = appState.getState().userRole === 'admin';
+
     return `
       <div class="idea-item" data-idea-id="${idea.id}">
         <h4>${escapeHtml(idea.conceptName)}</h4>
@@ -1058,14 +1067,16 @@ class App {
           <span style="color: ${riskColor}">⚠️ ${idea.riskRating} Risk</span>
           <span>📅 ${formatDate(idea.dateCreated)}</span>
         </div>
-        <div style="margin-top: 1rem;">
-          <button class="btn btn-primary" style="margin-right: 0.5rem;" onclick="event.stopPropagation(); app.activateIdea('${idea.id}')">
-            Activate & Create Repo
-          </button>
-          <button class="btn btn-secondary" onclick="event.stopPropagation(); app.editIdea('${idea.id}')">
-            Edit
-          </button>
-        </div>
+        ${isAdmin ? `
+          <div style="margin-top: 1rem;">
+            <button class="btn btn-primary" style="margin-right: 0.5rem;" onclick="event.stopPropagation(); app.activateIdea('${idea.id}')">
+              Activate & Create Repo
+            </button>
+            <button class="btn btn-secondary" onclick="event.stopPropagation(); app.editIdea('${idea.id}')">
+              Edit
+            </button>
+          </div>
+        ` : ''}
       </div>
     `;
   }

@@ -17,6 +17,15 @@ export class TabbedDetail {
   }
 
   /**
+   * Check if current user is admin
+   * @returns {boolean}
+   */
+  isAdmin() {
+    const state = appState.getState();
+    return state.userRole === 'admin';
+  }
+
+  /**
    * Clear completed todos
    */
   clearCompletedTodos() {
@@ -205,9 +214,11 @@ export class TabbedDetail {
               </span>
             </div>
           </div>
-          <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
-            ▶ Start Review Checklist
-          </button>
+          ${this.isAdmin() ? `
+            <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
+              ▶ Start Review Checklist
+            </button>
+          ` : ''}
         </div>
 
         <div class="detail-section">
@@ -232,7 +243,7 @@ export class TabbedDetail {
         <div class="detail-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3>To-Do Dashboard</h3>
-            <button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>
+            ${this.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : ''}
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
             <div class="app-card">
@@ -280,13 +291,15 @@ export class TabbedDetail {
           </div>
         </div>
 
-        <div class="detail-section">
-          <h3>Quick Actions</h3>
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
-            <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
+        ${this.isAdmin() ? `
+          <div class="detail-section">
+            <h3>Quick Actions</h3>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
+              <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
+            </div>
           </div>
-        </div>
+        ` : ''}
       </div>
     `;
   }
@@ -321,14 +334,16 @@ export class TabbedDetail {
       <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass}" data-todo-id="${todo.id}" style="${styleStr}">
         <div class="todo-content">
           <div class="todo-title"><span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}</div>
-          
+
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
         </div>
-        <div class="todo-actions">
-          <button class="btn-icon" data-action="edit" data-todo-id="${todo.id}">✏️</button>
-          <button class="btn-icon" data-action="delete" data-todo-id="${todo.id}">🗑️</button>
-        </div>
+        ${this.isAdmin() ? `
+          <div class="todo-actions">
+            <button class="btn-icon" data-action="edit" data-todo-id="${todo.id}">✏️</button>
+            <button class="btn-icon" data-action="delete" data-todo-id="${todo.id}">🗑️</button>
+          </div>
+        ` : ''}
       </div>
     `;
   }
