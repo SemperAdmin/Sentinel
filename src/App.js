@@ -355,11 +355,19 @@ class App {
       });
     }
 
-    // New idea button
+    // New idea button (admin)
     const newIdeaBtn = document.getElementById('new-idea-btn');
     if (newIdeaBtn) {
       newIdeaBtn.addEventListener('click', () => {
         this.showIdeaForm();
+      });
+    }
+
+    // Submit idea button (public users)
+    const submitIdeaBtn = document.getElementById('submit-idea-btn');
+    if (submitIdeaBtn) {
+      submitIdeaBtn.addEventListener('click', () => {
+        this.showPublicIdeaSubmission();
       });
     }
 
@@ -435,8 +443,14 @@ class App {
     // Show/hide admin-only elements
     const isAdmin = state.userRole === 'admin';
     const newIdeaBtn = document.getElementById('new-idea-btn');
+    const submitIdeaBtn = document.getElementById('submit-idea-btn');
+
     if (newIdeaBtn) {
       newIdeaBtn.style.display = isAdmin ? '' : 'none';
+    }
+
+    if (submitIdeaBtn) {
+      submitIdeaBtn.style.display = isAdmin ? 'none' : '';
     }
 
     // Update navigation active states
@@ -570,6 +584,134 @@ class App {
   }
 
   /**
+   * Show public idea submission modal
+   */
+  showPublicIdeaSubmission() {
+    const modalHTML = `
+      <div class="admin-modal-overlay" id="public-idea-modal">
+        <div class="admin-modal" style="max-width: 600px;">
+          <div class="admin-modal-header">
+            <h3>Submit App Idea</h3>
+            <button class="admin-modal-close" id="close-public-idea">&times;</button>
+          </div>
+          <div class="admin-modal-body">
+            <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
+              Have an idea for a new app? Submit your suggestion below and our team will review it!
+            </p>
+            <form id="public-idea-form">
+              <div class="form-group">
+                <label for="public-concept-name">App Name *</label>
+                <input
+                  type="text"
+                  id="public-concept-name"
+                  class="form-control"
+                  placeholder="Enter app name"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="public-problem-solved">What problem does this solve? *</label>
+                <textarea
+                  id="public-problem-solved"
+                  class="form-control"
+                  placeholder="Describe the value this app would provide..."
+                  rows="4"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="public-target-audience">Who would use this? *</label>
+                <input
+                  type="text"
+                  id="public-target-audience"
+                  class="form-control"
+                  placeholder="e.g., Marines, Veterans, General Public"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="public-contact-email">Your Email (optional)</label>
+                <input
+                  type="email"
+                  id="public-contact-email"
+                  class="form-control"
+                  placeholder="contact@example.com"
+                />
+              </div>
+
+              <div class="admin-modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-public-idea">Cancel</button>
+                <button type="submit" class="btn btn-primary">Submit Idea</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    const modal = document.getElementById('public-idea-modal');
+    const form = document.getElementById('public-idea-form');
+    const closeBtn = document.getElementById('close-public-idea');
+    const cancelBtn = document.getElementById('cancel-public-idea');
+
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+
+    const closeModal = () => {
+      document.removeEventListener('keydown', escapeHandler);
+      modal.remove();
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const idea = {
+        id: `idea-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        conceptName: document.getElementById('public-concept-name').value,
+        problemSolved: document.getElementById('public-problem-solved').value,
+        targetAudience: document.getElementById('public-target-audience').value,
+        contactEmail: document.getElementById('public-contact-email').value,
+        techStack: 'To Be Determined',
+        initialFeatures: 'To Be Determined',
+        riskRating: 'Medium',
+        dateCreated: new Date().toISOString(),
+        status: 'public-submission',
+        submittedBy: 'public'
+      };
+
+      try {
+        await this.saveIdea(idea);
+        toastManager.show('Thank you! Your idea has been submitted for review.', 'success');
+        closeModal();
+      } catch (error) {
+        console.error('Failed to submit idea:', error);
+        toastManager.show('Failed to submit idea. Please try again.', 'error');
+      }
+    });
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', escapeHandler);
+
+    setTimeout(() => document.getElementById('public-concept-name').focus(), 100);
+  }
+
+  /**
    * Get the full main content HTML with all views
    * @returns {string} HTML string
    */
@@ -671,6 +813,7 @@ class App {
         <div class="view-header">
           <h2>Innovation Lab</h2>
           <button class="btn btn-primary" id="new-idea-btn">+ NEW IDEA</button>
+          <button class="btn btn-success" id="submit-idea-btn" style="display: none;">💡 SUBMIT IDEA</button>
         </div>
         <div class="ideas-content">
           <div id="ideas-list" class="ideas-list"></div>
@@ -1062,16 +1205,21 @@ class App {
     }[idea.riskRating] || '#6c757d';
 
     const isAdmin = appState.getState().userRole === 'admin';
+    const isPublicSubmission = idea.status === 'public-submission' || idea.submittedBy === 'public';
 
     return `
-      <div class="idea-item" data-idea-id="${idea.id}">
-        <h4>${escapeHtml(idea.conceptName)}</h4>
+      <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''}" data-idea-id="${idea.id}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <h4>${escapeHtml(idea.conceptName)}</h4>
+          ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
+        </div>
         <p>${escapeHtml(idea.problemSolved ? idea.problemSolved.substring(0, 100) : '')}${idea.problemSolved && idea.problemSolved.length > 100 ? '...' : ''}</p>
         <div class="idea-meta">
           <span>👥 ${escapeHtml(idea.targetAudience)}</span>
           <span>🛠️ ${escapeHtml(idea.techStack)}</span>
           <span style="color: ${riskColor}">⚠️ ${idea.riskRating} Risk</span>
           <span>📅 ${formatDate(idea.dateCreated)}</span>
+          ${idea.contactEmail ? `<span>📧 ${escapeHtml(idea.contactEmail)}</span>` : ''}
         </div>
         ${isAdmin ? `
           <div style="margin-top: 1rem;">
