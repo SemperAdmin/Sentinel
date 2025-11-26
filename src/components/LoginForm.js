@@ -1,6 +1,6 @@
 /**
  * LoginForm Component
- * Handles admin authentication UI
+ * Handles admin authentication UI with prominent mode selection
  */
 
 import { authService } from '../auth/AuthService.js';
@@ -9,6 +9,7 @@ import { toastManager } from '../utils/uiComponents.js';
 export class LoginForm {
   constructor() {
     this.onLoginSuccess = null;
+    this.currentStep = 'mode-selection'; // 'mode-selection' or 'admin-password'
   }
 
   /**
@@ -16,40 +17,91 @@ export class LoginForm {
    * @returns {string} HTML string
    */
   render() {
+    if (this.currentStep === 'mode-selection') {
+      return this.renderModeSelection();
+    } else if (this.currentStep === 'admin-password') {
+      return this.renderAdminPasswordScreen();
+    }
+  }
+
+  /**
+   * Render mode selection screen (Step 1)
+   * @returns {string} HTML string
+   */
+  renderModeSelection() {
+    return `
+      <div class="login-container">
+        <div class="login-welcome">
+          <div class="login-welcome-header">
+            <h1>SENTINEL</h1>
+            <p class="login-welcome-subtitle">APP PORTFOLIO MANAGER</p>
+          </div>
+
+          <div class="mode-selection">
+            <h2>Choose Access Mode</h2>
+            <p class="mode-selection-subtitle">Select how you want to use Sentinel</p>
+
+            <div class="mode-buttons">
+              <!-- Public Mode Button -->
+              <button id="btn-select-public" class="mode-button mode-button-public">
+                <div class="mode-button-icon">👥</div>
+                <div class="mode-button-content">
+                  <h3>PUBLIC MODE</h3>
+                  <p class="mode-button-description">
+                    View apps and submit suggestions
+                  </p>
+                  <ul class="mode-button-features">
+                    <li>Browse app portfolio</li>
+                    <li>View app details and metrics</li>
+                    <li>Submit improvement suggestions</li>
+                    <li>Propose new app ideas</li>
+                  </ul>
+                  <div class="mode-button-action">
+                    <span class="mode-button-cta">Continue as Guest →</span>
+                  </div>
+                </div>
+              </button>
+
+              <!-- Admin Mode Button -->
+              <button id="btn-select-admin" class="mode-button mode-button-admin">
+                <div class="mode-button-icon">🔐</div>
+                <div class="mode-button-content">
+                  <h3>ADMIN MODE</h3>
+                  <p class="mode-button-description">
+                    Full management access
+                  </p>
+                  <ul class="mode-button-features">
+                    <li>Manage apps and tasks</li>
+                    <li>Review feedback submissions</li>
+                    <li>Edit developer notes</li>
+                    <li>Archive applications</li>
+                  </ul>
+                  <div class="mode-button-action">
+                    <span class="mode-button-cta">Login Required →</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render admin password screen (Step 2)
+   * @returns {string} HTML string
+   */
+  renderAdminPasswordScreen() {
     return `
       <div class="login-container">
         <div class="login-card">
           <div class="login-header">
             <h1>SENTINEL</h1>
-            <p class="login-subtitle">APP PORTFOLIO MANAGER</p>
+            <p class="login-subtitle">ADMIN LOGIN</p>
           </div>
 
-          <div class="login-mode-toggle">
-            <button id="btn-public-mode" class="mode-btn active" data-mode="public">
-              PUBLIC MODE
-            </button>
-            <button id="btn-admin-mode" class="mode-btn" data-mode="admin">
-              ADMIN MODE
-            </button>
-          </div>
-
-          <div id="public-mode-content" class="mode-content active">
-            <div class="public-info">
-              <h2>PUBLIC ACCESS</h2>
-              <p>Browse apps and submit suggestions</p>
-              <ul class="feature-list">
-                <li>View all active applications</li>
-                <li>Submit improvement suggestions</li>
-                <li>Propose new app ideas</li>
-                <li>View app metrics and health status</li>
-              </ul>
-              <button id="btn-continue-public" class="btn-primary">
-                CONTINUE AS PUBLIC USER
-              </button>
-            </div>
-          </div>
-
-          <div id="admin-mode-content" class="mode-content">
+          <div class="mode-content active">
             <form id="admin-login-form" class="admin-form">
               <div class="form-group">
                 <label for="admin-password">ADMIN PASSWORD</label>
@@ -60,21 +112,19 @@ export class LoginForm {
                   placeholder="Enter admin password"
                   required
                   autocomplete="current-password"
+                  autofocus
                 />
               </div>
-              <button type="submit" class="btn-primary">
-                LOGIN AS ADMIN
-              </button>
+
+              <div class="form-actions">
+                <button type="button" id="btn-back-to-mode" class="btn btn-secondary">
+                  ← Back
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  LOGIN
+                </button>
+              </div>
             </form>
-            <div class="admin-info">
-              <p class="info-text">Admin access required for:</p>
-              <ul class="feature-list">
-                <li>Managing apps and tasks</li>
-                <li>Reviewing feedback submissions</li>
-                <li>Editing developer notes</li>
-                <li>Archiving applications</li>
-              </ul>
-            </div>
           </div>
         </div>
       </div>
@@ -85,47 +135,54 @@ export class LoginForm {
    * Attach event listeners
    */
   attachEvents() {
-    // Mode toggle buttons
-    const publicModeBtn = document.getElementById('btn-public-mode');
-    const adminModeBtn = document.getElementById('btn-admin-mode');
-    const publicContent = document.getElementById('public-mode-content');
-    const adminContent = document.getElementById('admin-mode-content');
+    if (this.currentStep === 'mode-selection') {
+      this.attachModeSelectionEvents();
+    } else if (this.currentStep === 'admin-password') {
+      this.attachPasswordScreenEvents();
+    }
+  }
 
-    publicModeBtn?.addEventListener('click', () => {
-      publicModeBtn.classList.add('active');
-      adminModeBtn.classList.remove('active');
-      publicContent.classList.add('active');
-      adminContent.classList.remove('active');
-    });
-
-    adminModeBtn?.addEventListener('click', () => {
-      adminModeBtn.classList.add('active');
-      publicModeBtn.classList.remove('active');
-      adminContent.classList.add('active');
-      publicContent.classList.remove('active');
-    });
-
-    // Public mode continue button
-    const continuePublicBtn = document.getElementById('btn-continue-public');
-    continuePublicBtn?.addEventListener('click', () => {
+  /**
+   * Attach events for mode selection screen
+   */
+  attachModeSelectionEvents() {
+    // Public mode button
+    const publicBtn = document.getElementById('btn-select-public');
+    publicBtn?.addEventListener('click', () => {
+      console.log('Public mode selected');
       if (this.onLoginSuccess) {
         this.onLoginSuccess('public');
       }
     });
 
-    // Admin login form
+    // Admin mode button
+    const adminBtn = document.getElementById('btn-select-admin');
+    adminBtn?.addEventListener('click', () => {
+      console.log('Admin mode selected, showing password screen');
+      this.currentStep = 'admin-password';
+      this.remount();
+    });
+  }
+
+  /**
+   * Attach events for password screen
+   */
+  attachPasswordScreenEvents() {
+    // Back button
+    const backBtn = document.getElementById('btn-back-to-mode');
+    backBtn?.addEventListener('click', () => {
+      this.currentStep = 'mode-selection';
+      this.remount();
+    });
+
+    // Login form
     const loginForm = document.getElementById('admin-login-form');
     loginForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
       await this.handleAdminLogin(e);
     });
 
-    // Focus password field when admin mode is selected
-    adminModeBtn?.addEventListener('click', () => {
-      setTimeout(() => {
-        document.getElementById('admin-password')?.focus();
-      }, 100);
-    });
+    // Focus password field
+    document.getElementById('admin-password')?.focus();
   }
 
   /**
@@ -172,21 +229,26 @@ export class LoginForm {
   }
 
   /**
+   * Remount the component (used when switching steps)
+   */
+  remount() {
+    if (this.container) {
+      this.container.innerHTML = this.render();
+      this.attachEvents();
+    }
+  }
+
+  /**
    * Mount component to container
    * @param {HTMLElement} container - Container element
    * @param {Function} onSuccess - Callback on successful login
    */
   mount(container, onSuccess) {
+    this.container = container;
     this.onLoginSuccess = onSuccess;
+    this.currentStep = 'mode-selection';
     container.innerHTML = this.render();
     this.attachEvents();
-
-    // Auto-focus password field if admin mode is default
-    // or focus public button if public mode is default
-    const publicModeBtn = document.getElementById('btn-public-mode');
-    if (publicModeBtn?.classList.contains('active')) {
-      document.getElementById('btn-continue-public')?.focus();
-    }
   }
 
   /**
@@ -194,6 +256,7 @@ export class LoginForm {
    */
   unmount() {
     this.onLoginSuccess = null;
+    this.container = null;
   }
 }
 
