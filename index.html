@@ -1295,8 +1295,13 @@
 
     <script>
         window.MANAGER_REPO_FULL_NAME = window.MANAGER_REPO_FULL_NAME || 'SemperAdmin/Sentinel';
+
+        // Runtime configuration for admin password
+        // Replace 'admin123' with your actual password in production
+        window.APP_CONFIG = {
+            ADMIN_PASSWORD: 'admin123'  // CHANGE THIS IN PRODUCTION!
+        };
     </script>
-    <script src="/config.js"></script>
     <script type="module" src="src/App.js"></script>
 </body>
 </html>
