@@ -62,81 +62,76 @@ export class AuthService {
    * @returns {Promise<{success: boolean, role: string, error?: string}>}
    */
   async login(password) {
-    // ⚠️ SECURITY WARNING: This is client-side authentication.
-    // The VITE_ADMIN_PASSWORD will be embedded in the production JavaScript bundle
-    // and will be visible to the public. This method is only suitable for
-    // personal or internal-only applications. For public-facing apps,
-    // authentication should be handled by a backend service.
+    // ⚠️ SECURITY NOTE: This uses bcrypt-hashed password stored in auth-config.json
+    // The hash is secure and cannot be reversed, but this is still client-side auth.
+    // For production apps with sensitive data, use proper backend authentication.
 
-    // Password from environment variable
-    // DEVELOPMENT: Set VITE_ADMIN_PASSWORD in .env file
-    // PRODUCTION (Render.com): Set VITE_ADMIN_PASSWORD in Environment Variables
-    //   - Go to Render Dashboard → Your Service → Environment
-    //   - Add: Key = VITE_ADMIN_PASSWORD, Value = your_secure_password
-    //   - Vite will inject this at build time
-
-    // Safely access import.meta.env (might be undefined in some builds)
-    let adminPassword;
     try {
-      adminPassword = import.meta?.env?.VITE_ADMIN_PASSWORD;
-    } catch (e) {
-      console.error('Error accessing import.meta.env:', e);
-    }
+      // Fetch the auth configuration file
+      console.log('Loading authentication configuration...');
+      const response = await fetch('/auth-config.json');
 
-    console.log('Environment check:', {
-      hasImportMeta: typeof import.meta !== 'undefined',
-      hasEnv: typeof import.meta?.env !== 'undefined',
-      hasPassword: !!adminPassword,
-      envMode: import.meta?.env?.MODE,
-      isDev: import.meta?.env?.DEV,
-      isProd: import.meta?.env?.PROD
-    });
+      if (!response.ok) {
+        console.error('❌ Failed to load auth-config.json:', response.status);
+        return {
+          success: false,
+          error: 'Authentication configuration not found. Please run: node scripts/setup-password.js'
+        };
+      }
 
-    if (!adminPassword) {
-      console.error('❌ VITE_ADMIN_PASSWORD not configured!');
-      console.error('');
-      console.error('For LOCAL development:');
-      console.error('  1. Create/edit .env file in project root');
-      console.error('  2. Add: VITE_ADMIN_PASSWORD=your_password');
-      console.error('  3. Restart dev server');
-      console.error('');
-      console.error('For RENDER.COM deployment:');
-      console.error('  1. Go to Render Dashboard → Your Service');
-      console.error('  2. Click "Environment" in left sidebar');
-      console.error('  3. Add environment variable:');
-      console.error('     Key:   VITE_ADMIN_PASSWORD');
-      console.error('     Value: your_secure_password');
-      console.error('  4. Save and trigger a new deploy');
-      console.error('');
+      const config = await response.json();
+      const adminPasswordHash = config.adminPasswordHash;
+
+      if (!adminPasswordHash || adminPasswordHash.includes('dummyHash')) {
+        console.error('❌ Admin password not configured!');
+        console.error('');
+        console.error('To set up your admin password:');
+        console.error('  1. Run: node scripts/setup-password.js');
+        console.error('  2. Enter your desired password');
+        console.error('  3. The script will hash it with bcrypt and save to auth-config.json');
+        console.error('');
+        return {
+          success: false,
+          error: 'Admin password not configured. Run: node scripts/setup-password.js'
+        };
+      }
+
+      // Dynamically import bcryptjs for password verification
+      console.log('Verifying password with bcrypt...');
+      const bcrypt = await import('bcryptjs');
+
+      // Verify the password against the hash
+      const isValid = await bcrypt.default.compare(password, adminPasswordHash);
+
+      if (isValid) {
+        console.log('✅ Password verified successfully');
+
+        const session = {
+          role: 'admin',
+          authenticatedAt: Date.now(),
+          expiresAt: Date.now() + SESSION_DURATION
+        };
+
+        this.saveSession(session);
+
+        return {
+          success: true,
+          role: 'admin'
+        };
+      } else {
+        console.log('❌ Invalid password');
+        return {
+          success: false,
+          error: 'Invalid password'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Authentication error:', error);
       return {
         success: false,
-        error: 'Admin password not configured. Check console for setup instructions.'
+        error: 'Authentication failed. Check console for details.'
       };
     }
-
-    console.log('✓ Password loaded from environment variable');
-
-    console.log('Comparing passwords... (lengths)', password.length, adminPassword.length);
-
-    if (password === adminPassword) {
-      const session = {
-        role: 'admin',
-        authenticatedAt: Date.now(),
-        expiresAt: Date.now() + SESSION_DURATION
-      };
-
-      this.saveSession(session);
-
-      return {
-        success: true,
-        role: 'admin'
-      };
-    }
-
-    return {
-      success: false,
-      error: 'Invalid password'
-    };
   }
 
   /**

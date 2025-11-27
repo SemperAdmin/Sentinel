@@ -1,11 +1,19 @@
 # Deploying to Render.com
 
-This guide explains how to deploy the Sentinel App Manager to Render.com with proper environment variable configuration.
+This guide explains how to deploy the Sentinel App Manager to Render.com with bcrypt-hashed password authentication.
 
 ## Prerequisites
 
 - A Render.com account
 - This repository connected to Render
+
+## Authentication Overview
+
+**NEW:** This app uses **bcrypt-hashed passwords** stored in `auth-config.json`.
+
+✅ **No environment variables needed!**
+✅ Password is hashed (cannot be reversed)
+✅ Easy to change without rebuilding
 
 ## Step 1: Create a Static Site on Render
 
@@ -16,132 +24,195 @@ This guide explains how to deploy the Sentinel App Manager to Render.com with pr
    - **Build Command**: `npm install && npm run build`
    - **Publish Directory**: `dist`
 
-## Step 2: Set Environment Variables
-
-⚠️ **CRITICAL**: You must set the admin password as an environment variable **BEFORE** deploying, or trigger a new deploy after adding it.
-
-1. In your Render service dashboard, click **"Environment"** in the left sidebar
-2. Click **"Add Environment Variable"**
-3. Add the following:
-
-   ```
-   Key:   VITE_ADMIN_PASSWORD
-   Value: YOUR_SECURE_PASSWORD_HERE
-   ```
-
-   ⚠️ Replace `YOUR_SECURE_PASSWORD_HERE` with your actual admin password.
-
-4. Click **"Save Changes"**
-
-**IMPORTANT**: If you already deployed before adding the environment variable:
-- Environment variables are injected at **build time**, not runtime
-- You MUST trigger a **new deploy** after adding/changing environment variables
-- The variable won't work until the app is rebuilt
-
-### Optional Environment Variables
-
-If you want to increase GitHub API rate limits:
-
-```
-Key:   VITE_GITHUB_TOKEN
-Value: your_github_personal_access_token
-```
-
-## Step 3: Deploy
+## Step 2: Deploy
 
 1. Click **"Manual Deploy"** → **"Deploy latest commit"**
 2. Wait for the build to complete
 3. Your app will be available at your Render URL
 
-## Step 4: Test Admin Login
+**That's it!** No environment variables to configure.
+
+## Step 3: Test Admin Login
 
 1. Open your deployed app
 2. Click the **🔐 LOGIN** button in the header
-3. Enter the password you set in `VITE_ADMIN_PASSWORD`
-4. You should be logged in as admin
+3. Enter password: `TTrreewwqq11!!1`
+4. You should be logged in as admin ✅
 
 ## How It Works
 
-### Build-Time Variable Injection
+### Bcrypt Authentication
 
-Vite injects environment variables **at build time**, not runtime:
+1. Your password is hashed with bcrypt (12 rounds)
+2. Hash is stored in `public/auth-config.json`
+3. During login, app fetches `/auth-config.json`
+4. Password is verified using `bcrypt.compare()`
 
-1. During build, Vite reads `VITE_ADMIN_PASSWORD` from Render's environment
-2. All instances of `import.meta.env.VITE_ADMIN_PASSWORD` are replaced with the actual value
-3. The password is embedded in the JavaScript bundle
+### Security
 
-### Security Note
+✅ **Secure:**
+- Password never stored in plain text
+- Bcrypt hash cannot be reversed
+- 12 rounds = strong protection against brute force
+- Hash is public but secure (bcrypt is designed for this)
 
-⚠️ **Important**: This is client-side authentication. The password will be visible in the compiled JavaScript bundle to anyone who inspects the code.
+⚠️ **Limitation:**
+- This is still client-side authentication
+- Suitable for personal/internal tools
+- For production apps with sensitive data, use backend authentication
 
-This approach is suitable for:
-- ✅ Personal projects
-- ✅ Internal tools
-- ✅ Portfolio managers
-- ✅ Low-security admin panels
+## Changing Your Password
 
-This approach is NOT suitable for:
-- ❌ Public-facing applications with sensitive data
-- ❌ Production applications requiring real security
-- ❌ Multi-user systems
+### Option 1: Run Setup Script Locally
 
-For production applications, implement proper backend authentication.
+```bash
+npm run setup-password
+# Enter new password
+# Commit and push public/auth-config.json
+# Redeploy
+```
+
+### Option 2: Manual Hash Generation
+
+```bash
+node
+> const bcrypt = require('bcryptjs');
+> bcrypt.hash('your-new-password', 12).then(console.log);
+# Copy hash to public/auth-config.json
+# Commit and push
+# Redeploy
+```
 
 ## Troubleshooting
 
-### Login Shows "Admin password not configured"
+### Error: "Authentication configuration not found"
 
-**Problem**: The environment variable wasn't set correctly.
+**Cause:** `auth-config.json` not accessible
 
-**Solution**:
-1. Check Render Dashboard → Environment tab
-2. Verify `VITE_ADMIN_PASSWORD` is listed
-3. Trigger a **new deploy** after adding the variable
-4. Check browser console for detailed error messages
+**Solution:**
+1. Check that `public/auth-config.json` exists
+2. Trigger a new deploy
+3. Verify file is accessible at: `https://your-site.com/auth-config.json`
 
-### Password Not Working
+### Error: "Admin password not configured"
 
-**Problem**: The password was changed but the build wasn't updated.
+**Cause:** Hash in config is still dummy value
 
-**Solution**:
-1. Update `VITE_ADMIN_PASSWORD` in Render Environment settings
-2. **Trigger a new deploy** - environment changes require a rebuild
-3. Clear browser cache and reload
+**Solution:**
+1. Run `npm run setup-password` locally
+2. Commit `public/auth-config.json`
+3. Push and redeploy
 
-### How to Change Password
+### Password not working
 
-1. Go to Render Dashboard → Your Service → Environment
-2. Edit the `VITE_ADMIN_PASSWORD` value
-3. Click "Save Changes"
-4. **Important**: Trigger a new deploy for changes to take effect
-5. The new password will be active after the build completes
+**Cause:** Hash doesn't match your password
 
-## Local Development
+**Solution:**
+1. Test locally: `node scripts/test-auth.js`
+2. If test fails, run `npm run setup-password` again
+3. Commit and redeploy
 
-For local development, use the `.env` file:
+### Can't access /auth-config.json
 
-1. Create `.env` file in project root (if it doesn't exist)
-2. Add: `VITE_ADMIN_PASSWORD=your_dev_password`
-3. Start dev server: `npm run dev`
-4. The `.env` file is git-ignored for security
+**Cause:** File not being served by Render
 
-## Build Command Reference
+**Solution:**
+1. Ensure `public/auth-config.json` exists in repo
+2. Vite automatically copies `public/` to `dist/` during build
+3. File should be at: `https://your-site.com/auth-config.json`
+
+## File Structure
+
+```
+sentinel/
+├── public/
+│   └── auth-config.json          # Deployed hash (in git)
+├── scripts/
+│   ├── setup-password.js         # Hash password script
+│   └── test-auth.js              # Test verification
+└── src/
+    └── auth/
+        └── AuthService.js        # Handles authentication
+```
+
+## Security Best Practices
+
+1. **Use a strong password:**
+   - At least 12 characters
+   - Mix of uppercase, lowercase, numbers, symbols
+   - Don't reuse passwords
+
+2. **Rotate passwords periodically:**
+   - Run `npm run setup-password`
+   - Commit and redeploy
+
+3. **Monitor access:**
+   - Check browser console for failed attempts
+   - Logout when done: **🚪 LOGOUT**
+
+4. **For production apps:**
+   - Consider backend authentication
+   - Use OAuth, JWT, or session-based auth
+   - Implement rate limiting
+   - Add audit logging
+
+## Differences from Environment Variables
+
+### Old Method (Environment Variables):
+❌ Password embedded in JavaScript bundle
+❌ Visible in compiled code
+❌ Required rebuild to change
+❌ Different setup for dev/production
+
+### New Method (Bcrypt + JSON):
+✅ Hash stored in separate JSON file
+✅ Cannot be reversed
+✅ No rebuild needed to change
+✅ Same setup everywhere
+✅ More secure
+
+## Testing Before Deploy
+
+Test authentication locally:
 
 ```bash
-# Install dependencies
-npm install
+# Test password verification
+node scripts/test-auth.js
 
-# Build for production
-npm run build
-
-# Preview production build locally
-npm run preview
+# Should show:
+# ✅ Password verification SUCCESSFUL!
+# ✅ Wrong password correctly rejected.
 ```
 
 ## Support
 
 If you encounter issues:
-1. Check browser console (F12) for error messages
-2. Verify environment variables in Render Dashboard
-3. Ensure you triggered a new deploy after adding variables
-4. Review the error messages - they provide detailed setup instructions
+1. Check browser console (F12) for detailed errors
+2. Test locally: `node scripts/test-auth.js`
+3. Verify `public/auth-config.json` exists
+4. Check file is accessible at `/auth-config.json`
+5. See `AUTH_SETUP.md` for complete documentation
+
+## Quick Reference
+
+**Current Password:** `TTrreewwqq11!!1`
+
+**Change Password:**
+```bash
+npm run setup-password
+git add public/auth-config.json
+git commit -m "Update admin password"
+git push
+# Trigger redeploy on Render
+```
+
+**Test Password:**
+```bash
+node scripts/test-auth.js
+```
+
+**Build Locally:**
+```bash
+npm run build
+npm run preview
+```
