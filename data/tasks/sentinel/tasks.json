@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "1764277902625",
+    "title": "Create supabase sql tables",
+    "description": "Create tables for tasks and ideas ",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-27T21:11:42.625Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
+  }
+]
