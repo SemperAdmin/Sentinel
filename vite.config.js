@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || '/',
+  // For GitHub Pages: use repository name as base
+  // For Render.com or custom domain: use '/'
+  base: process.env.VITE_BASE_PATH || '/Sentinel/',
   server: {
     proxy: {
       '/api': {
