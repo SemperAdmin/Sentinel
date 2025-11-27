@@ -50,7 +50,7 @@
   {
     "id": "1763949933501",
     "title": "Manage events tabs base text color",
-    "description": "Need to adjust the color to be darker as they blend into the background color.\n\n<div aria-label=\"Manage tabs\" role=\"tablist\" class=\"manage-tabs\">\n                <button id=\"tab-overview-btn\" aria-controls=\"tab-overview\" aria-selected=\"true\" role=\"tab\" class=\"tab-btn active\">Overview</button>\n                <button id=\"tab-guests-btn\" aria-controls=\"tab-guests\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Guest List</button>\n                <button id=\"tab-special-btn\" aria-controls=\"tab-special\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Special</button>\n            </div>",
+    "description": "Need to adjust the color to be darker as they blend into the background color.\n\n<div aria-label=\"Manage tabs\" role=\"tablist\" class=\"manage-tabs\">\n\u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 <button id=\"tab-overview-btn\" aria-controls=\"tab-overview\" aria-selected=\"true\" role=\"tab\" class=\"tab-btn active\">Overview</button>\n\u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 <button id=\"tab-guests-btn\" aria-controls=\"tab-guests\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Guest List</button>\n\u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 <button id=\"tab-special-btn\" aria-controls=\"tab-special\" aria-selected=\"false\" role=\"tab\" class=\"tab-btn\">Special</button>\n\u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 </div>",
     "priority": "low",
     "dueDate": null,
     "completed": true,
@@ -130,7 +130,7 @@
   {
     "id": "1763950318805",
     "title": "Export Seating Chart not working",
-    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n                        \u00c3\u00b0\u00c2\u009f\u00c2\u0093\u00c2\u00a5 Export Seating Chart\n                    </button>",
+    "description": "Need to ensure that seating chart is exported to excel on click. \n\n<button class=\"btn-action\">\n\u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c3\u00b0\u00c2\u009f\u00c2\u0093\u00c2\u00a5 Export Seating Chart\n\u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 \u00c2\u00a0 </button>",
     "priority": "medium",
     "dueDate": null,
     "completed": true,
@@ -175,7 +175,7 @@
   {
     "id": "1764132427001",
     "title": "Profile Save Offline/Error Feedback",
-    "description": "Implemented clearer offline/error feedback for local profile save, then reverted per request:js/early-functions.js:534–538 updated to differentiate offline vs sync-failed messages; later restored original behavior.",
+    "description": "Implemented clearer offline/error feedback for local profile save, then reverted per request:js/early-functions.js:534\u00e2\u0080\u0093538 updated to differentiate offline vs sync-failed messages; later restored original behavior.",
     "priority": "low",
     "dueDate": null,
     "completed": false,
@@ -189,7 +189,7 @@
   {
     "id": "1764132427002",
     "title": "Implement User Data Persistence",
-    "description": "Updated profile writes to private repo:js/backend-api.js:updateUserProfile now creates/updates EventCall-Data/users/<username>.json. RSVP writes:js/backend-api.js:339–451 writes to EventCall-Data/rsvps/<eventId>.json (create/update with proper sha).",
+    "description": "Updated profile writes to private repo:js/backend-api.js:updateUserProfile now creates/updates EventCall-Data/users/<username>.json. RSVP writes:js/backend-api.js:339\u00e2\u0080\u0093451 writes to EventCall-Data/rsvps/<eventId>.json (create/update with proper sha).",
     "priority": "high",
     "dueDate": null,
     "completed": false,
@@ -217,7 +217,7 @@
   {
     "id": "1764132427004",
     "title": "Persist Special Tab After Seat Assignment",
-    "description": "Persist Special tab after seat assignment:js/event-manager.js:2689 sets manage_active_tab='special' before refresh. js/event-manager.js:570–663 restores overview subtabs only when Overview is active.",
+    "description": "Persist Special tab after seat assignment:js/event-manager.js:2689 sets manage_active_tab='special' before refresh. js/event-manager.js:570\u00e2\u0080\u0093663 restores overview subtabs only when Overview is active.",
     "priority": "low",
     "dueDate": null,
     "completed": false,
@@ -231,7 +231,7 @@
   {
     "id": "1764132427005",
     "title": "Seating Action Delegation and Error Handling",
-    "description": "Added robust action delegation and error handling for seating: Exact data-action selector and .catch() on refresh: js/event-manager.js:3291, 3318–3322.",
+    "description": "Added robust action delegation and error handling for seating: Exact data-action selector and .catch() on refresh: js/event-manager.js:3291, 3318\u00e2\u0080\u00933322.",
     "priority": "medium",
     "dueDate": null,
     "completed": false,
@@ -245,7 +245,7 @@
   {
     "id": "1764132427006",
     "title": "Background Save Reliability and Sync Banner",
-    "description": "Added non-intrusive sync banner with retry/backoff for seating saves:js/event-manager.js:3181–3210 _showSyncBanner, _hideSyncBanner, and backoff retry chain.",
+    "description": "Added non-intrusive sync banner with retry/backoff for seating saves:js/event-manager.js:3181\u00e2\u0080\u00933210 _showSyncBanner, _hideSyncBanner, and backoff retry chain.",
     "priority": "high",
     "dueDate": null,
     "completed": false,
@@ -259,7 +259,7 @@
   {
     "id": "1764132427007",
     "title": "Validation UX - Hide Errors Until Submit",
-    "description": "Hide errors until submit click; keep realtime validation silent until then:js/form-ux.js:24–33, 86–100, 140–184 gating and validateForm with submit handlers. Keeps summary and inline errors off until user clicks Sign In/Register.",
+    "description": "Hide errors until submit click; keep realtime validation silent until then:js/form-ux.js:24\u00e2\u0080\u009333, 86\u00e2\u0080\u0093100, 140\u00e2\u0080\u0093184 gating and validateForm with submit handlers. Keeps summary and inline errors off until user clicks Sign In/Register.",
     "priority": "low",
     "dueDate": null,
     "completed": false,
@@ -273,7 +273,7 @@
   {
     "id": "1764132427008",
     "title": "Date Formatting Safe Guards",
-    "description": "Safe guards for empty/invalid dates with locale-respecting output:js/utils.js:24–43 returns '' on empty, Invalid Date on bad parse.",
+    "description": "Safe guards for empty/invalid dates with locale-respecting output:js/utils.js:24\u00e2\u0080\u009343 returns '' on empty, Invalid Date on bad parse.",
     "priority": "low",
     "dueDate": null,
     "completed": false,
@@ -311,5 +311,18 @@
     "submittedBy": "",
     "status": "Draft",
     "effortEstimate": "Small"
+  },
+  {
+    "id": "1764277803543",
+    "title": "Create supabase sql tables",
+    "description": "Crate tables for accounts, events, rsvp, and custom questions. ",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-27T21:10:03.543Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
