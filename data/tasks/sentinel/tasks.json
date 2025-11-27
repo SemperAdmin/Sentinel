@@ -11,5 +11,18 @@
     "feedbackSummary": "",
     "submittedBy": "",
     "status": "Draft"
+  },
+  {
+    "id": "1764277992725",
+    "title": "Migrate json to sql tables",
+    "description": "Migrate all data from current json files for tasks and ideas to sql tables",
+    "priority": "medium",
+    "dueDate": null,
+    "completed": false,
+    "createdAt": "2025-11-27T21:13:12.725Z",
+    "source": "Other",
+    "feedbackSummary": "",
+    "submittedBy": "",
+    "status": "Draft"
   }
 ]
