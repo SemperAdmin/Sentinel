@@ -69,7 +69,11 @@ export class AuthService {
     try {
       // Fetch the auth configuration file
       console.log('Loading authentication configuration...');
-      const response = await fetch('/auth-config.json');
+      // Use BASE_URL from Vite to handle different base paths (GitHub Pages vs root)
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const configPath = `${baseUrl}auth-config.json`;
+      console.log('Fetching auth config from:', configPath);
+      const response = await fetch(configPath);
 
       if (!response.ok) {
         console.error('❌ Failed to load auth-config.json:', response.status);
