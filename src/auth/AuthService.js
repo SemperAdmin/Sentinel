@@ -69,8 +69,36 @@ export class AuthService {
     try {
       // Fetch the auth configuration file
       console.log('Loading authentication configuration...');
-      // Use BASE_URL from Vite to handle different base paths (GitHub Pages vs root)
-      const baseUrl = import.meta.env.BASE_URL || '/';
+
+      // Detect base URL using multiple methods for maximum compatibility
+      let baseUrl = '/';
+
+      // Method 1: Try import.meta.env.BASE_URL (works in dev and some builds)
+      try {
+        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) {
+          baseUrl = import.meta.env.BASE_URL;
+          console.log('Base URL from import.meta.env:', baseUrl);
+        }
+      } catch (e) {
+        console.log('import.meta.env not available, using fallback');
+      }
+
+      // Method 2: Check <base> tag if present
+      if (baseUrl === '/') {
+        const baseTag = document.querySelector('base');
+        if (baseTag && baseTag.href) {
+          const url = new URL(baseTag.href);
+          baseUrl = url.pathname;
+          console.log('Base URL from <base> tag:', baseUrl);
+        }
+      }
+
+      // Method 3: Detect from pathname (e.g., /Sentinel/)
+      if (baseUrl === '/' && window.location.pathname.includes('/Sentinel/')) {
+        baseUrl = '/Sentinel/';
+        console.log('Base URL detected from pathname:', baseUrl);
+      }
+
       const configPath = `${baseUrl}auth-config.json`;
       console.log('Fetching auth config from:', configPath);
       const response = await fetch(configPath);
