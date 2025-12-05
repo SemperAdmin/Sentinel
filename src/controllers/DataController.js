@@ -109,19 +109,8 @@ export class DataController {
    */
   async fetchUserRepositories() {
     try {
-      // Check if API key is configured
-      let repos;
-      if (!apiService.isApiKeyConfigured()) {
-        repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
-      } else {
-        console.log('Fetching user repositories from GitHub...');
-        try {
-          repos = await apiService.fetchUserRepos();
-        } catch (err) {
-          console.warn('Authenticated repo fetch failed, falling back to public repos:', err);
-          repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
-        }
-      }
+      // Always fetch public repos for the default user for the main portfolio view
+      const repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
 
       // Filter to only public repositories and exclude image/asset repos
       const publicRepos = repos.filter(repo => !repo.private && !EXCLUDED_REPO_NAMES.includes(repo.name));
