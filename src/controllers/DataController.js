@@ -225,12 +225,17 @@ export class DataController {
 
     // Process function for each app
     const processApp = async (app) => {
-      const repoData = await apiService.getComprehensiveRepoData(app.repoUrl);
+      const [repoData, tasksResult] = await Promise.all([
+        apiService.getComprehensiveRepoData(app.repoUrl),
+        apiService.fetchRepoTasks(app.id)
+      ]);
 
       // If fetch failed, throw error for proper failure tracking
       if (!repoData) {
         throw new Error(`Failed to fetch GitHub data for ${app.id}`);
       }
+
+      const todos = tasksResult.success ? tasksResult.data : app.todos || [];
 
       // Update app with GitHub data
       const updatedApp = {
@@ -238,7 +243,9 @@ export class DataController {
         lastCommitDate: repoData.lastCommitDate,
         latestTag: repoData.latestTag,
         description: repoData.description || app.description,
-        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate)
+        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate),
+        recentViews: repoData.recentViews,
+        todos
       };
 
       // Save to data store
