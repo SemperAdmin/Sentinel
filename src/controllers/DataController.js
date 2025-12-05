@@ -109,19 +109,8 @@ export class DataController {
    */
   async fetchUserRepositories() {
     try {
-      // Check if API key is configured
-      let repos;
-      if (!apiService.isApiKeyConfigured()) {
-        repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
-      } else {
-        console.log('Fetching user repositories from GitHub...');
-        try {
-          repos = await apiService.fetchUserRepos();
-        } catch (err) {
-          console.warn('Authenticated repo fetch failed, falling back to public repos:', err);
-          repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
-        }
-      }
+      // Always fetch public repos for the default user for the main portfolio view
+      const repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
 
       // Filter to only public repositories and exclude image/asset repos
       const publicRepos = repos.filter(repo => !repo.private && !EXCLUDED_REPO_NAMES.includes(repo.name));
@@ -225,12 +214,17 @@ export class DataController {
 
     // Process function for each app
     const processApp = async (app) => {
-      const repoData = await apiService.getComprehensiveRepoData(app.repoUrl);
+      const [repoData, tasksResult] = await Promise.all([
+        apiService.getComprehensiveRepoData(app.repoUrl),
+        apiService.fetchRepoTasks(app.id)
+      ]);
 
       // If fetch failed, throw error for proper failure tracking
       if (!repoData) {
         throw new Error(`Failed to fetch GitHub data for ${app.id}`);
       }
+
+      const todos = tasksResult.success ? tasksResult.data : app.todos || [];
 
       // Update app with GitHub data
       const updatedApp = {
@@ -238,7 +232,9 @@ export class DataController {
         lastCommitDate: repoData.lastCommitDate,
         latestTag: repoData.latestTag,
         description: repoData.description || app.description,
-        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate)
+        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate),
+        recentViews: repoData.recentViews,
+        todos
       };
 
       // Save to data store
