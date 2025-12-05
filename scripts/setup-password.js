@@ -21,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to config file
-const CONFIG_PATH = path.join(__dirname, '..', 'auth-config.json');
+const CONFIG_PATH = path.join(__dirname, '..', 'public', 'auth-config.json');
 
 // Number of bcrypt rounds (12 is recommended for security)
 const SALT_ROUNDS = 12;
@@ -98,7 +98,6 @@ async function main() {
 
   console.log('\n✅ Setup complete!');
   console.log('You can now use this password to log in as admin.');
-  console.log('\n⚠️  IMPORTANT: Keep auth-config.json secure and never commit it to git!');
 }
 
 main().catch((error) => {

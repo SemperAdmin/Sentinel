@@ -6,7 +6,7 @@
   "main": "src/App.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run setup-password TTrreewwqq11!!1 && vite build",
     "preview": "vite preview",
     "serve": "vite preview --port 3000",
     "start": "node server/index.js",
