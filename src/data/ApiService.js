@@ -486,9 +486,9 @@ class ApiService {
         archived: repoData.archived,
         updatedAt: repoData.updated_at,
         url: repoData.html_url,
-        recentViews: views.status === 'fulfilled' ? views.value.count || 0 : 0,
-        recentClones: clones.status === 'fulfilled' ? clones.value.count || 0 : 0,
-        uniqueViews: views.status === 'fulfilled' ? views.value.uniques || 0 : 0,
+        recentViews: views.status === 'fulfilled' && views.value ? views.value.count || 0 : 0,
+        recentClones: clones.status === 'fulfilled' && clones.value ? clones.value.count || 0 : 0,
+        uniqueViews: views.status === 'fulfilled' && views.value ? views.value.uniques || 0 : 0,
         uniqueClones: clones.status === 'fulfilled' ? clones.value.uniques || 0 : 0,
         isFallback: false
       };

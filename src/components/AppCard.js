@@ -44,20 +44,10 @@ export class AppCard {
         </div>
         
         <div class="metric-item">
-          <span class="metric-label">Visitors (14d):</span>
-          <span class="metric-value">${this.app.recentViews || 0} views</span>
-        </div>
-        
-        <div class="metric-item">
           <span class="metric-label">Next Review:</span>
           <span class="metric-value">
             ${this.formatReviewDate(this.app.nextReviewDate)}
           </span>
-        </div>
-        
-        <div class="metric-item">
-          <span class="metric-label">Active To-Dos:</span>
-          <span class="metric-value">${activeCount}</span>
         </div>
       </div>
       
