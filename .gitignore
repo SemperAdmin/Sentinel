@@ -10,3 +10,6 @@ dist/
 # Dependencies
 node_modules/
 .env
+
+# Log files
+*.log
