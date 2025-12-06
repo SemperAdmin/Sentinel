@@ -444,6 +444,8 @@ class App {
     const isAdmin = state.userRole === 'admin';
     const newIdeaBtn = document.getElementById('new-idea-btn');
     const submitIdeaBtn = document.getElementById('submit-idea-btn');
+    const clearCacheBtn = document.getElementById('clear-cache-btn');
+    const forceClearBtn = document.getElementById('force-clear-btn');
 
     if (newIdeaBtn) {
       newIdeaBtn.style.display = isAdmin ? '' : 'none';
@@ -451,6 +453,14 @@ class App {
 
     if (submitIdeaBtn) {
       submitIdeaBtn.style.display = isAdmin ? 'none' : '';
+    }
+
+    if (clearCacheBtn) {
+      clearCacheBtn.style.display = isAdmin ? '' : 'none';
+    }
+
+    if (forceClearBtn) {
+      forceClearBtn.style.display = isAdmin ? '' : 'none';
     }
 
     // Update navigation active states
