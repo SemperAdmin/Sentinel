@@ -170,10 +170,6 @@ export class TabbedDetail {
                 ${this.app.status}
               </span>
             </div>
-            <div class="status-item">
-              <label>Pending Tasks:</label>
-              <span>${this.app.pendingTodos || 0}</span>
-            </div>
           </div>
         </div>
         
@@ -189,10 +185,6 @@ export class TabbedDetail {
             <div class="status-item">
               <label>Last Reviewed:</label>
               <span>${formatDate(lastReviewedDate, { relative: true }) || 'Never'}</span>
-            </div>
-            <div class="status-item">
-              <label>Recent Activity:</label>
-              <span>${this.app.recentViews || 0} views · ${this.app.recentClones || 0} clones (14d)</span>
             </div>
             <div class="status-item">
               <label>Platform:</label>

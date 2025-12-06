@@ -1,7 +1,6 @@
 
-> sentinel-app-portfolio-manager@1.0.0 preview
-> vite preview
+> sentinel-app-portfolio-manager@1.0.0 serve
+> vite preview --port 3000
 
-Port 4173 is in use, trying another one...
-  ➜  Local:   http://localhost:4174/Sentinel/
+  ➜  Local:   http://localhost:3000/Sentinel/
   ➜  Network: use --host to expose
