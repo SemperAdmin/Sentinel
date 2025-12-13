@@ -19,7 +19,7 @@ function renderComments(comments = [], isAdmin = false) {
 
   return comments.map(comment => {
     // Only show author name and email to admins
-    const displayName = isAdmin ? escapeHtml(comment.author || 'Anonymous') : 'Anonymous';
+    const displayName = isAdmin ? escapeHtml(comment.author || 'Semper Squad') : 'Semper Squad';
     const emailDisplay = isAdmin && comment.email
       ? `<span style="font-size: 0.75rem; color: #888; margin-left: 0.5rem;">(${escapeHtml(comment.email)})</span>`
       : '';
