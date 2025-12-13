@@ -864,7 +864,8 @@ class App {
 
     // Render ideas list using extracted component
     renderIdeasList(state.ideas, ideasList, {
-      onEdit: (idea) => this.editIdea(idea)
+      onEdit: (idea) => this.editIdea(idea.id),
+      onActivate: (ideaId) => this.activateIdea(ideaId)
     });
 
     // Handle idea form

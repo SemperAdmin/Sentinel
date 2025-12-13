@@ -37,10 +37,10 @@ export function renderIdeaItem(idea) {
       </div>
       ${isAdmin ? `
         <div style="margin-top: 1rem;">
-          <button class="btn btn-primary" style="margin-right: 0.5rem;" onclick="event.stopPropagation(); app.activateIdea('${idea.id}')">
+          <button class="btn btn-primary" style="margin-right: 0.5rem;" data-action="activate">
             Activate & Create Repo
           </button>
-          <button class="btn btn-secondary" onclick="event.stopPropagation(); app.editIdea('${idea.id}')">
+          <button class="btn btn-secondary" data-action="edit">
             Edit
           </button>
         </div>
@@ -55,6 +55,7 @@ export function renderIdeaItem(idea) {
  * @param {HTMLElement} container - DOM element to render into
  * @param {Object} callbacks - Callback functions
  * @param {Function} callbacks.onEdit - Called when idea is clicked for editing (admin)
+ * @param {Function} callbacks.onActivate - Called when activate button is clicked (admin)
  */
 export function renderIdeasList(ideas, container, callbacks = {}) {
   if (!ideas || ideas.length === 0) {
@@ -64,23 +65,39 @@ export function renderIdeasList(ideas, container, callbacks = {}) {
         <p>Start documenting your app concepts here.</p>
       </div>
     `;
+    // Remove any existing listener marker
+    delete container.dataset.listenerAttached;
     return;
   }
 
   container.innerHTML = ideas.map(idea => renderIdeaItem(idea)).join('');
 
-  // Add click listeners to idea items (admin only)
+  // Add click listeners using event delegation for better performance and maintenance
   const isAdmin = appState.isAdmin();
-  if (isAdmin && callbacks.onEdit) {
-    container.querySelectorAll('.idea-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const ideaId = item.dataset.ideaId;
-        const idea = appState.getIdeaById(ideaId);
-        if (idea) {
+  if (isAdmin && !container.dataset.listenerAttached) {
+    container.addEventListener('click', (e) => {
+      const item = e.target.closest('.idea-item[data-idea-id]');
+      if (!item) return;
+
+      const ideaId = item.dataset.ideaId;
+      const idea = appState.getIdeaById(ideaId);
+      if (!idea) return;
+
+      const button = e.target.closest('button[data-action]');
+      if (button) {
+        e.stopPropagation(); // Prevent item click handler
+        const action = button.dataset.action;
+        if (action === 'edit' && callbacks.onEdit) {
           callbacks.onEdit(idea);
+        } else if (action === 'activate' && callbacks.onActivate) {
+          callbacks.onActivate(idea.id);
         }
-      });
+      } else if (callbacks.onEdit) {
+        // Clicking on the item itself opens edit
+        callbacks.onEdit(idea);
+      }
     });
+    container.dataset.listenerAttached = 'true';
   }
 }
 
