@@ -38,7 +38,7 @@ import LoginForm from './components/LoginForm.js';
 import { showAdminLoginModal, showPublicIdeaModal } from './components/modals/index.js';
 import { renderIdeasList } from './components/IdeasList.js';
 import { initDevTools } from './utils/devTools.js';
-import { SearchFilter, filterApps } from './components/SearchFilter.js';
+import { filterApps } from './components/SearchFilter.js';
 
 class App {
   constructor() {
@@ -46,7 +46,7 @@ class App {
     this.tabbedDetail = null;
     this.ideaForm = null;
     this.loginForm = null;
-    this.searchFilter = null;
+    this.searchTimeout = null;
     this.initialized = false;
     this.DEFAULT_GITHUB_USER = DEFAULT_GITHUB_USER;
     this.loadingManager = new LoadingStateManager();
@@ -219,6 +219,24 @@ class App {
       });
     }
 
+    // Search input with debouncing
+    const searchInput = document.getElementById('app-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+          appState.setSearchQuery(e.target.value);
+        }, 200);
+      });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchInput.value = '';
+          appState.setSearchQuery('');
+        }
+      });
+    }
+
     // New idea button (admin)
     const newIdeaBtn = document.getElementById('new-idea-btn');
     if (newIdeaBtn) {
@@ -386,20 +404,22 @@ class App {
       <div id="dashboard-view" class="view active">
         <div class="view-header">
           <h2>PORTFOLIO OVERVIEW</h2>
-          <label class="view-header-sort-label">
-            <span>Sort by</span>
-            <select id="sort-select" class="btn btn-secondary view-header-sort-select">
-              <option value="alphabetical">Alphabetical</option>
-              <option value="lastReviewed">Last Reviewed</option>
-              <option value="nextReview">Next Review</option>
-              <option value="activeTodo">Active To-Dos</option>
-            </select>
-          </label>
-          <div class="view-actions">
+          <div class="view-header-controls">
+            <div class="search-box-inline">
+              <input type="text" id="app-search" class="search-input-inline" placeholder="Search apps..." autocomplete="off" />
+            </div>
+            <label class="sort-label">
+              <span>Sort</span>
+              <select id="sort-select" class="btn btn-secondary sort-select">
+                <option value="alphabetical">A-Z</option>
+                <option value="lastReviewed">Last Reviewed</option>
+                <option value="nextReview">Next Review</option>
+                <option value="activeTodo">Active To-Dos</option>
+              </select>
+            </label>
             <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
           </div>
         </div>
-        <div id="search-filter-container"></div>
         <div id="app-grid" class="app-grid"></div>
       </div>
 
@@ -660,19 +680,16 @@ class App {
     const appGrid = document.getElementById('app-grid');
     if (!appGrid) return;
 
-    // Initialize search/filter component
-    const searchFilterContainer = document.getElementById('search-filter-container');
-    if (searchFilterContainer && !this.searchFilter) {
-      this.searchFilter = new SearchFilter(searchFilterContainer, (updates) => {
-        this.handleFilterChange(updates);
-      });
-      this.searchFilter.render();
-    }
-
     if (!this.appGrid) {
       this.appGrid = new AppGrid(appGrid, (app) => {
         this.showAppDetail(app);
       });
+    }
+
+    // Sync search input with state
+    const searchInput = document.getElementById('app-search');
+    if (searchInput && searchInput.value !== (state.searchQuery || '')) {
+      searchInput.value = state.searchQuery || '';
     }
 
     // Debug: log what's being rendered
@@ -687,14 +704,10 @@ class App {
           <div class="loading-spinner"></div>
         </div>
       `;
-      if (this.searchFilter) {
-        this.searchFilter.updateResultCount(0, 0);
-      }
     } else {
-      // Apply search and filters
+      // Apply search (searches name, platform, status, language)
       const searchQuery = state.searchQuery || '';
-      const filters = state.filters || {};
-      const filteredApps = filterApps(state.portfolio, searchQuery, filters);
+      const filteredApps = filterApps(state.portfolio, searchQuery);
 
       // Sort filtered apps
       const order = state.sortOrder || 'alphabetical';
@@ -722,40 +735,21 @@ class App {
         appGrid.innerHTML = `
           <div class="empty-state">
             <h3>No matching apps</h3>
-            <p>Try adjusting your search or filters</p>
-            <button class="btn btn-secondary" id="clear-filters-btn">Clear Filters</button>
+            <p>Try a different search term</p>
+            <button class="btn btn-secondary" id="clear-search-btn">Clear Search</button>
           </div>
         `;
-        const clearBtn = appGrid.querySelector('#clear-filters-btn');
+        const clearBtn = appGrid.querySelector('#clear-search-btn');
         if (clearBtn) {
           clearBtn.addEventListener('click', () => {
-            appState.clearSearchAndFilters();
-            if (this.searchFilter) this.searchFilter.render();
+            appState.setSearchQuery('');
+            const searchInput = document.getElementById('app-search');
+            if (searchInput) searchInput.value = '';
           });
         }
       } else {
         this.appGrid.render(apps);
       }
-
-      // Update result count
-      if (this.searchFilter) {
-        this.searchFilter.updateResultCount(apps.length, state.portfolio.length);
-      }
-    }
-  }
-
-  /**
-   * Handle filter changes from SearchFilter component
-   */
-  handleFilterChange(updates) {
-    if (updates.searchQuery !== undefined) {
-      appState.setSearchQuery(updates.searchQuery);
-    }
-    if (updates.filters) {
-      appState.setFilters(updates.filters);
-    }
-    if (this.searchFilter) {
-      this.searchFilter.render();
     }
   }
 
