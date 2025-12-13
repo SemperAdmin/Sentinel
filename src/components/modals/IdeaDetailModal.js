@@ -13,16 +13,16 @@ import appState from '../../state/AppState.js';
  */
 function renderComments(comments = []) {
   if (!comments || comments.length === 0) {
-    return '<p style="color: var(--gray-500); font-style: italic; margin: 0;">No comments yet. Be the first to add feedback!</p>';
+    return '<p style="color: #999; font-style: italic; margin: 0;">No comments yet. Be the first to add feedback!</p>';
   }
 
   return comments.map(comment => `
-    <div class="idea-comment" style="background: var(--gray-100); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem;">
+    <div class="idea-comment" style="background: #2a2a2a; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid #444;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-weight: 600; color: var(--gray-700);">${escapeHtml(comment.author || 'Anonymous')}</span>
-        <span style="font-size: 0.75rem; color: var(--gray-500);">${formatDate(comment.createdAt)}</span>
+        <span style="font-weight: 600; color: #ddd;">${escapeHtml(comment.author || 'Anonymous')}</span>
+        <span style="font-size: 0.75rem; color: #999;">${formatDate(comment.createdAt)}</span>
       </div>
-      <p style="margin: 0; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(comment.text)}</p>
+      <p style="margin: 0; line-height: 1.5; white-space: pre-wrap; color: #ccc;">${escapeHtml(comment.text)}</p>
     </div>
   `).join('');
 }
@@ -61,54 +61,54 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
               ${escapeHtml(idea.conceptName)}
               ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
             </h3>
-            <p style="color: var(--gray-500); margin: 0.5rem 0 0 0; font-size: 0.875rem;">
+            <p style="color: #999; margin: 0.5rem 0 0 0; font-size: 0.875rem;">
               Created ${formatDate(idea.dateCreated)}
               ${idea.contactEmail ? ` • ${escapeHtml(idea.contactEmail)}` : ''}
             </p>
           </div>
-          <button class="dialog-close" id="close-idea-detail" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray-500);">&times;</button>
+          <button class="dialog-close" id="close-idea-detail" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
         </div>
 
         <div class="idea-detail-body" style="margin-top: 1.5rem;">
           <div class="idea-detail-section">
-            <h4 style="color: var(--gray-600); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Problem Solved</h4>
-            <p style="margin: 0; line-height: 1.6;">${escapeHtml(idea.problemSolved || 'No description provided')}</p>
+            <h4 style="color: #bbb; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Problem Solved</h4>
+            <p style="margin: 0; line-height: 1.6; color: #ddd;">${escapeHtml(idea.problemSolved || 'No description provided')}</p>
           </div>
 
           <div class="idea-detail-section" style="margin-top: 1.5rem;">
-            <h4 style="color: var(--gray-600); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Target Audience</h4>
-            <p style="margin: 0;">${escapeHtml(idea.targetAudience || 'Not specified')}</p>
+            <h4 style="color: #bbb; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Target Audience</h4>
+            <p style="margin: 0; color: #ddd;">${escapeHtml(idea.targetAudience || 'Not specified')}</p>
           </div>
 
           ${idea.initialFeatures ? `
           <div class="idea-detail-section" style="margin-top: 1.5rem;">
-            <h4 style="color: var(--gray-600); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Initial Features (MVP)</h4>
-            <p style="margin: 0; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(idea.initialFeatures)}</p>
+            <h4 style="color: #bbb; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Initial Features (MVP)</h4>
+            <p style="margin: 0; line-height: 1.6; white-space: pre-wrap; color: #ddd;">${escapeHtml(idea.initialFeatures)}</p>
           </div>
           ` : ''}
 
-          <div class="idea-detail-meta" style="display: flex; gap: 1.5rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200); flex-wrap: wrap;">
+          <div class="idea-detail-meta" style="display: flex; gap: 1.5rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #444; flex-wrap: wrap;">
             <div>
-              <span style="color: var(--gray-500); font-size: 0.75rem; text-transform: uppercase;">Tech Stack</span>
-              <p style="margin: 0.25rem 0 0 0; font-weight: 600;">${escapeHtml(idea.techStack || 'Not specified')}</p>
+              <span style="color: #999; font-size: 0.75rem; text-transform: uppercase;">Tech Stack</span>
+              <p style="margin: 0.25rem 0 0 0; font-weight: 600; color: #eee;">${escapeHtml(idea.techStack || 'Not specified')}</p>
             </div>
             <div>
-              <span style="color: var(--gray-500); font-size: 0.75rem; text-transform: uppercase;">Risk Rating</span>
+              <span style="color: #999; font-size: 0.75rem; text-transform: uppercase;">Risk Rating</span>
               <p style="margin: 0.25rem 0 0 0; font-weight: 600; color: ${riskColor};">${escapeHtml(idea.riskRating || 'Not rated')}</p>
             </div>
             ${idea.submittedBy ? `
             <div>
-              <span style="color: var(--gray-500); font-size: 0.75rem; text-transform: uppercase;">Submitted By</span>
-              <p style="margin: 0.25rem 0 0 0; font-weight: 600;">${escapeHtml(idea.submittedBy)}</p>
+              <span style="color: #999; font-size: 0.75rem; text-transform: uppercase;">Submitted By</span>
+              <p style="margin: 0.25rem 0 0 0; font-weight: 600; color: #eee;">${escapeHtml(idea.submittedBy)}</p>
             </div>
             ` : ''}
           </div>
 
           <!-- Comments Section -->
-          <div class="idea-comments-section" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200);">
-            <h4 style="color: var(--gray-600); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <div class="idea-comments-section" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #444;">
+            <h4 style="color: #bbb; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
               Feedback & Comments
-              <span style="background: var(--gray-200); color: var(--gray-600); padding: 0.125rem 0.5rem; border-radius: 10px; font-size: 0.75rem;">${comments.length}</span>
+              <span style="background: #333; color: #aaa; padding: 0.125rem 0.5rem; border-radius: 10px; font-size: 0.75rem;">${comments.length}</span>
             </h4>
 
             <div id="comments-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
@@ -122,14 +122,14 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
                   type="text"
                   id="comment-author"
                   placeholder="Your name (optional)"
-                  style="flex: 1; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.875rem; background: var(--gray-50);"
+                  style="flex: 1; padding: 0.5rem; border: 1px solid #555; border-radius: 4px; font-size: 0.875rem; background: #2a2a2a; color: #eee;"
                 />
               </div>
               <textarea
                 id="comment-text"
                 placeholder="Add your feedback or suggestions..."
                 rows="3"
-                style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.875rem; resize: vertical; font-family: inherit; background: var(--gray-50);"
+                style="width: 100%; padding: 0.75rem; border: 1px solid #555; border-radius: 4px; font-size: 0.875rem; resize: vertical; font-family: inherit; background: #2a2a2a; color: #eee;"
               ></textarea>
               <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
                 <button class="btn btn-primary" id="submit-comment-btn" style="padding: 0.5rem 1rem;">
@@ -140,7 +140,7 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
           </div>
         </div>
 
-        <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+        <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #444;">
           ${isAdmin ? `
             <button class="btn btn-primary" id="activate-idea-btn">
               Activate & Create Repo
