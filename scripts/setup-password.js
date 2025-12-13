@@ -7,8 +7,11 @@
  * The hashed password is secure and cannot be reversed.
  *
  * Usage:
- *   node scripts/setup-password.js
- *   node scripts/setup-password.js YOUR_PASSWORD
+ *   Interactive:     node scripts/setup-password.js
+ *   With argument:   node scripts/setup-password.js YOUR_PASSWORD
+ *   With env var:    ADMIN_PASSWORD="your-password" node scripts/setup-password.js
+ *
+ * For CI/CD pipelines, set the ADMIN_PASSWORD environment variable as a secret.
  */
 
 import bcrypt from 'bcryptjs';
@@ -70,11 +73,19 @@ function saveConfig(hash) {
 async function main() {
   console.log('=== Admin Password Setup ===\n');
 
-  // Get password from command line arg or prompt
-  let password = process.argv[2];
+  // Get password from: 1) env var, 2) command line arg, 3) interactive prompt
+  let password = process.env.ADMIN_PASSWORD || process.argv[2];
 
   if (!password) {
-    password = await promptPassword();
+    // Only prompt if running interactively (not in CI/CD)
+    if (process.stdin.isTTY) {
+      password = await promptPassword();
+    } else {
+      console.error('❌ Error: ADMIN_PASSWORD environment variable not set');
+      console.error('   Set it with: export ADMIN_PASSWORD="your-secure-password"');
+      console.error('   Or run interactively: node scripts/setup-password.js');
+      process.exit(1);
+    }
   }
 
   if (!password || password.trim().length === 0) {
