@@ -124,6 +124,14 @@ class AppState {
       autoRepoSync: false,
       sortOrder: 'alphabetical',
 
+      // Search and filter state
+      searchQuery: '',
+      filters: {
+        platform: 'All',
+        status: 'All',
+        health: 'All'
+      },
+
       // Authentication state
       isAuthenticated: false,
       userRole: 'guest', // admin, public, guest
@@ -362,6 +370,39 @@ class AppState {
   setSortOrder(order) {
     const allowed = ['alphabetical','lastReviewed','nextReview','activeTodo'];
     this.setState({ sortOrder: allowed.includes(order) ? order : 'alphabetical' });
+  }
+
+  /**
+   * Set search query
+   * @param {string} query - Search query string
+   */
+  setSearchQuery(query) {
+    this.setState({ searchQuery: query || '' });
+  }
+
+  /**
+   * Set filters
+   * @param {Object} filters - Filter object with platform, status, health
+   */
+  setFilters(filters) {
+    const currentFilters = this.state.filters || {};
+    this.setState({
+      filters: { ...currentFilters, ...filters }
+    });
+  }
+
+  /**
+   * Clear all search and filters
+   */
+  clearSearchAndFilters() {
+    this.setState({
+      searchQuery: '',
+      filters: {
+        platform: 'All',
+        status: 'All',
+        health: 'All'
+      }
+    });
   }
 
   /**

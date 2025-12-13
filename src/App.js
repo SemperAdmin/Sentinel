@@ -38,6 +38,7 @@ import LoginForm from './components/LoginForm.js';
 import { showAdminLoginModal, showPublicIdeaModal } from './components/modals/index.js';
 import { renderIdeasList } from './components/IdeasList.js';
 import { initDevTools } from './utils/devTools.js';
+import { SearchFilter, filterApps } from './components/SearchFilter.js';
 
 class App {
   constructor() {
@@ -45,6 +46,7 @@ class App {
     this.tabbedDetail = null;
     this.ideaForm = null;
     this.loginForm = null;
+    this.searchFilter = null;
     this.initialized = false;
     this.DEFAULT_GITHUB_USER = DEFAULT_GITHUB_USER;
     this.loadingManager = new LoadingStateManager();
@@ -397,6 +399,7 @@ class App {
             <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
           </div>
         </div>
+        <div id="search-filter-container"></div>
         <div id="app-grid" class="app-grid"></div>
       </div>
 
@@ -657,6 +660,15 @@ class App {
     const appGrid = document.getElementById('app-grid');
     if (!appGrid) return;
 
+    // Initialize search/filter component
+    const searchFilterContainer = document.getElementById('search-filter-container');
+    if (searchFilterContainer && !this.searchFilter) {
+      this.searchFilter = new SearchFilter(searchFilterContainer, (updates) => {
+        this.handleFilterChange(updates);
+      });
+      this.searchFilter.render();
+    }
+
     if (!this.appGrid) {
       this.appGrid = new AppGrid(appGrid, (app) => {
         this.showAppDetail(app);
@@ -675,9 +687,18 @@ class App {
           <div class="loading-spinner"></div>
         </div>
       `;
+      if (this.searchFilter) {
+        this.searchFilter.updateResultCount(0, 0);
+      }
     } else {
+      // Apply search and filters
+      const searchQuery = state.searchQuery || '';
+      const filters = state.filters || {};
+      const filteredApps = filterApps(state.portfolio, searchQuery, filters);
+
+      // Sort filtered apps
       const order = state.sortOrder || 'alphabetical';
-      const apps = [...state.portfolio];
+      const apps = [...filteredApps];
       const byAlpha = (a,b) => String(a.id).localeCompare(String(b.id));
       const toDate = (s) => s ? new Date(s) : null;
       const lastRev = (app) => getLatestReviewDate(app.lastCommitDate, app.lastReviewDate);
@@ -695,7 +716,46 @@ class App {
       });
       else if (order === 'nextReview') apps.sort((a,b) => nextRev(a) - nextRev(b));
       else if (order === 'activeTodo') apps.sort((a,b) => activeCount(b) - activeCount(a));
-      this.appGrid.render(apps);
+
+      // Render filtered and sorted apps
+      if (apps.length === 0) {
+        appGrid.innerHTML = `
+          <div class="empty-state">
+            <h3>No matching apps</h3>
+            <p>Try adjusting your search or filters</p>
+            <button class="btn btn-secondary" id="clear-filters-btn">Clear Filters</button>
+          </div>
+        `;
+        const clearBtn = appGrid.querySelector('#clear-filters-btn');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            appState.clearSearchAndFilters();
+            if (this.searchFilter) this.searchFilter.render();
+          });
+        }
+      } else {
+        this.appGrid.render(apps);
+      }
+
+      // Update result count
+      if (this.searchFilter) {
+        this.searchFilter.updateResultCount(apps.length, state.portfolio.length);
+      }
+    }
+  }
+
+  /**
+   * Handle filter changes from SearchFilter component
+   */
+  handleFilterChange(updates) {
+    if (updates.searchQuery !== undefined) {
+      appState.setSearchQuery(updates.searchQuery);
+    }
+    if (updates.filters) {
+      appState.setFilters(updates.filters);
+    }
+    if (this.searchFilter) {
+      this.searchFilter.render();
     }
   }
 
