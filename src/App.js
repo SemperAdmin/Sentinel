@@ -1075,9 +1075,10 @@ class App {
 
       // Sync to GitHub
       try {
-        const api = (await import('./data/ApiService.js')).default;
-        await api.saveIdeaYaml(updatedIdea);
-      } catch (_) {}
+        await apiService.saveIdeaYaml(updatedIdea);
+      } catch (error) {
+        console.warn('Failed to sync idea to GitHub:', error);
+      }
 
       toastManager.show(`"${idea.conceptName}" marked as created!`, 'success');
     } catch (error) {

@@ -156,19 +156,12 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
         </div>
 
         <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #444;">
-          ${isAdmin && idea.status !== 'created' ? `
-            <button class="btn btn-success" id="mark-created-btn">
-              ✓ Mark as Created
-            </button>
-            <button class="btn btn-secondary" id="edit-idea-btn">
-              Edit
-            </button>
-          ` : ''}
-          ${isAdmin && idea.status === 'created' ? `
-            <span style="color: #28a745; align-self: center; margin-right: auto;">✓ This idea has been created</span>
-            <button class="btn btn-secondary" id="edit-idea-btn">
-              Edit
-            </button>
+          ${isAdmin ? `
+            ${idea.status === 'created'
+              ? '<span style="color: #28a745; align-self: center; margin-right: auto;">✓ This idea has been created</span>'
+              : '<button class="btn btn-success" id="mark-created-btn">✓ Mark as Created</button>'
+            }
+            <button class="btn btn-secondary" id="edit-idea-btn">Edit</button>
           ` : ''}
           <button class="btn btn-secondary" id="close-idea-btn">Close</button>
         </div>
