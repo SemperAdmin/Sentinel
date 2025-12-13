@@ -860,7 +860,7 @@ class App {
     renderIdeasList(state.ideas, ideasList, {
       onView: (idea) => this.showIdeaDetail(idea),
       onEdit: (idea) => this.editIdea(idea.id),
-      onActivate: (ideaId) => this.activateIdea(ideaId)
+      onMarkCreated: (ideaId) => this.markIdeaCreated(ideaId)
     });
 
     // Handle idea form
@@ -980,7 +980,7 @@ class App {
   showIdeaDetail(idea) {
     showIdeaDetailModal(idea, {
       onEdit: (idea) => this.editIdea(idea.id),
-      onActivate: (ideaId) => this.activateIdea(ideaId),
+      onMarkCreated: (ideaId) => this.markIdeaCreated(ideaId),
       onAddComment: (ideaId, comment) => this.addCommentToIdea(ideaId, comment)
     });
   }
@@ -1046,46 +1046,43 @@ class App {
   }
 
   /**
-   * Activate idea (convert to app) - admin only
+   * Mark idea as created (archived) - admin only
    */
-  async activateIdea(ideaId) {
-    // Security check: Only admins can activate ideas
+  async markIdeaCreated(ideaId) {
+    // Security check: Only admins can mark ideas as created
     if (!appState.isAdmin()) {
       toastManager.show('Admin access required', 'error');
       return;
     }
 
-    const repoUrl = prompt('Enter GitHub repository URL for this app:');
-    if (!repoUrl || !isValidGitHubUrl(repoUrl)) {
-      alert('Please enter a valid GitHub repository URL');
-      return;
-    }
-
     try {
-      const newApp = await dataStore.activateIdea(ideaId, repoUrl);
-      appState.removeIdea(ideaId);
-      appState.addApp(newApp);
+      const idea = appState.getIdeaById(ideaId);
+      if (!idea) {
+        console.error('Idea not found:', ideaId);
+        return;
+      }
+
+      // Update the idea status to 'created'
+      const updatedIdea = {
+        ...idea,
+        status: 'created',
+        createdDate: new Date().toISOString()
+      };
+
+      // Save to local storage
+      await dataStore.saveIdea(updatedIdea);
+      appState.updateIdea(updatedIdea);
+
+      // Sync to GitHub
       try {
         const api = (await import('./data/ApiService.js')).default;
-        const idea = {
-          id: ideaId,
-          conceptName: newApp.id,
-          problemSolved: newApp.notes || '',
-          techStack: newApp.platform || 'Web',
-          riskRating: 'Medium',
-          targetAudience: 'Unknown',
-          dateCreated: new Date().toISOString()
-        };
-        await api.saveIdeaYaml(idea);
+        await api.saveIdeaYaml(updatedIdea);
       } catch (_) {}
-      
-      // Fetch GitHub data for the new app
-      this.fetchGitHubDataForApps([newApp]);
-      
-      alert(`Idea activated successfully! App "${newApp.id}" added to portfolio.`);
+
+      toastManager.show(`"${idea.conceptName}" marked as created!`, 'success');
     } catch (error) {
-      console.error('Failed to activate idea:', error);
-      appState.setError('Failed to activate idea');
+      console.error('Failed to mark idea as created:', error);
+      appState.setError('Failed to mark idea as created');
     }
   }
 

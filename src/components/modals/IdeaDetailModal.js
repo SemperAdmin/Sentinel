@@ -41,7 +41,7 @@ function renderComments(comments = [], isAdmin = false) {
  * @param {Object} idea - Idea object to display
  * @param {Object} callbacks - Optional callbacks for actions
  * @param {Function} callbacks.onEdit - Called when edit button is clicked (admin only)
- * @param {Function} callbacks.onActivate - Called when activate button is clicked (admin only)
+ * @param {Function} callbacks.onMarkCreated - Called when mark as created button is clicked (admin only)
  * @param {Function} callbacks.onAddComment - Called when a comment is added (all users)
  */
 export function showIdeaDetailModal(idea, callbacks = {}) {
@@ -156,10 +156,16 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
         </div>
 
         <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #444;">
-          ${isAdmin ? `
-            <button class="btn btn-primary" id="activate-idea-btn">
-              Activate & Create Repo
+          ${isAdmin && idea.status !== 'created' ? `
+            <button class="btn btn-success" id="mark-created-btn">
+              ✓ Mark as Created
             </button>
+            <button class="btn btn-secondary" id="edit-idea-btn">
+              Edit
+            </button>
+          ` : ''}
+          ${isAdmin && idea.status === 'created' ? `
+            <span style="color: #28a745; align-self: center; margin-right: auto;">✓ This idea has been created</span>
             <button class="btn btn-secondary" id="edit-idea-btn">
               Edit
             </button>
@@ -263,10 +269,10 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
       }
     });
 
-    dialog.querySelector('#activate-idea-btn')?.addEventListener('click', () => {
+    dialog.querySelector('#mark-created-btn')?.addEventListener('click', () => {
       closeModal();
-      if (callbacks.onActivate) {
-        callbacks.onActivate(idea.id);
+      if (callbacks.onMarkCreated) {
+        callbacks.onMarkCreated(idea.id);
       }
     });
   }
