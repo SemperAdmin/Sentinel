@@ -25,7 +25,7 @@ export function renderIdeaItem(idea) {
   const commentsCount = idea.comments?.length || 0;
 
   return `
-    <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''} ${isCreated ? 'created' : ''}" data-idea-id="${idea.id}" style="cursor: pointer; ${isCreated ? 'opacity: 0.7;' : ''}">
+    <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''} ${isCreated ? 'created' : ''}" data-idea-id="${idea.id}" style="cursor: pointer;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <h4>${escapeHtml(idea.conceptName)}</h4>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -42,23 +42,19 @@ export function renderIdeaItem(idea) {
         <span>📅 ${formatDate(idea.dateCreated)}</span>
         ${idea.contactEmail ? `<span>📧 ${escapeHtml(idea.contactEmail)}</span>` : ''}
       </div>
-      ${isAdmin && !isCreated ? `
+      ${isAdmin ? `
         <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-          <button class="btn btn-success" data-action="mark-created">
-            ✓ Mark as Created
-          </button>
+          ${!isCreated ? `
+            <button class="btn btn-success" data-action="mark-created">
+              ✓ Mark as Created
+            </button>
+          ` : ''}
           <button class="btn btn-secondary" data-action="edit">
             Edit
           </button>
-          <span style="margin-left: auto; color: #888; font-size: 0.75rem; align-self: center;">Click card to view details</span>
-        </div>
-      ` : ''}
-      ${isAdmin && isCreated ? `
-        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-          <button class="btn btn-secondary" data-action="edit">
-            Edit
-          </button>
-          <span style="margin-left: auto; color: #28a745; font-size: 0.75rem; align-self: center;">App has been created</span>
+          <span style="margin-left: auto; color: ${isCreated ? '#28a745' : '#888'}; font-size: 0.75rem; align-self: center;">
+            ${isCreated ? 'App has been created' : 'Click card to view details'}
+          </span>
         </div>
       ` : ''}
     </div>

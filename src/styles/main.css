@@ -1571,6 +1571,12 @@ body {
   background: rgba(0, 123, 255, 0.05);
 }
 
+/* Created/Archived Idea Styling */
+.idea-item.created {
+  opacity: 0.7;
+  border-left: 4px solid var(--success-green);
+}
+
 .btn-success {
   background-color: var(--success-green);
   color: var(--white);
