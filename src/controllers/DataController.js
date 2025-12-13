@@ -311,23 +311,72 @@ export class DataController {
    */
   mergeIdeas(localIdeas, remoteIdeas) {
     const byId = new Map(localIdeas.map(i => [i.id, i]));
-    const merged = [...localIdeas];
+    const merged = [];
 
+    // Process all remote ideas first (they are the source of truth)
     for (const ri of remoteIdeas) {
-      if (!byId.has(ri.id)) {
-        merged.push({
-          id: ri.id,
-          conceptName: ri.conceptName || ri.id,
-          problemSolved: ri.problemSolved || '',
-          targetAudience: ri.targetAudience || '',
-          techStack: ri.techStack || 'Web',
-          riskRating: ri.riskRating || 'Medium',
-          dateCreated: ri.dateCreated || new Date().toISOString()
-        });
-      }
+      const localIdea = byId.get(ri.id);
+      const remoteComments = Array.isArray(ri.comments) ? ri.comments : [];
+      const localComments = localIdea && Array.isArray(localIdea.comments) ? localIdea.comments : [];
+
+      // Merge comments - combine and deduplicate by timestamp
+      const mergedComments = this.mergeComments(localComments, remoteComments);
+
+      merged.push({
+        id: ri.id,
+        conceptName: ri.conceptName || ri.id,
+        problemSolved: ri.problemSolved || '',
+        targetAudience: ri.targetAudience || '',
+        techStack: ri.techStack || 'Web',
+        riskRating: ri.riskRating || 'Medium',
+        dateCreated: ri.dateCreated || new Date().toISOString(),
+        initialFeatures: ri.initialFeatures || (localIdea?.initialFeatures || ''),
+        submittedBy: ri.submittedBy || (localIdea?.submittedBy || ''),
+        contactEmail: ri.contactEmail || (localIdea?.contactEmail || ''),
+        comments: mergedComments
+      });
+
+      byId.delete(ri.id);
+    }
+
+    // Add any local-only ideas (not in remote)
+    for (const [, localIdea] of byId) {
+      merged.push(localIdea);
     }
 
     return merged;
+  }
+
+  /**
+   * Merge local and remote comments, deduplicating by createdAt timestamp
+   * @param {Array} localComments
+   * @param {Array} remoteComments
+   * @returns {Array}
+   */
+  mergeComments(localComments, remoteComments) {
+    const seen = new Set();
+    const merged = [];
+
+    // Add remote comments first (source of truth)
+    for (const comment of remoteComments) {
+      const key = `${comment.createdAt}-${comment.author || 'Anonymous'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(comment);
+      }
+    }
+
+    // Add local comments that aren't already in remote
+    for (const comment of localComments) {
+      const key = `${comment.createdAt}-${comment.author || 'Anonymous'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(comment);
+      }
+    }
+
+    // Sort by date (oldest first)
+    return merged.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }
 }
 

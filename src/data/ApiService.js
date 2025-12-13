@@ -427,6 +427,9 @@ class ApiService {
         riskRating: idea.riskRating || '',
         dateCreated: idea.dateCreated || new Date().toISOString(),
         initialFeatures: idea.initialFeatures || '',
+        submittedBy: idea.submittedBy || '',
+        contactEmail: idea.contactEmail || '',
+        comments: JSON.stringify(idea.comments || []),
       };
       const yaml = this.toYaml(payload);
       const content = this.encodeBase64(yaml);
@@ -569,7 +572,17 @@ class ApiService {
       const idx = line.indexOf(':');
       if (idx === -1) continue;
       const key = line.slice(0, idx).trim();
-      const val = line.slice(idx + 1).trim();
+      let val = line.slice(idx + 1).trim();
+
+      // Parse comments field as JSON array
+      if (key === 'comments' && val.startsWith('[')) {
+        try {
+          val = JSON.parse(val);
+        } catch (e) {
+          val = [];
+        }
+      }
+
       obj[key] = val;
     }
     return obj;

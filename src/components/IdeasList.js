@@ -21,11 +21,16 @@ export function renderIdeaItem(idea) {
   const isAdmin = appState.getState().userRole === 'admin';
   const isPublicSubmission = idea.status === 'public-submission' || idea.submittedBy === 'public';
 
+  const commentsCount = idea.comments?.length || 0;
+
   return `
-    <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''}" data-idea-id="${idea.id}">
+    <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''}" data-idea-id="${idea.id}" style="cursor: pointer;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <h4>${escapeHtml(idea.conceptName)}</h4>
-        ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          ${commentsCount > 0 ? `<span style="background: #444; color: #aaa; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">💬 ${commentsCount}</span>` : ''}
+          ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
+        </div>
       </div>
       <p>${escapeHtml(idea.problemSolved ? idea.problemSolved.substring(0, 100) : '')}${idea.problemSolved && idea.problemSolved.length > 100 ? '...' : ''}</p>
       <div class="idea-meta">
@@ -36,13 +41,14 @@ export function renderIdeaItem(idea) {
         ${idea.contactEmail ? `<span>📧 ${escapeHtml(idea.contactEmail)}</span>` : ''}
       </div>
       ${isAdmin ? `
-        <div style="margin-top: 1rem;">
-          <button class="btn btn-primary" style="margin-right: 0.5rem;" data-action="activate">
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary" data-action="activate">
             Activate & Create Repo
           </button>
           <button class="btn btn-secondary" data-action="edit">
             Edit
           </button>
+          <span style="margin-left: auto; color: #888; font-size: 0.75rem; align-self: center;">Click card to view details</span>
         </div>
       ` : ''}
     </div>
