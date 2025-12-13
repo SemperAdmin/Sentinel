@@ -18,7 +18,7 @@ services:
   - type: static_site
     name: sentinel-frontend
     plan: free
-    buildCommand: npm run build
+    buildCommand: npm run build:with-password
     staticPublishPath: dist
     autoDeploy: true
     envVars:
@@ -26,3 +26,5 @@ services:
         value: https://sentinel-bfhj.onrender.com/api
       - key: VITE_BASE_PATH
         value: /
+      - key: ADMIN_PASSWORD
+        sync: false
