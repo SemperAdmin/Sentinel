@@ -980,8 +980,45 @@ class App {
   showIdeaDetail(idea) {
     showIdeaDetailModal(idea, {
       onEdit: (idea) => this.editIdea(idea.id),
-      onActivate: (ideaId) => this.activateIdea(ideaId)
+      onActivate: (ideaId) => this.activateIdea(ideaId),
+      onAddComment: (ideaId, comment) => this.addCommentToIdea(ideaId, comment)
     });
+  }
+
+  /**
+   * Add a comment to an idea (all users)
+   */
+  async addCommentToIdea(ideaId, comment) {
+    try {
+      const idea = appState.getIdeaById(ideaId);
+      if (!idea) {
+        console.error('Idea not found:', ideaId);
+        return;
+      }
+
+      // Initialize comments array if needed
+      const updatedIdea = {
+        ...idea,
+        comments: [...(idea.comments || []), comment]
+      };
+
+      // Save to local storage
+      await dataStore.saveIdea(updatedIdea);
+      appState.updateIdea(updatedIdea);
+
+      // Try to save to YAML (backend)
+      try {
+        const api = (await import('./data/ApiService.js')).default;
+        await api.saveIdeaYaml(updatedIdea);
+      } catch (err) {
+        console.warn('Failed to sync comment to backend:', err);
+      }
+
+      console.log(`Comment added to idea ${ideaId}`);
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      throw error;
+    }
   }
 
   /**
