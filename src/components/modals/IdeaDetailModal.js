@@ -9,22 +9,31 @@ import appState from '../../state/AppState.js';
 /**
  * Render comments list HTML
  * @param {Array} comments - Array of comment objects
+ * @param {boolean} isAdmin - Whether the current user is admin
  * @returns {string} HTML string
  */
-function renderComments(comments = []) {
+function renderComments(comments = [], isAdmin = false) {
   if (!comments || comments.length === 0) {
     return '<p style="color: #999; font-style: italic; margin: 0;">No comments yet. Be the first to add feedback!</p>';
   }
 
-  return comments.map(comment => `
+  return comments.map(comment => {
+    // Only show author name and email to admins
+    const displayName = isAdmin ? escapeHtml(comment.author || 'Anonymous') : 'Anonymous';
+    const emailDisplay = isAdmin && comment.email
+      ? `<span style="font-size: 0.75rem; color: #888; margin-left: 0.5rem;">(${escapeHtml(comment.email)})</span>`
+      : '';
+
+    return `
     <div class="idea-comment" style="background: #2a2a2a; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid #444;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-weight: 600; color: #ddd;">${escapeHtml(comment.author || 'Anonymous')}</span>
+        <span style="font-weight: 600; color: #ddd;">${displayName}${emailDisplay}</span>
         <span style="font-size: 0.75rem; color: #999;">${formatDate(comment.createdAt)}</span>
       </div>
       <p style="margin: 0; line-height: 1.5; white-space: pre-wrap; color: #ccc;">${escapeHtml(comment.text)}</p>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 /**
@@ -112,7 +121,7 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
             </h4>
 
             <div id="comments-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
-              ${renderComments(comments)}
+              ${renderComments(comments, isAdmin)}
             </div>
 
             <!-- Add Comment Form -->
@@ -121,7 +130,13 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
                 <input
                   type="text"
                   id="comment-author"
-                  placeholder="Your name (optional)"
+                  placeholder="Your name"
+                  style="flex: 1; padding: 0.5rem; border: 1px solid #555; border-radius: 4px; font-size: 0.875rem; background: #2a2a2a; color: #eee;"
+                />
+                <input
+                  type="email"
+                  id="comment-email"
+                  placeholder="Your email"
                   style="flex: 1; padding: 0.5rem; border: 1px solid #555; border-radius: 4px; font-size: 0.875rem; background: #2a2a2a; color: #eee;"
                 />
               </div>
@@ -171,6 +186,7 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
   const submitCommentBtn = dialog.querySelector('#submit-comment-btn');
   const commentTextInput = dialog.querySelector('#comment-text');
   const commentAuthorInput = dialog.querySelector('#comment-author');
+  const commentEmailInput = dialog.querySelector('#comment-email');
 
   if (submitCommentBtn && commentTextInput) {
     submitCommentBtn.addEventListener('click', async () => {
@@ -180,11 +196,13 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
         return;
       }
 
-      const author = commentAuthorInput?.value.trim() || 'Anonymous';
+      const author = commentAuthorInput?.value.trim() || '';
+      const email = commentEmailInput?.value.trim() || '';
       const comment = {
         id: Date.now().toString(),
         text,
         author,
+        email,
         createdAt: new Date().toISOString()
       };
 
@@ -201,7 +219,7 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
         const commentsList = dialog.querySelector('#comments-list');
         const updatedComments = [...comments, comment];
         if (commentsList) {
-          commentsList.innerHTML = renderComments(updatedComments);
+          commentsList.innerHTML = renderComments(updatedComments, isAdmin);
           // Scroll to bottom to show new comment
           commentsList.scrollTop = commentsList.scrollHeight;
         }
@@ -214,7 +232,8 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
 
         // Clear the form
         commentTextInput.value = '';
-        commentAuthorInput.value = '';
+        if (commentAuthorInput) commentAuthorInput.value = '';
+        if (commentEmailInput) commentEmailInput.value = '';
 
         // Add to local comments array for subsequent renders
         comments.push(comment);
