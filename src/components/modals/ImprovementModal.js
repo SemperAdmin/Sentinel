@@ -35,7 +35,12 @@ export function showImprovementModal(app, onSubmit) {
                       placeholder="Provide details about the problem or enhancement..." required></textarea>
           </div>
           <div class="form-group">
-            <label for="improvement-email">Your Email (optional)</label>
+            <label for="improvement-name">Your Name</label>
+            <input type="text" id="improvement-name" class="form-control"
+                   placeholder="Your name" />
+          </div>
+          <div class="form-group">
+            <label for="improvement-email">Your Email</label>
             <input type="email" id="improvement-email" class="form-control"
                    placeholder="your.email@example.com" />
           </div>
@@ -56,7 +61,8 @@ export function showImprovementModal(app, onSubmit) {
 
     const title = dialog.querySelector('#improvement-title').value;
     const description = dialog.querySelector('#improvement-description').value;
-    const email = dialog.querySelector('#improvement-email').value;
+    const name = dialog.querySelector('#improvement-name').value.trim();
+    const email = dialog.querySelector('#improvement-email').value.trim();
 
     // Create a todo with public submission marker
     const todo = {
@@ -67,7 +73,9 @@ export function showImprovementModal(app, onSubmit) {
       status: 'public-submission',
       source: 'Public User Feedback',
       feedbackSummary: description,
-      submittedBy: email || 'public',
+      submitterName: name || '',
+      submitterEmail: email || '',
+      submittedBy: 'public',
       completed: false,
       createdAt: new Date().toISOString()
     };

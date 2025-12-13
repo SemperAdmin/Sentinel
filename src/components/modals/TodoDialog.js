@@ -50,8 +50,12 @@ export function showAddTodoDialog(onSubmit) {
             <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback"></textarea>
           </div>
           <div class="form-group">
-            <label>Submitted By</label>
-            <input type="text" id="todo-submitted-by">
+            <label>Submitter Name</label>
+            <input type="text" id="todo-submitter-name">
+          </div>
+          <div class="form-group">
+            <label>Submitter Email</label>
+            <input type="email" id="todo-submitter-email">
           </div>
           <div class="dialog-actions">
             <button type="button" class="btn btn-secondary" id="cancel-todo">Cancel</button>
@@ -77,7 +81,8 @@ export function showAddTodoDialog(onSubmit) {
       dueDate: null,
       source: dialog.querySelector('#todo-source').value,
       feedbackSummary: dialog.querySelector('#todo-feedback-summary').value,
-      submittedBy: dialog.querySelector('#todo-submitted-by').value || '',
+      submitterName: dialog.querySelector('#todo-submitter-name').value || '',
+      submitterEmail: dialog.querySelector('#todo-submitter-email').value || '',
       status: 'Draft'
     };
 
@@ -166,8 +171,12 @@ export function showEditTodoDialog(todo, onSubmit) {
             <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback">${escapeHtml(todo.feedbackSummary || '')}</textarea>
           </div>
           <div class="form-group">
-            <label>Submitted By</label>
-            <input type="text" id="todo-submitted-by" value="${escapeHtml(todo.submittedBy || '')}">
+            <label>Submitter Name</label>
+            <input type="text" id="todo-submitter-name" value="${escapeHtml(todo.submitterName || '')}">
+          </div>
+          <div class="form-group">
+            <label>Submitter Email</label>
+            <input type="email" id="todo-submitter-email" value="${escapeHtml(todo.submitterEmail || '')}">
           </div>
 
           <h4>Workflow & Completion</h4>
@@ -226,7 +235,8 @@ export function showEditTodoDialog(todo, onSubmit) {
       description: dialog.querySelector('#todo-description').value,
       source: dialog.querySelector('#todo-source').value,
       feedbackSummary: dialog.querySelector('#todo-feedback-summary').value,
-      submittedBy: dialog.querySelector('#todo-submitted-by').value || '',
+      submitterName: dialog.querySelector('#todo-submitter-name').value || '',
+      submitterEmail: dialog.querySelector('#todo-submitter-email').value || '',
       priority: dialog.querySelector('#todo-priority').value,
       dueDate: dialog.querySelector('#todo-due-date').value || null,
       effortEstimate: dialog.querySelector('#todo-effort-estimate').value || null,

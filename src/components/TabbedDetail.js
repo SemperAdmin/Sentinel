@@ -339,7 +339,12 @@ export class TabbedDetail {
 
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
-          ${todo.submittedBy && todo.submittedBy !== 'public' ? `<div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem;">📧 ${this.escapeHtml(todo.submittedBy)}</div>` : ''}
+          ${appState.isAdmin() && isPublicSubmission ? `
+            <div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+              ${todo.submitterName ? `<span>👤 ${this.escapeHtml(todo.submitterName)}</span>` : ''}
+              ${todo.submitterEmail ? `<span>📧 ${this.escapeHtml(todo.submitterEmail)}</span>` : ''}
+            </div>
+          ` : ''}
         </div>
         ${appState.isAdmin() ? `
           <div class="todo-actions">
