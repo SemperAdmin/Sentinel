@@ -28,6 +28,11 @@ export class AppCard {
     card.className = 'app-card';
     card.onclick = () => this.onClick(this.app);
     
+    const description = this.app.description || this.app.notes || '';
+    const truncatedDesc = description.length > 100
+      ? description.substring(0, 100) + '...'
+      : description;
+
     card.innerHTML = `
       <div class="app-card-header">
         <h3 class="app-card-title">
@@ -36,13 +41,15 @@ export class AppCard {
         </h3>
         <span class="app-card-platform">${this.escapeHtml(this.app.platform)}</span>
       </div>
-      
+
+      ${truncatedDesc ? `<p class="app-card-description">${this.escapeHtml(truncatedDesc)}</p>` : ''}
+
       <div class="app-card-metrics">
         <div class="metric-item">
           <span class="metric-label">Last Reviewed:</span>
           <span class="metric-value">${formatDate(lastReviewedDate, { relative: true })}</span>
         </div>
-        
+
         <div class="metric-item">
           <span class="metric-label">Next Review:</span>
           <span class="metric-value">
@@ -50,9 +57,9 @@ export class AppCard {
           </span>
         </div>
       </div>
-      
+
       <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-        Manage App
+        View App
       </button>
     `;
     
