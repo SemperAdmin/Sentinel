@@ -35,7 +35,7 @@ import { toastManager, loadingOverlay, escapeHtml } from './utils/uiComponents.j
 import { isValidGitHubUrl } from './utils/validation.js';
 import { authService } from './auth/AuthService.js';
 import LoginForm from './components/LoginForm.js';
-import { showAdminLoginModal, showPublicIdeaModal } from './components/modals/index.js';
+import { showAdminLoginModal, showPublicIdeaModal, showIdeaDetailModal } from './components/modals/index.js';
 import { renderIdeasList } from './components/IdeasList.js';
 import { initDevTools } from './utils/devTools.js';
 import { filterApps } from './components/SearchFilter.js';
@@ -858,6 +858,7 @@ class App {
 
     // Render ideas list using extracted component
     renderIdeasList(state.ideas, ideasList, {
+      onView: (idea) => this.showIdeaDetail(idea),
       onEdit: (idea) => this.editIdea(idea.id),
       onActivate: (ideaId) => this.activateIdea(ideaId)
     });
@@ -971,6 +972,16 @@ class App {
     if (idea) {
       this.showIdeaForm(idea);
     }
+  }
+
+  /**
+   * Show idea detail modal (all users)
+   */
+  showIdeaDetail(idea) {
+    showIdeaDetailModal(idea, {
+      onEdit: (idea) => this.editIdea(idea.id),
+      onActivate: (ideaId) => this.activateIdea(ideaId)
+    });
   }
 
   /**

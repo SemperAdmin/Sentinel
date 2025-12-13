@@ -54,8 +54,9 @@ export function renderIdeaItem(idea) {
  * @param {Array} ideas - Array of idea objects
  * @param {HTMLElement} container - DOM element to render into
  * @param {Object} callbacks - Callback functions
- * @param {Function} callbacks.onEdit - Called when idea is clicked for editing (admin)
- * @param {Function} callbacks.onActivate - Called when activate button is clicked (admin)
+ * @param {Function} callbacks.onView - Called when idea is clicked for viewing (all users)
+ * @param {Function} callbacks.onEdit - Called when edit button is clicked (admin only)
+ * @param {Function} callbacks.onActivate - Called when activate button is clicked (admin only)
  */
 export function renderIdeasList(ideas, container, callbacks = {}) {
   if (!ideas || ideas.length === 0) {
@@ -72,9 +73,8 @@ export function renderIdeasList(ideas, container, callbacks = {}) {
 
   container.innerHTML = ideas.map(idea => renderIdeaItem(idea)).join('');
 
-  // Add click listeners using event delegation for better performance and maintenance
-  const isAdmin = appState.isAdmin();
-  if (isAdmin && !container.dataset.listenerAttached) {
+  // Add click listeners for ALL users using event delegation
+  if (!container.dataset.listenerAttached) {
     container.addEventListener('click', (e) => {
       const item = e.target.closest('.idea-item[data-idea-id]');
       if (!item) return;
@@ -83,8 +83,10 @@ export function renderIdeasList(ideas, container, callbacks = {}) {
       const idea = appState.getIdeaById(ideaId);
       if (!idea) return;
 
+      const isAdmin = appState.isAdmin();
       const button = e.target.closest('button[data-action]');
-      if (button) {
+
+      if (button && isAdmin) {
         e.stopPropagation(); // Prevent item click handler
         const action = button.dataset.action;
         if (action === 'edit' && callbacks.onEdit) {
@@ -92,9 +94,9 @@ export function renderIdeasList(ideas, container, callbacks = {}) {
         } else if (action === 'activate' && callbacks.onActivate) {
           callbacks.onActivate(idea.id);
         }
-      } else if (callbacks.onEdit) {
-        // Clicking on the item itself opens edit
-        callbacks.onEdit(idea);
+      } else if (callbacks.onView) {
+        // Clicking on the item opens view modal for all users
+        callbacks.onView(idea);
       }
     });
     container.dataset.listenerAttached = 'true';
