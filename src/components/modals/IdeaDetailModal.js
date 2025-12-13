@@ -7,11 +7,33 @@ import { formatDate } from '../../utils/helpers.js';
 import appState from '../../state/AppState.js';
 
 /**
+ * Render comments list HTML
+ * @param {Array} comments - Array of comment objects
+ * @returns {string} HTML string
+ */
+function renderComments(comments = []) {
+  if (!comments || comments.length === 0) {
+    return '<p style="color: var(--gray-500); font-style: italic; margin: 0;">No comments yet. Be the first to add feedback!</p>';
+  }
+
+  return comments.map(comment => `
+    <div class="idea-comment" style="background: var(--gray-100); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-weight: 600; color: var(--gray-700);">${escapeHtml(comment.author || 'Anonymous')}</span>
+        <span style="font-size: 0.75rem; color: var(--gray-500);">${formatDate(comment.createdAt)}</span>
+      </div>
+      <p style="margin: 0; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(comment.text)}</p>
+    </div>
+  `).join('');
+}
+
+/**
  * Show idea detail modal (view-only for all users)
  * @param {Object} idea - Idea object to display
- * @param {Object} callbacks - Optional callbacks for admin actions
+ * @param {Object} callbacks - Optional callbacks for actions
  * @param {Function} callbacks.onEdit - Called when edit button is clicked (admin only)
  * @param {Function} callbacks.onActivate - Called when activate button is clicked (admin only)
+ * @param {Function} callbacks.onAddComment - Called when a comment is added (all users)
  */
 export function showIdeaDetailModal(idea, callbacks = {}) {
   // Remove any existing dialog
@@ -20,6 +42,7 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
 
   const isAdmin = appState.isAdmin();
   const isPublicSubmission = idea.status === 'public-submission' || idea.submittedBy === 'public';
+  const comments = idea.comments || [];
 
   const riskColor = {
     'Low': '#28a745',
@@ -31,10 +54,10 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
   dialog.className = 'idea-detail-dialog todo-dialog';
   dialog.innerHTML = `
     <div class="dialog-overlay">
-      <div class="dialog-content" style="max-width: 700px;">
+      <div class="dialog-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
         <div class="idea-detail-header">
           <div>
-            <h3 style="margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+            <h3 style="margin: 0; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
               ${escapeHtml(idea.conceptName)}
               ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
             </h3>
@@ -80,9 +103,44 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
             </div>
             ` : ''}
           </div>
+
+          <!-- Comments Section -->
+          <div class="idea-comments-section" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200);">
+            <h4 style="color: var(--gray-600); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              Feedback & Comments
+              <span style="background: var(--gray-200); color: var(--gray-600); padding: 0.125rem 0.5rem; border-radius: 10px; font-size: 0.75rem;">${comments.length}</span>
+            </h4>
+
+            <div id="comments-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
+              ${renderComments(comments)}
+            </div>
+
+            <!-- Add Comment Form -->
+            <div class="add-comment-form" style="margin-top: 1rem;">
+              <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <input
+                  type="text"
+                  id="comment-author"
+                  placeholder="Your name (optional)"
+                  style="flex: 1; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.875rem; background: var(--gray-50);"
+                />
+              </div>
+              <textarea
+                id="comment-text"
+                placeholder="Add your feedback or suggestions..."
+                rows="3"
+                style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.875rem; resize: vertical; font-family: inherit; background: var(--gray-50);"
+              ></textarea>
+              <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
+                <button class="btn btn-primary" id="submit-comment-btn" style="padding: 0.5rem 1rem;">
+                  Add Comment
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
           ${isAdmin ? `
             <button class="btn btn-primary" id="activate-idea-btn">
               Activate & Create Repo
@@ -108,6 +166,74 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
 
   dialog.querySelector('#close-idea-detail')?.addEventListener('click', closeModal);
   dialog.querySelector('#close-idea-btn')?.addEventListener('click', closeModal);
+
+  // Handle comment submission
+  const submitCommentBtn = dialog.querySelector('#submit-comment-btn');
+  const commentTextInput = dialog.querySelector('#comment-text');
+  const commentAuthorInput = dialog.querySelector('#comment-author');
+
+  if (submitCommentBtn && commentTextInput) {
+    submitCommentBtn.addEventListener('click', async () => {
+      const text = commentTextInput.value.trim();
+      if (!text) {
+        commentTextInput.focus();
+        return;
+      }
+
+      const author = commentAuthorInput?.value.trim() || 'Anonymous';
+      const comment = {
+        id: Date.now().toString(),
+        text,
+        author,
+        createdAt: new Date().toISOString()
+      };
+
+      // Disable button while saving
+      submitCommentBtn.disabled = true;
+      submitCommentBtn.textContent = 'Adding...';
+
+      try {
+        if (callbacks.onAddComment) {
+          await callbacks.onAddComment(idea.id, comment);
+        }
+
+        // Update the comments list in the UI
+        const commentsList = dialog.querySelector('#comments-list');
+        const updatedComments = [...comments, comment];
+        if (commentsList) {
+          commentsList.innerHTML = renderComments(updatedComments);
+          // Scroll to bottom to show new comment
+          commentsList.scrollTop = commentsList.scrollHeight;
+        }
+
+        // Update the comment count
+        const countBadge = dialog.querySelector('.idea-comments-section h4 span');
+        if (countBadge) {
+          countBadge.textContent = updatedComments.length.toString();
+        }
+
+        // Clear the form
+        commentTextInput.value = '';
+        commentAuthorInput.value = '';
+
+        // Add to local comments array for subsequent renders
+        comments.push(comment);
+      } catch (error) {
+        console.error('Failed to add comment:', error);
+      } finally {
+        submitCommentBtn.disabled = false;
+        submitCommentBtn.textContent = 'Add Comment';
+      }
+    });
+
+    // Handle Enter key in textarea (Ctrl+Enter to submit)
+    commentTextInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        submitCommentBtn.click();
+      }
+    });
+  }
 
   // Handle admin actions
   if (isAdmin) {
