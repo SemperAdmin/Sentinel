@@ -35,8 +35,8 @@ jobs:
         run: npm ci
 
       - name: Setup admin password
-        if: ${{ secrets.ADMIN_PASSWORD != '' }}
         run: npm run setup-password
+        continue-on-error: true
         env:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 

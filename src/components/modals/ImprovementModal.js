@@ -2,19 +2,7 @@
  * ImprovementModal - Modal for public users to suggest improvements
  */
 
-import { toastManager } from '../../utils/uiComponents.js';
-
-/**
- * Escape HTML to prevent XSS
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+import { toastManager, escapeHtml } from '../../utils/uiComponents.js';
 
 /**
  * Show public improvement suggestion dialog
