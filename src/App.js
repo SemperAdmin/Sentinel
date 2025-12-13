@@ -35,6 +35,9 @@ import { toastManager, loadingOverlay, escapeHtml } from './utils/uiComponents.j
 import { isValidGitHubUrl } from './utils/validation.js';
 import { authService } from './auth/AuthService.js';
 import LoginForm from './components/LoginForm.js';
+import { showAdminLoginModal, showPublicIdeaModal } from './components/modals/index.js';
+import { renderIdeasList } from './components/IdeasList.js';
+import { initDevTools } from './utils/devTools.js';
 
 class App {
   constructor() {
@@ -152,153 +155,12 @@ class App {
       this.initialized = true;
 
       console.log('Sentinel initialized successfully');
-      
-      window.checkApiBackend = () => {
-        console.log('apiService.isApiKeyConfigured():', apiService.isApiKeyConfigured());
-      };
-      
-      // Add debug helper to clear data and refresh
-      window.clearPortfolioAndRefresh = async () => {
-        console.log('Clearing portfolio data and refreshing...');
-        try {
-          // Clear app state first
-          appState.setPortfolio([]);
-          
-          // Clear data store
-          await dataStore.clearAll();
-          console.log('Data store cleared');
-          
-          // Force a complete reload
-          location.reload();
-        } catch (error) {
-          console.error('Failed to refresh portfolio:', error);
-        }
-      };
 
-      // Add comprehensive cache clearing method
-      window.clearAllCache = async (options = {}) => {
-        console.log('🧹 Starting comprehensive cache clear...');
-        
-        try {
-          const { 
-            clearGitHub = true, 
-            clearLocalStorage = true, 
-            clearSessionStorage = true, 
-            reloadAfter = true 
-          } = options;
-          
-          // Clear IndexedDB
-          console.log('📦 Clearing IndexedDB...');
-          await dataStore.clearAll();
-          
-          // Clear app state
-          console.log('🗑️ Clearing app state...');
-          appState.setPortfolio([]);
-          
-          // Clear localStorage if requested
-          if (clearLocalStorage) {
-            console.log('💾 Clearing localStorage...');
-            localStorage.clear();
-          }
-          
-          // Clear sessionStorage if requested
-          if (clearSessionStorage) {
-            console.log('🔒 Clearing sessionStorage...');
-            sessionStorage.clear();
-          }
-          
-          // Clear GitHub cache if requested
-          if (clearGitHub && apiService) {
-            console.log('🐙 Clearing GitHub API cache...');
-            // Force cache busting by adding timestamp to next API calls
-            window.__github_cache_bust = Date.now();
-          }
-          
-          console.log('✅ Cache cleared successfully!');
-          
-          if (reloadAfter) {
-            console.log('🔄 Reloading application...');
-            setTimeout(() => {
-              location.reload();
-            }, 100);
-          }
-          
-        } catch (error) {
-          console.error('❌ Failed to clear cache:', error);
-        }
-      };
-      
-      console.log('Type checkGitHubApiKey() in console to debug API key status');
-      console.log('Type clearPortfolioAndRefresh() in console to clear data and refresh from GitHub');
-      
-      // Add emergency cache clear that works even if UI fails
-      window.emergencyCacheClear = () => {
-        console.log('🚨 Emergency cache clear initiated...');
-        
-        // Clear all browser storage
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Try to clear IndexedDB
-        try {
-          const deleteReq = indexedDB.deleteDatabase('APM-Portfolio-Manager');
-          deleteReq.onsuccess = () => console.log('✅ IndexedDB cleared');
-          deleteReq.onerror = () => console.log('⚠️ Could not clear IndexedDB');
-        } catch (e) {
-          console.log('⚠️ IndexedDB clear failed:', e);
-        }
-        
-        console.log('✅ Emergency cache clear complete');
-        console.log('🔄 Reloading page...');
-        
-        setTimeout(() => {
-          location.reload();
-        }, 500);
-      };
-
-      // Add test functionality
-      window.testTodoFunctionality = () => {
-        console.log('🧪 Testing todo functionality...');
-        
-        // Get current app (assuming one is selected)
-        const currentState = appState.getState();
-        if (currentState.currentApp) {
-          console.log('Current app found:', currentState.currentApp.id);
-          
-          // Add a test todo
-          const testTodo = {
-            id: 'test-' + Date.now(),
-            title: 'Test Todo Item',
-            description: 'This is a test todo to verify functionality',
-            priority: 'high',
-            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
-            completed: false,
-            createdAt: new Date().toISOString()
-          };
-          
-          if (!currentState.currentApp.todos) currentState.currentApp.todos = [];
-          currentState.currentApp.todos.push(testTodo);
-          
-          // Save the updated app
-          dataStore.saveApp(currentState.currentApp).then(() => {
-            console.log('✅ Test todo added successfully!');
-            appState.updateApp(currentState.currentApp);
-            
-            // Switch to todo tab if detail view is active
-            if (this.tabbedDetail) {
-              this.tabbedDetail.activeTab = 'todo';
-              this.tabbedDetail.render();
-            }
-          }).catch(err => {
-            console.error('❌ Failed to save test todo:', err);
-          });
-        } else {
-          console.log('⚠️ No app currently selected. Please select an app first.');
-        }
-      };
-      
-      console.log('💡 If the UI is not working, type emergencyCacheClear() in console to force clear all data');
-      console.log('🧪 To test todo functionality, select an app and type testTodoFunctionality() in console');
+      // Initialize dev tools (console commands for debugging)
+      initDevTools({
+        apiService,
+        getTabbedDetail: () => this.tabbedDetail
+      });
     } catch (error) {
       console.error('Failed to initialize application:', error);
       this.showError('Failed to initialize application. Please refresh the page.');
@@ -503,222 +365,14 @@ class App {
    * Show admin login modal
    */
   showAdminLoginModal() {
-    // Create modal HTML
-    const modalHTML = `
-      <div class="admin-modal-overlay" id="admin-modal">
-        <div class="admin-modal">
-          <div class="admin-modal-header">
-            <h3>Admin Login</h3>
-            <button class="admin-modal-close" id="close-admin-modal">&times;</button>
-          </div>
-          <div class="admin-modal-body">
-            <form id="admin-login-form">
-              <div class="form-group">
-                <label for="admin-password-input">Admin Password</label>
-                <input
-                  type="password"
-                  id="admin-password-input"
-                  class="form-control"
-                  placeholder="Enter admin password"
-                  required
-                  autofocus
-                />
-              </div>
-              <div class="admin-modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancel-admin-login">Cancel</button>
-                <button type="submit" class="btn btn-primary">Login</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Add modal to body
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-    // Get elements
-    const modal = document.getElementById('admin-modal');
-    const form = document.getElementById('admin-login-form');
-    const closeBtn = document.getElementById('close-admin-modal');
-    const cancelBtn = document.getElementById('cancel-admin-login');
-    const passwordInput = document.getElementById('admin-password-input');
-
-    // Escape key handler
-    const escapeHandler = (e) => {
-      if (e.key === 'Escape') {
-        closeModal();
-      }
-    };
-
-    // Close modal function - cleanup all listeners
-    const closeModal = () => {
-      document.removeEventListener('keydown', escapeHandler);
-      modal.remove();
-    };
-
-    // Handle form submit
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const password = passwordInput.value;
-      const result = await authService.login(password);
-
-      if (result.success) {
-        appState.setAuthentication('admin');
-        toastManager.show('Successfully logged in as admin', 'success');
-        closeModal();
-      } else {
-        toastManager.show(result.error || 'Invalid password', 'error');
-        passwordInput.value = '';
-        passwordInput.focus();
-      }
-    });
-
-    // Close button
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-
-    // Close on overlay click
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal();
-      }
-    });
-
-    // Close on escape key
-    document.addEventListener('keydown', escapeHandler);
-
-    // Focus password input
-    setTimeout(() => passwordInput.focus(), 100);
+    showAdminLoginModal();
   }
 
   /**
    * Show public idea submission modal
    */
   showPublicIdeaSubmission() {
-    const modalHTML = `
-      <div class="admin-modal-overlay" id="public-idea-modal">
-        <div class="admin-modal" style="max-width: 600px;">
-          <div class="admin-modal-header">
-            <h3>Submit App Idea</h3>
-            <button class="admin-modal-close" id="close-public-idea">&times;</button>
-          </div>
-          <div class="admin-modal-body">
-            <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
-              Have an idea for a new app? Submit your suggestion below and our team will review it!
-            </p>
-            <form id="public-idea-form">
-              <div class="form-group">
-                <label for="public-concept-name">App Name *</label>
-                <input
-                  type="text"
-                  id="public-concept-name"
-                  class="form-control"
-                  placeholder="Enter app name"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="public-problem-solved">What problem does this solve? *</label>
-                <textarea
-                  id="public-problem-solved"
-                  class="form-control"
-                  placeholder="Describe the value this app would provide..."
-                  rows="4"
-                  required
-                ></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="public-target-audience">Who would use this? *</label>
-                <input
-                  type="text"
-                  id="public-target-audience"
-                  class="form-control"
-                  placeholder="e.g., Marines, Veterans, General Public"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="public-contact-email">Your Email (optional)</label>
-                <input
-                  type="email"
-                  id="public-contact-email"
-                  class="form-control"
-                  placeholder="contact@example.com"
-                />
-              </div>
-
-              <div class="admin-modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancel-public-idea">Cancel</button>
-                <button type="submit" class="btn btn-primary">Submit Idea</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-    const modal = document.getElementById('public-idea-modal');
-    const form = document.getElementById('public-idea-form');
-    const closeBtn = document.getElementById('close-public-idea');
-    const cancelBtn = document.getElementById('cancel-public-idea');
-
-    const escapeHandler = (e) => {
-      if (e.key === 'Escape') {
-        closeModal();
-      }
-    };
-
-    const closeModal = () => {
-      document.removeEventListener('keydown', escapeHandler);
-      modal.remove();
-    };
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const idea = {
-        id: `idea-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        conceptName: document.getElementById('public-concept-name').value,
-        problemSolved: document.getElementById('public-problem-solved').value,
-        targetAudience: document.getElementById('public-target-audience').value,
-        contactEmail: document.getElementById('public-contact-email').value,
-        techStack: 'To Be Determined',
-        initialFeatures: 'To Be Determined',
-        riskRating: 'Medium',
-        dateCreated: new Date().toISOString(),
-        status: 'public-submission',
-        submittedBy: 'public'
-      };
-
-      try {
-        await this.saveIdea(idea);
-        toastManager.show('Thank you! Your idea has been submitted for review.', 'success');
-        closeModal();
-      } catch (error) {
-        console.error('Failed to submit idea:', error);
-        toastManager.show('Failed to submit idea. Please try again.', 'error');
-      }
-    });
-
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal();
-      }
-    });
-
-    document.addEventListener('keydown', escapeHandler);
-
-    setTimeout(() => document.getElementById('public-concept-name').focus(), 100);
+    showPublicIdeaModal((idea) => this.saveIdea(idea));
   }
 
   /**
@@ -1148,8 +802,10 @@ class App {
     const ideasList = document.getElementById('ideas-list');
     if (!ideasList) return;
 
-    // Render ideas list
-    this.renderIdeasList(state.ideas, ideasList);
+    // Render ideas list using extracted component
+    renderIdeasList(state.ideas, ideasList, {
+      onEdit: (idea) => this.editIdea(idea)
+    });
 
     // Handle idea form
     const formContainer = document.getElementById('idea-form-container');
@@ -1171,78 +827,6 @@ class App {
         this.ideaForm = null;
       }
     }
-  }
-
-  /**
-   * Render ideas list
-   */
-  renderIdeasList(ideas, container) {
-    if (!ideas || ideas.length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; padding: 3rem; color: #6c757d;">
-          <h3>No ideas yet</h3>
-          <p>Start documenting your app concepts here.</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = ideas.map(idea => this.renderIdeaItem(idea)).join('');
-
-    // Add click listeners to idea items (admin only)
-    const isAdmin = appState.isAdmin();
-    if (isAdmin) {
-      container.querySelectorAll('.idea-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const ideaId = item.dataset.ideaId;
-          const idea = appState.getIdeaById(ideaId);
-          if (idea) {
-            this.editIdea(idea);
-          }
-        });
-      });
-    }
-  }
-
-  /**
-   * Render individual idea item
-   */
-  renderIdeaItem(idea) {
-    const riskColor = {
-      'Low': '#28a745',
-      'Medium': '#ffc107',
-      'High': '#dc3545'
-    }[idea.riskRating] || '#6c757d';
-
-    const isAdmin = appState.getState().userRole === 'admin';
-    const isPublicSubmission = idea.status === 'public-submission' || idea.submittedBy === 'public';
-
-    return `
-      <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''}" data-idea-id="${idea.id}">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <h4>${escapeHtml(idea.conceptName)}</h4>
-          ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
-        </div>
-        <p>${escapeHtml(idea.problemSolved ? idea.problemSolved.substring(0, 100) : '')}${idea.problemSolved && idea.problemSolved.length > 100 ? '...' : ''}</p>
-        <div class="idea-meta">
-          <span>👥 ${escapeHtml(idea.targetAudience)}</span>
-          <span>🛠️ ${escapeHtml(idea.techStack)}</span>
-          <span style="color: ${riskColor}">⚠️ ${idea.riskRating} Risk</span>
-          <span>📅 ${formatDate(idea.dateCreated)}</span>
-          ${idea.contactEmail ? `<span>📧 ${escapeHtml(idea.contactEmail)}</span>` : ''}
-        </div>
-        ${isAdmin ? `
-          <div style="margin-top: 1rem;">
-            <button class="btn btn-primary" style="margin-right: 0.5rem;" onclick="event.stopPropagation(); app.activateIdea('${idea.id}')">
-              Activate & Create Repo
-            </button>
-            <button class="btn btn-secondary" onclick="event.stopPropagation(); app.editIdea('${idea.id}')">
-              Edit
-            </button>
-          </div>
-        ` : ''}
-      </div>
-    `;
   }
 
   /**
