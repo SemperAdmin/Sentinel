@@ -164,6 +164,36 @@ body {
   text-transform: none;
 }
 
+/* Styled search input (Uiverse.io inspired) */
+.search-input-styled {
+  color: #e0e0e0;
+  border: 2px solid #a00000;
+  border-radius: 10px;
+  padding: 10px 25px;
+  background: transparent;
+  width: 200px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease-in-out;
+}
+
+.search-input-styled:focus {
+  outline: none;
+  border-color: #a00000;
+  box-shadow: 0 0 12px rgba(160, 0, 0, 0.5);
+}
+
+.search-input-styled:active {
+  box-shadow: 2px 2px 15px #a00000 inset;
+}
+
+.search-input-styled::placeholder {
+  color: #888;
+  text-transform: uppercase;
+}
+
 .sort-label {
   display: flex;
   align-items: center;
@@ -185,6 +215,11 @@ body {
 
   .search-input-inline {
     width: 150px;
+  }
+
+  .search-input-styled {
+    width: 150px;
+    padding: 8px 15px;
   }
 }
 
