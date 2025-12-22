@@ -2,7 +2,7 @@
  * AppCard Component - Displays individual app information in a card format
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, getPendingTodosCount } from '../utils/helpers.js';
 
 export class AppCard {
   constructor(app, onClick) {
@@ -18,20 +18,21 @@ export class AppCard {
     const health = calculateHealth(this.app);
     const healthColor = getHealthColor(health);
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
-    const todos = Array.isArray(this.app.todos) ? this.app.todos : [];
-    const activeCount = todos.filter(t => {
-      const s = String(t.status || '');
-      return !t.completed && s !== 'Draft' && s !== 'Rejected';
-    }).length;
-    
+    const pendingTodos = getPendingTodosCount(this.app);
+
     const card = document.createElement('div');
     card.className = 'app-card';
     card.onclick = () => this.onClick(this.app);
-    
+
     const description = this.app.description || this.app.notes || '';
     const truncatedDesc = description.length > 100
       ? description.substring(0, 100) + '...'
       : description;
+
+    // Format pending todos with color coding
+    const todoDisplay = pendingTodos > 0
+      ? `<span style="color: ${pendingTodos > 5 ? '#dc3545' : pendingTodos > 2 ? '#ffc107' : '#28a745'}; font-weight: 600;">${pendingTodos}</span>`
+      : '<span style="color: #6c757d;">0</span>';
 
     card.innerHTML = `
       <div class="app-card-header">
@@ -55,6 +56,11 @@ export class AppCard {
           <span class="metric-value">
             ${this.formatReviewDate(this.app.nextReviewDate)}
           </span>
+        </div>
+
+        <div class="metric-item">
+          <span class="metric-label">Pending Tasks:</span>
+          <span class="metric-value">${todoDisplay}</span>
         </div>
       </div>
 
