@@ -866,6 +866,8 @@ class ApiService {
         initialFeatures: idea.initialFeatures || '',
         submittedBy: idea.submittedBy || '',
         contactEmail: idea.contactEmail || '',
+        status: idea.status || '',
+        createdDate: idea.createdDate || '',
         comments: JSON.stringify(idea.comments || []),
       };
       const yamlContent = this.toYaml(payload);
