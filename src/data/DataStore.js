@@ -4,6 +4,8 @@
  * Uses a lightweight native IndexedDB wrapper (no external idb dependency)
  */
 
+import { normalizeAppId } from '../utils/helpers.js';
+
 function openNativeDB(name, version, options = {}) {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(name, version);
@@ -312,7 +314,7 @@ class DataStore {
 
       // Create new app from idea
       const newApp = {
-        id: idea.conceptName.toLowerCase().replace(/\s+/g, '-'),
+        id: normalizeAppId(idea.conceptName),
         repoUrl: repoUrl,
         platform: this.inferPlatform(idea.techStack),
         status: 'Active',

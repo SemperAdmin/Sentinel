@@ -4,6 +4,7 @@
  */
 
 import { ok, err } from '../utils/result.js';
+import { normalizeAppId } from '../utils/helpers.js';
 import {
   GITHUB_API_RETRY_ATTEMPTS,
   GITHUB_API_RETRY_BASE_DELAY,
@@ -189,6 +190,7 @@ class ApiService {
    * Trigger repository_dispatch to save tasks via GitHub Actions
    */
   async triggerSaveTasks(appId, tasks) {
+    const normalizedId = normalizeAppId(appId);
     if (!this.managerRepo) {
       console.warn('Manager repository not configured (window.MANAGER_REPO_FULL_NAME)');
       return { ok: false, error: 'Manager repo not configured' };
@@ -200,7 +202,7 @@ class ApiService {
     // Merge remote tasks to avoid overwriting existing entries
     let merged = Array.isArray(tasks) ? tasks.slice() : [];
     try {
-      const remoteResult = await this.fetchRepoTasks(appId);
+      const remoteResult = await this.fetchRepoTasks(normalizedId);
       const remote = remoteResult.success ? (remoteResult.data || []) : [];
       const keyOf = (t) => (t && t.id ? String(t.id) : `${t?.title || ''}|${t?.dueDate || ''}`);
       const keys = new Set(merged.map(keyOf));
@@ -213,7 +215,7 @@ class ApiService {
     const body = {
       event_type: 'save_tasks',
       client_payload: {
-        app_id: appId,
+        app_id: normalizedId,
         tasks_json: JSON.stringify(merged)
       }
     };
@@ -225,19 +227,20 @@ class ApiService {
     } catch (err) {
       console.warn('Dispatch error, falling back to direct contents API:', err);
     }
-    const fallback = await this.saveTasksViaContents(appId, merged);
+    const fallback = await this.saveTasksViaContents(normalizedId, merged);
     return { ok: fallback };
   }
 
   async fetchRepoTasks(appId) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      if (!this.managerRepo || !appId) {
+      if (!this.managerRepo || !normalizedId) {
         return err('Manager repo or app ID not configured');
       }
-      if (this.tasksCache.has(appId)) {
-        return ok(this.tasksCache.get(appId));
+      if (this.tasksCache.has(normalizedId)) {
+        return ok(this.tasksCache.get(normalizedId));
       }
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${normalizedId}/tasks.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) {
         return err('Failed to fetch tasks', res?.status);
@@ -246,7 +249,7 @@ class ApiService {
       const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
       const parsed = JSON.parse(content);
       const tasks = Array.isArray(parsed) ? parsed : [];
-      this.tasksCache.set(appId, tasks);
+      this.tasksCache.set(normalizedId, tasks);
       return ok(tasks);
     } catch (error) {
       return err(error);
@@ -283,8 +286,9 @@ class ApiService {
   }
 
   async fetchAppReviews(appId) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${normalizedId}/reviews.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) {
         return err('Failed to fetch reviews', res?.status);
@@ -300,8 +304,9 @@ class ApiService {
   }
 
   async getReviewsSha(appId) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${normalizedId}/reviews.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) return null;
       const data = await res.json();
@@ -312,9 +317,10 @@ class ApiService {
   }
 
   async saveAppReviews(appId, reviews) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const sha = await this.getReviewsSha(appId);
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json`;
+      const sha = await this.getReviewsSha(normalizedId);
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${normalizedId}/reviews.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
@@ -322,7 +328,7 @@ class ApiService {
       const pretty = JSON.stringify(Array.isArray(reviews) ? reviews : [], null, 2) + "\n";
       const content = this.encodeBase64(pretty);
       const body = {
-        message: `Update reviews for ${appId}`,
+        message: `Update reviews for ${normalizedId}`,
         content,
         branch: 'main',
         sha: sha || undefined
@@ -335,8 +341,9 @@ class ApiService {
   }
 
   async getFileSha(appId) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${normalizedId}/tasks.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) return null;
       const data = await res.json();
@@ -347,9 +354,10 @@ class ApiService {
   }
 
   async saveTasksViaContents(appId, tasks) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const sha = await this.getFileSha(appId);
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
+      const sha = await this.getFileSha(normalizedId);
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${normalizedId}/tasks.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
@@ -359,7 +367,7 @@ class ApiService {
       const pretty = JSON.stringify(arr, null, 2) + "\n";
       const content = this.encodeBase64(pretty);
       const body = {
-        message: `Save tasks for ${appId} (direct contents API)`,
+        message: `Save tasks for ${normalizedId} (direct contents API)`,
         content,
         branch: 'main',
         sha: sha || undefined
