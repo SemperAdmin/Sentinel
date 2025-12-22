@@ -6,7 +6,6 @@
 import { ok, err } from '../utils/result.js';
 import { normalizeAppId } from '../utils/helpers.js';
 import offlineQueue from '../utils/offlineQueue.js';
-import yaml from 'js-yaml';
 import {
   GITHUB_API_RETRY_ATTEMPTS,
   GITHUB_API_RETRY_BASE_DELAY,
@@ -641,28 +640,25 @@ class ApiService {
   }
 
   /**
-   * Convert object to YAML string using js-yaml library
+   * Convert object to YAML string (simple flat objects only)
    * @param {Object} obj - Object to serialize
    * @returns {string} - YAML string
    */
   toYaml(obj) {
-    try {
-      return yaml.dump(obj, {
-        indent: 2,
-        lineWidth: -1, // Disable line wrapping
-        noRefs: true,  // Don't use YAML anchors/aliases
-        sortKeys: false,
-        quotingType: '"',
-        forceQuotes: false
-      });
-    } catch (error) {
-      console.error('Error converting to YAML:', error);
-      // Fallback to simple key-value for flat objects
-      return Object.entries(obj)
-        .filter(([_, v]) => v !== null && v !== undefined)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n') + '\n';
+    const lines = [];
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null || value === undefined) continue;
+      // Escape strings that might cause YAML issues
+      let val = value;
+      if (typeof val === 'string') {
+        // Replace newlines with spaces for single-line YAML
+        val = val.replace(/\r?\n/g, ' ');
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val);
+      }
+      lines.push(`${key}: ${val}`);
     }
+    return lines.join('\n') + '\n';
   }
 
   async getIdeaSha(ideaId) {
@@ -855,47 +851,66 @@ class ApiService {
   }
 
   /**
-   * Parse YAML string to object using js-yaml library
+   * Parse simple YAML string to object (inline implementation)
+   * Handles flat key-value YAML without external dependencies
    * @param {string} text - YAML string to parse
    * @returns {Object} - Parsed object
    */
   parseSimpleYaml(text) {
     try {
-      const parsed = yaml.load(String(text || ''), {
-        schema: yaml.DEFAULT_SCHEMA,
-        json: true // Allow duplicate keys (use last value)
-      });
-
-      // Ensure we return an object
-      if (!parsed || typeof parsed !== 'object') {
-        return {};
-      }
-
-      // Handle special case: comments field that's stored as JSON string
-      if (parsed.comments && typeof parsed.comments === 'string') {
-        try {
-          parsed.comments = JSON.parse(parsed.comments);
-        } catch (_) {
-          parsed.comments = [];
-        }
-      }
-
-      return parsed;
-    } catch (error) {
-      console.error('Error parsing YAML:', error);
-      // Fallback: try simple key-value parsing for malformed YAML
       const obj = {};
       const lines = String(text || '').split(/\r?\n/);
+
       for (const raw of lines) {
         const line = raw.trim();
         if (!line || line.startsWith('#')) continue;
+
         const idx = line.indexOf(':');
         if (idx === -1) continue;
+
         const key = line.slice(0, idx).trim();
-        const val = line.slice(idx + 1).trim();
+        let val = line.slice(idx + 1).trim();
+
+        // Handle quoted strings
+        if ((val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+
+        // Handle booleans
+        if (val === 'true') val = true;
+        else if (val === 'false') val = false;
+        // Handle null
+        else if (val === 'null' || val === '~' || val === '') val = null;
+        // Handle numbers
+        else if (/^-?\d+$/.test(val)) val = parseInt(val, 10);
+        else if (/^-?\d+\.\d+$/.test(val)) val = parseFloat(val);
+        // Handle JSON arrays/objects embedded in YAML
+        else if ((val.startsWith('[') && val.endsWith(']')) ||
+                 (val.startsWith('{') && val.endsWith('}'))) {
+          try {
+            val = JSON.parse(val);
+          } catch (_) {
+            // Keep as string if JSON parse fails
+          }
+        }
+
         obj[key] = val;
       }
+
+      // Handle special case: comments field that's stored as JSON string
+      if (obj.comments && typeof obj.comments === 'string') {
+        try {
+          obj.comments = JSON.parse(obj.comments);
+        } catch (_) {
+          obj.comments = [];
+        }
+      }
+
       return obj;
+    } catch (error) {
+      console.error('Error parsing YAML:', error);
+      return {};
     }
   }
 
