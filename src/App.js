@@ -592,6 +592,9 @@ class App {
       // Hydrate tasks from backend (async, updates dashboard when complete)
       this.hydrateTasksForApps(portfolio);
 
+      // Hydrate metadata from backend (async, updates dashboard when complete)
+      this.hydrateMetadataForApps(portfolio);
+
       // Load ideas using DataController
       const ideas = await this.dataController.loadIdeas();
       appState.setIdeas(ideas);
@@ -651,12 +654,17 @@ class App {
 
       await dataStore.saveApp(updatedApp);
       appState.updateApp(updatedApp);
-      
+
       console.log(`App ${appId} marked as reviewed. Next review: ${updatedApp.nextReviewDate}`);
-      
+
+      // Sync metadata to backend (async, don't block)
+      apiService.saveAppMetadata(appId, updatedApp).catch(err => {
+        console.warn('Metadata sync failed (queued for retry):', err);
+      });
+
       // Refresh the current view
       this.updateDashboard();
-      
+
     } catch (error) {
       console.error('Failed to mark app as reviewed:', error);
     }
@@ -798,6 +806,52 @@ class App {
         this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
       }
     } catch (_) {}
+  }
+
+  /**
+   * Hydrate app metadata from backend for all apps
+   * Fetches metadata.json for each app and merges with local data
+   */
+  async hydrateMetadataForApps(apps) {
+    try {
+      const updates = [];
+      for (const app of apps) {
+        const metadataResult = await apiService.fetchAppMetadata(app.id);
+        const metadata = unwrapOr(metadataResult, null);
+        if (!metadata) continue;
+
+        // Merge: remote metadata fills in missing local fields
+        const updatedApp = {
+          ...app,
+          description: app.description || metadata.description || '',
+          notes: app.notes || metadata.notes || '',
+          platform: app.platform || metadata.platform || 'Web',
+          lastReviewDate: metadata.lastReviewDate || app.lastReviewDate,
+          nextReviewDate: metadata.nextReviewDate || app.nextReviewDate,
+          reviewCycle: metadata.reviewCycle || app.reviewCycle || 90
+        };
+
+        // Only update if something changed
+        if (JSON.stringify(updatedApp) !== JSON.stringify(app)) {
+          await dataStore.saveApp(updatedApp);
+          updates.push(updatedApp);
+        }
+      }
+
+      if (updates.length > 0) {
+        const state = appState.getState();
+        const mergedPortfolio = state.portfolio.map(a => {
+          const u = updates.find(x => x.id === a.id);
+          return u ? u : a;
+        });
+        appState.setPortfolio(mergedPortfolio);
+        const order = state.sortOrder || 'alphabetical';
+        this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
+        console.log(`Hydrated metadata for ${updates.length} apps from backend`);
+      }
+    } catch (err) {
+      console.warn('Failed to hydrate metadata:', err);
+    }
   }
 
   /**
@@ -965,9 +1019,14 @@ class App {
     try {
       const app = appState.getAppById(appId);
       if (app) {
-        const updatedApp = { ...app, developerNotes: notes };
+        const updatedApp = { ...app, developerNotes: notes, notes: notes };
         await dataStore.saveApp(updatedApp);
         appState.updateApp(updatedApp);
+
+        // Sync metadata to backend (async, don't block)
+        apiService.saveAppMetadata(appId, updatedApp).catch(err => {
+          console.warn('Metadata sync failed (queued for retry):', err);
+        });
       }
     } catch (error) {
       console.error('Failed to save notes:', error);
@@ -986,14 +1045,19 @@ class App {
       console.log('Saving app data for:', appId);
       const app = appState.getAppById(appId);
       if (app) {
-        const updatedApp = { 
-          ...app, 
+        const updatedApp = {
+          ...app,
           ...updatedAppData,
           id: appId // Ensure ID stays the same
         };
         await dataStore.saveApp(updatedApp);
         appState.updateApp(updatedApp);
         console.log('App data saved successfully for:', appId);
+
+        // Sync metadata to backend (async, don't block)
+        apiService.saveAppMetadata(appId, updatedApp).catch(err => {
+          console.warn('Metadata sync failed (queued for retry):', err);
+        });
       }
     } catch (error) {
       console.error('Failed to save app data:', error);
@@ -1159,6 +1223,9 @@ class App {
 
       // Hydrate tasks from backend to update pending counts
       this.hydrateTasksForApps(portfolio);
+
+      // Hydrate metadata from backend
+      this.hydrateMetadataForApps(portfolio);
 
       appState.setLoading(false, 'portfolioLoading');
     } catch (error) {

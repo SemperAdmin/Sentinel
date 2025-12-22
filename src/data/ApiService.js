@@ -639,6 +639,173 @@ class ApiService {
     );
   }
 
+  // ==================== APP METADATA SYNC ====================
+
+  /**
+   * Get SHA for app metadata file
+   * @param {string} appId - App identifier
+   * @returns {Promise<string|null>} - SHA or null if not found
+   */
+  async getAppMetadataSha(appId) {
+    const normalizedId = normalizeAppId(appId);
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/apps/${normalizedId}/metadata.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      return data.sha || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch app metadata from backend
+   * @param {string} appId - App identifier
+   * @returns {Promise<Result>} - Result with metadata object or error
+   */
+  async fetchAppMetadata(appId) {
+    const normalizedId = normalizeAppId(appId);
+    try {
+      if (!this.managerRepo || !normalizedId) {
+        return err('Manager repo or app ID not configured');
+      }
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/apps/${normalizedId}/metadata.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) {
+        // 404 is expected for apps without metadata file yet
+        if (res?.status === 404) {
+          return ok(null);
+        }
+        return err('Failed to fetch app metadata', res?.status);
+      }
+      const data = await res.json();
+      const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
+      const parsed = JSON.parse(content);
+      // Cache SHA for optimistic locking
+      if (data.sha) {
+        this.cacheSha(`metadata:${normalizedId}`, data.sha);
+      }
+      return ok(parsed);
+    } catch (error) {
+      return err(error);
+    }
+  }
+
+  /**
+   * Save app metadata to backend
+   * @param {string} appId - App identifier
+   * @param {Object} metadata - Metadata object to save
+   * @param {number} retryCount - Current retry count for conflict resolution
+   * @param {boolean} skipQueue - Skip offline queue (used during queue processing)
+   * @returns {Promise<Object>} - Result object { ok, conflict?, queued?, message? }
+   */
+  async saveAppMetadata(appId, metadata, retryCount = 0, skipQueue = false) {
+    const normalizedId = normalizeAppId(appId);
+    const fileKey = `metadata:${normalizedId}`;
+
+    // Extract only the fields we want to persist
+    const metadataToSave = {
+      id: normalizedId,
+      description: metadata.description || '',
+      notes: metadata.notes || '',
+      platform: metadata.platform || 'Web',
+      lastReviewDate: metadata.lastReviewDate || null,
+      nextReviewDate: metadata.nextReviewDate || null,
+      reviewCycle: metadata.reviewCycle || 90,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Check if offline - queue for later
+    if (!this.isOnline() && !skipQueue) {
+      console.log(`Offline: queuing metadata save for ${normalizedId}`);
+      this.queueForRetry('metadata', normalizedId, metadataToSave);
+      return { ok: false, queued: true, message: 'Changes saved locally. Will sync when online.' };
+    }
+
+    try {
+      // Use cached SHA for optimistic locking, fallback to fresh fetch
+      let sha = this.getCachedSha(fileKey);
+      if (!sha) {
+        sha = await this.getAppMetadataSha(normalizedId);
+      }
+
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/apps/${normalizedId}/metadata.json`;
+      const headers = {
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      };
+      const pretty = JSON.stringify(metadataToSave, null, 2) + "\n";
+      const content = this.encodeBase64(pretty);
+      const body = {
+        message: `Update metadata for ${normalizedId}`,
+        content,
+        branch: 'main',
+        sha: sha || undefined
+      };
+      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
+
+      // Handle 409 Conflict - SHA mismatch
+      if (this.isConflictError(res)) {
+        console.warn(`SHA conflict detected for ${fileKey}, attempt ${retryCount + 1}`);
+
+        if (retryCount >= this.maxConflictRetries) {
+          console.error(`Max conflict retries (${this.maxConflictRetries}) reached for ${fileKey}`);
+          return { ok: false, conflict: true, message: 'File was modified. Please refresh and try again.' };
+        }
+
+        // Clear stale SHA and refetch
+        this.clearCachedSha(fileKey);
+
+        // Fetch latest version and merge (local takes precedence)
+        const remoteResult = await this.fetchAppMetadata(normalizedId);
+        if (!remoteResult.success) {
+          return { ok: false, conflict: true, message: 'Failed to fetch latest version for merge.' };
+        }
+
+        // Merge: local values take precedence, remote fills gaps
+        const remote = remoteResult.data || {};
+        const merged = { ...remote, ...metadataToSave };
+
+        // Retry with merged data
+        await this.delay(500 * (retryCount + 1));
+        return this.saveAppMetadata(normalizedId, merged, retryCount + 1, skipQueue);
+      }
+
+      if (res && res.ok) {
+        // Update SHA cache with new SHA from response
+        try {
+          const responseData = await res.json();
+          if (responseData.content && responseData.content.sha) {
+            this.cacheSha(fileKey, responseData.content.sha);
+          }
+        } catch (_) {
+          this.clearCachedSha(fileKey);
+        }
+        return { ok: true };
+      }
+
+      // Network error or other failure - queue for retry
+      if (!skipQueue) {
+        console.log(`Save failed, queuing metadata for ${normalizedId}`);
+        this.queueForRetry('metadata', normalizedId, metadataToSave);
+        return { ok: false, queued: true, message: 'Save failed. Changes queued for retry.' };
+      }
+
+      return { ok: false };
+    } catch (err) {
+      console.warn('Save metadata failed:', err);
+      // Queue on network errors
+      if (!skipQueue && (err.name === 'TypeError' || err.message.includes('network') || err.message.includes('fetch'))) {
+        this.queueForRetry('metadata', normalizedId, metadataToSave);
+        return { ok: false, queued: true, message: 'Network error. Changes queued for retry.' };
+      }
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==================== YAML UTILITIES ====================
+
   /**
    * Convert object to YAML string (simple flat objects only)
    * @param {Object} obj - Object to serialize
