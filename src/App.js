@@ -589,6 +589,9 @@ class App {
       // Debug: log the final portfolio
       console.log('Final portfolio being set:', portfolio.map(app => ({ id: app.id, name: app.id })));
 
+      // Hydrate tasks from backend (async, updates dashboard when complete)
+      this.hydrateTasksForApps(portfolio);
+
       // Load ideas using DataController
       const ideas = await this.dataController.loadIdeas();
       appState.setIdeas(ideas);
@@ -1147,13 +1150,16 @@ class App {
   async refreshPortfolio() {
     try {
       appState.setLoading(true, 'portfolioLoading');
-      
+
       const portfolio = await dataStore.getPortfolio();
       appState.setPortfolio(portfolio);
-      
+
       // Refresh GitHub data
       this.fetchGitHubDataForApps(portfolio);
-      
+
+      // Hydrate tasks from backend to update pending counts
+      this.hydrateTasksForApps(portfolio);
+
       appState.setLoading(false, 'portfolioLoading');
     } catch (error) {
       console.error('Failed to refresh portfolio:', error);
