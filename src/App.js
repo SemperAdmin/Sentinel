@@ -502,23 +502,21 @@ class App {
           <button class="btn btn-primary" id="new-idea-btn">+ NEW IDEA</button>
           <button class="btn btn-success" id="submit-idea-btn" style="display: none;">💡 SUBMIT IDEA</button>
         </div>
-        <div class="ideas-content">
-          <div class="ideas-sections">
-            <div class="ideas-section">
-              <h3 class="section-title" style="color: #ffc107; border-bottom: 2px solid #ffc107; padding-bottom: 0.5rem; margin-bottom: 1rem;">
-                📋 Pending Review
-                <span id="pending-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
-              </h3>
-              <div id="ideas-list-pending" class="ideas-list"></div>
-            </div>
+        <div class="ideas-content" style="display: block;">
+          <div class="ideas-section">
+            <h3 class="section-title" style="color: #ffc107; border-bottom: 2px solid #ffc107; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+              📋 Pending Review
+              <span id="pending-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
+            </h3>
+            <div id="ideas-list-pending" class="ideas-list"></div>
+          </div>
 
-            <div class="ideas-section" style="margin-top: 2rem;">
-              <h3 class="section-title" style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 0.5rem; margin-bottom: 1rem;">
-                ✓ Implemented
-                <span id="completed-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
-              </h3>
-              <div id="ideas-list-completed" class="ideas-list"></div>
-            </div>
+          <div class="ideas-section" style="margin-top: 2rem;">
+            <h3 class="section-title" style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+              ✓ Implemented
+              <span id="completed-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
+            </h3>
+            <div id="ideas-list-completed" class="ideas-list"></div>
           </div>
 
           <div id="idea-form-container" class="idea-form-container hidden">
