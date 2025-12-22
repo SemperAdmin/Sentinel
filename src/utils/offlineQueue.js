@@ -200,6 +200,10 @@ class OfflineQueue {
         const ideaResult = await api.saveIdeaYaml(operation.data, true);
         return ideaResult && ideaResult.ok === true;
 
+      case 'metadata':
+        const metadataResult = await api.saveAppMetadata(operation.appId, operation.data, 0, true);
+        return metadataResult && metadataResult.ok === true;
+
       default:
         console.warn(`Unknown operation type: ${operation.type}`);
         return false;
