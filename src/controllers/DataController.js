@@ -8,6 +8,7 @@ import apiService from '../data/ApiService.js';
 import { unwrapOr } from '../utils/result.js';
 import { batchProcess } from '../utils/batchProcessor.js';
 import errorHandler, { ErrorType, ErrorSeverity, RecoveryStrategies } from '../utils/errorHandler.js';
+import { normalizeAppId } from '../utils/helpers.js';
 import {
   REVIEW_CYCLE_DAYS,
   GITHUB_API_DELAY_MS,
@@ -135,7 +136,7 @@ export class DataController {
    */
   convertRepoToApp(repo) {
     return {
-      id: repo.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      id: normalizeAppId(repo.name),
       repoUrl: repo.html_url,
       platform: 'Web',
       status: 'Active',

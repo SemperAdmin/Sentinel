@@ -2,7 +2,7 @@
  * TabbedDetail Component - Tabbed interface for app detail view
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify, getSourceIcon } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify, getSourceIcon, getPendingTodosCount } from '../utils/helpers.js';
 import appState from '../state/AppState.js';
 import { unwrapOr } from '../utils/result.js';
 import { toastManager } from '../utils/uiComponents.js';
@@ -44,16 +44,8 @@ export class TabbedDetail {
       if (this.onNotesSave) {
         this.onNotesSave(this.app);
       }
-      (async () => {
-        try {
-          const apiModule = await import('../data/ApiService.js');
-          const api = apiModule.default;
-          const appId = this.app.id;
-          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-          await api.triggerSaveTasks(appId, todos);
-        } catch (_) {}
-      })();
-      
+      this.syncTodosToApi(`Cleared ${completedCount} completed task${completedCount > 1 ? 's' : ''}`);
+
       this.activeTab = 'todo';
       this.render();
     }
@@ -383,16 +375,8 @@ export class TabbedDetail {
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
-    (async () => {
-      try {
-        const apiModule = await import('../data/ApiService.js');
-        const api = apiModule.default;
-        const appId = this.app.id;
-        const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-        await api.triggerSaveTasks(appId, todos);
-      } catch (_) {}
-    })();
-    
+    this.syncTodosToApi('Task added successfully');
+
     // Re-render the todo tab
     this.activeTab = 'todo';
     this.render();
@@ -403,24 +387,17 @@ export class TabbedDetail {
    */
   toggleTodo(todoId) {
     if (!this.app.todos) return;
-    
+
     const todo = this.app.todos.find(t => t.id === todoId);
     if (todo) {
       todo.completed = !todo.completed;
-      
+
       if (this.onNotesSave) {
         this.onNotesSave(this.app);
       }
-      (async () => {
-        try {
-          const apiModule = await import('../data/ApiService.js');
-          const api = apiModule.default;
-          const appId = this.app.id;
-          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-          await api.triggerSaveTasks(appId, todos);
-        } catch (_) {}
-      })();
-      
+      const statusMessage = todo.completed ? 'Task marked as complete' : 'Task marked as incomplete';
+      this.syncTodosToApi(statusMessage);
+
       this.activeTab = 'todo';
       this.render();
     }
@@ -448,20 +425,12 @@ export class TabbedDetail {
     if (!this.app.todos) return;
 
     this.app.todos = this.app.todos.filter(t => t.id !== todoId);
-    
+
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
-    (async () => {
-      try {
-        const apiModule = await import('../data/ApiService.js');
-        const api = apiModule.default;
-        const appId = this.app.id;
-        const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-        await api.triggerSaveTasks(appId, todos);
-      } catch (_) {}
-    })();
-    
+    this.syncTodosToApi('Task deleted');
+
     this.activeTab = 'todo';
     this.render();
   }
@@ -470,7 +439,7 @@ export class TabbedDetail {
     showEditTodoDialog(todo, (updatedTodo) => {
       this.app.todos = this.app.todos.map(t => t.id === todo.id ? updatedTodo : t);
       if (this.onNotesSave) this.onNotesSave(this.app);
-      this.syncTodosToApi();
+      this.syncTodosToApi('Task updated');
       this.activeTab = 'todo';
       this.render();
     });
@@ -506,16 +475,30 @@ export class TabbedDetail {
 
   /**
    * Sync todos to API (helper method)
+   * Shows toast notifications on success/failure
+   * @param {string} [successMessage] - Optional success message to show
    */
-  syncTodosToApi() {
+  syncTodosToApi(successMessage = null) {
     (async () => {
       try {
         const apiModule = await import('../data/ApiService.js');
         const api = apiModule.default;
         const appId = this.app.id;
         const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-        await api.triggerSaveTasks(appId, todos);
-      } catch (_) {}
+        const result = await api.triggerSaveTasks(appId, todos);
+
+        // Check if save was successful
+        if (result && (result.ok || result.status === 204)) {
+          if (successMessage) {
+            toastManager.showSuccess(successMessage);
+          }
+        } else {
+          toastManager.showError('Failed to save tasks to server. Changes saved locally.');
+        }
+      } catch (error) {
+        console.error('Error syncing todos:', error);
+        toastManager.showError('Failed to save tasks. Please check your connection and try again.');
+      }
     })();
   }
 
@@ -523,7 +506,7 @@ export class TabbedDetail {
    * Generate simulated tasks
    */
   generateSimulatedTasks() {
-    const taskCount = Math.min(this.app.pendingTodos || 0, 5);
+    const taskCount = Math.min(getPendingTodosCount(this.app), 5);
     const tasks = [];
     
     const taskTemplates = [

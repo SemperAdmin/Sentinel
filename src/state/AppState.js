@@ -3,6 +3,7 @@
  * Manages application state and provides methods for state mutations
  */
 import { EXCLUDED_REPO_NAMES } from '../utils/constants.js'
+import { getPendingTodosCount } from '../utils/helpers.js'
 
 /**
  * @typedef {Object} App
@@ -596,9 +597,10 @@ class AppState {
       else if (daysUntilReview < 14) healthScore += 1; // Due soon
     }
     
-    // Check pending todos
-    if (app.pendingTodos > 5) healthScore += 1;
-    
+    // Check pending todos - use actual count from todos array
+    const pendingCount = getPendingTodosCount(app);
+    if (pendingCount > 5) healthScore += 1;
+
     // Determine health level
     if (healthScore >= 3) return 'critical';
     if (healthScore >= 1) return 'warning';

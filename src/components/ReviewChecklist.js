@@ -1,6 +1,7 @@
 import apiService from '../data/ApiService.js'
 import { formatDate } from '../utils/helpers.js'
 import { unwrapOr } from '../utils/result.js'
+import { toastManager } from '../utils/uiComponents.js'
 
 export class ReviewChecklist {
   constructor(app, initialReview, onComplete) {
@@ -164,14 +165,29 @@ export class ReviewChecklist {
   }
 
   async save(complete) {
-    if (complete) this.review.completedAt = new Date().toISOString()
-    const allResult = await apiService.fetchAppReviews(this.app.id)
-    const all = unwrapOr(allResult, [])
-    const idx = all.findIndex(r => r.id === this.review.id)
-    const next = [...all]
-    if (idx >= 0) next[idx] = this.review
-    else next.push(this.review)
-    await apiService.saveAppReviews(this.app.id, next)
+    try {
+      if (complete) this.review.completedAt = new Date().toISOString()
+      const allResult = await apiService.fetchAppReviews(this.app.id)
+      const all = unwrapOr(allResult, [])
+      const idx = all.findIndex(r => r.id === this.review.id)
+      const next = [...all]
+      if (idx >= 0) next[idx] = this.review
+      else next.push(this.review)
+      const success = await apiService.saveAppReviews(this.app.id, next)
+
+      if (success) {
+        if (complete) {
+          toastManager.showSuccess('Review completed and saved')
+        } else {
+          toastManager.showSuccess('Review progress saved')
+        }
+      } else {
+        toastManager.showError('Failed to save review. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error saving review:', error)
+      toastManager.showError('Failed to save review. Please check your connection.')
+    }
   }
 
   updateSummary() {

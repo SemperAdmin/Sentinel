@@ -98,9 +98,10 @@ export function calculateHealth(app) {
     healthScore += 1; // Penalty for no review date
   }
 
-  // Check pending todos
-  if (app.pendingTodos > 5) healthScore += 2;
-  else if (app.pendingTodos > 2) healthScore += 1;
+  // Check pending todos - use actual count from todos array
+  const pendingCount = getPendingTodosCount(app);
+  if (pendingCount > 5) healthScore += 2;
+  else if (pendingCount > 2) healthScore += 1;
 
   // Determine health level
   if (healthScore >= 6) return 'critical';
@@ -150,7 +151,7 @@ export function generateId(prefix = 'item') {
  */
 export function slugify(text) {
   if (!text) return '';
-  
+
   return text
     .toString()
     .toLowerCase()
@@ -160,6 +161,46 @@ export function slugify(text) {
     .replace(/\-\-+/g, '-')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
+}
+
+/**
+ * Normalize app ID to lowercase kebab-case
+ * This is the CANONICAL function for normalizing app IDs throughout the application.
+ * Always use this when:
+ * - Creating new app IDs from repo names
+ * - Looking up apps by ID
+ * - Fetching tasks/reviews for an app
+ * - Saving tasks/reviews for an app
+ *
+ * @param {string} id - Raw app ID or repo name
+ * @returns {string} Normalized lowercase kebab-case ID
+ */
+export function normalizeAppId(id) {
+  if (!id) return '';
+
+  return id
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')  // Replace any non-alphanumeric with dash
+    .replace(/^-+/, '')           // Remove leading dashes
+    .replace(/-+$/, '')           // Remove trailing dashes
+    .replace(/-+/g, '-');         // Collapse multiple dashes
+}
+
+/**
+ * Get the count of pending (incomplete) todos for an app
+ * This replaces the static pendingTodos field which was never updated.
+ * Use this instead of app.pendingTodos for accurate counts.
+ *
+ * @param {Object} app - App object with optional todos array
+ * @returns {number} Count of incomplete todos
+ */
+export function getPendingTodosCount(app) {
+  if (!app || !Array.isArray(app.todos)) {
+    return 0;
+  }
+  return app.todos.filter(todo => !todo.completed).length;
 }
 
 /**
