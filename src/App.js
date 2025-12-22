@@ -503,7 +503,23 @@ class App {
           <button class="btn btn-success" id="submit-idea-btn" style="display: none;">💡 SUBMIT IDEA</button>
         </div>
         <div class="ideas-content">
-          <div id="ideas-list" class="ideas-list"></div>
+          <div class="ideas-sections">
+            <div class="ideas-section">
+              <h3 class="section-title" style="color: #ffc107; border-bottom: 2px solid #ffc107; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                📋 Pending Review
+                <span id="pending-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
+              </h3>
+              <div id="ideas-list-pending" class="ideas-list"></div>
+            </div>
+
+            <div class="ideas-section" style="margin-top: 2rem;">
+              <h3 class="section-title" style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                ✓ Implemented
+                <span id="completed-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
+              </h3>
+              <div id="ideas-list-completed" class="ideas-list"></div>
+            </div>
+          </div>
 
           <div id="idea-form-container" class="idea-form-container hidden">
             <h3>DOCUMENT NEW CONCEPT</h3>
@@ -853,15 +869,55 @@ class App {
    * Update ideas view
    */
   updateIdeasView(state) {
-    const ideasList = document.getElementById('ideas-list');
-    if (!ideasList) return;
+    const pendingList = document.getElementById('ideas-list-pending');
+    const completedList = document.getElementById('ideas-list-completed');
+    const pendingCount = document.getElementById('pending-count');
+    const completedCount = document.getElementById('completed-count');
 
-    // Render ideas list using extracted component
-    renderIdeasList(state.ideas, ideasList, {
+    if (!pendingList || !completedList) return;
+
+    // Split ideas into pending and completed
+    const allIdeas = state.ideas || [];
+    const pending = allIdeas.filter(idea => idea.status !== 'created');
+    const completed = allIdeas.filter(idea => idea.status === 'created');
+
+    // Update counts
+    if (pendingCount) {
+      pendingCount.textContent = `(${pending.length})`;
+    }
+    if (completedCount) {
+      completedCount.textContent = `(${completed.length})`;
+    }
+
+    const callbacks = {
       onView: (idea) => this.showIdeaDetail(idea),
       onEdit: (idea) => this.editIdea(idea.id),
       onMarkCreated: (ideaId) => this.markIdeaCreated(ideaId)
-    });
+    };
+
+    // Render pending ideas
+    if (pending.length === 0) {
+      pendingList.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #6c757d;">
+          <p>No pending ideas. All caught up!</p>
+        </div>
+      `;
+      delete pendingList.dataset.listenerAttached;
+    } else {
+      renderIdeasList(pending, pendingList, callbacks);
+    }
+
+    // Render completed ideas
+    if (completed.length === 0) {
+      completedList.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #6c757d;">
+          <p>No implemented ideas yet.</p>
+        </div>
+      `;
+      delete completedList.dataset.listenerAttached;
+    } else {
+      renderIdeasList(completed, completedList, callbacks);
+    }
 
     // Handle idea form
     const formContainer = document.getElementById('idea-form-container');
