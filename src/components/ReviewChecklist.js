@@ -173,7 +173,12 @@ export class ReviewChecklist {
       const next = [...all]
       if (idx >= 0) next[idx] = this.review
       else next.push(this.review)
-      const success = await apiService.saveAppReviews(this.app.id, next)
+      const result = await apiService.saveAppReviews(this.app.id, next)
+
+      // Handle new return format with conflict detection and offline queue
+      const success = result === true || (result && result.ok)
+      const isConflict = result && result.conflict
+      const isQueued = result && result.queued
 
       if (success) {
         if (complete) {
@@ -181,6 +186,10 @@ export class ReviewChecklist {
         } else {
           toastManager.showSuccess('Review progress saved')
         }
+      } else if (isQueued) {
+        toastManager.showInfo(result.message || 'Changes saved locally. Will sync when online.')
+      } else if (isConflict) {
+        toastManager.showError(result.message || 'Conflict detected. Please refresh and try again.')
       } else {
         toastManager.showError('Failed to save review. Please try again.')
       }

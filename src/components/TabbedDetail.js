@@ -476,6 +476,7 @@ export class TabbedDetail {
   /**
    * Sync todos to API (helper method)
    * Shows toast notifications on success/failure
+   * Handles SHA conflict detection and offline queuing with user feedback
    * @param {string} [successMessage] - Optional success message to show
    */
   syncTodosToApi(successMessage = null) {
@@ -487,11 +488,21 @@ export class TabbedDetail {
         const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
         const result = await api.triggerSaveTasks(appId, todos);
 
-        // Check if save was successful
-        if (result && (result.ok || result.status === 204)) {
+        // Check if save was successful - handle both old boolean and new object format
+        const isSuccess = result && (result.ok === true || result.status === 204 || result === true);
+        const isConflict = result && result.conflict === true;
+        const isQueued = result && result.queued === true;
+
+        if (isSuccess) {
           if (successMessage) {
             toastManager.showSuccess(successMessage);
           }
+        } else if (isQueued) {
+          // Operation queued for later (offline or network error)
+          toastManager.showInfo(result.message || 'Changes saved locally. Will sync when online.');
+        } else if (isConflict) {
+          // SHA conflict detected - file was modified by another user
+          toastManager.showError(result.message || 'Conflict: Data was modified elsewhere. Please refresh and try again.');
         } else {
           toastManager.showError('Failed to save tasks to server. Changes saved locally.');
         }
