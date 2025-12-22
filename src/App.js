@@ -589,11 +589,11 @@ class App {
       // Debug: log the final portfolio
       console.log('Final portfolio being set:', portfolio.map(app => ({ id: app.id, name: app.id })));
 
-      // Hydrate tasks from backend (async, updates dashboard when complete)
-      this.hydrateTasksForApps(portfolio);
+      // Hydrate tasks from backend (sequential to avoid race conditions)
+      await this.hydrateTasksForApps(portfolio);
 
-      // Hydrate metadata from backend (async, updates dashboard when complete)
-      this.hydrateMetadataForApps(portfolio);
+      // Hydrate metadata from backend (sequential to avoid race conditions)
+      await this.hydrateMetadataForApps(portfolio);
 
       // Load ideas using DataController
       const ideas = await this.dataController.loadIdeas();
@@ -796,62 +796,79 @@ class App {
         updates.push(updatedApp);
       }
       if (updates.length > 0) {
-        const state = appState.getState();
-        const mergedPortfolio = state.portfolio.map(a => {
-          const u = updates.find(x => x.id === a.id);
-          return u ? u : a;
-        });
-        appState.setPortfolio(mergedPortfolio);
-        const order = state.sortOrder || 'alphabetical';
-        this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
+        this.applyPortfolioUpdates(updates);
       }
     } catch (_) {}
   }
 
   /**
    * Hydrate app metadata from backend for all apps
-   * Fetches metadata.json for each app and merges with local data
+   * Fetches metadata.json for each app and merges with local data (parallelized)
    */
   async hydrateMetadataForApps(apps) {
     try {
-      const updates = [];
-      for (const app of apps) {
-        const metadataResult = await apiService.fetchAppMetadata(app.id);
-        const metadata = unwrapOr(metadataResult, null);
-        if (!metadata) continue;
+      // Fetch all metadata in parallel for better performance
+      const results = await Promise.all(apps.map(async (app) => {
+        try {
+          const metadataResult = await apiService.fetchAppMetadata(app.id);
+          const metadata = unwrapOr(metadataResult, null);
+          if (!metadata) return null;
 
-        // Merge: remote metadata fills in missing local fields
-        const updatedApp = {
-          ...app,
-          description: app.description || metadata.description || '',
-          notes: app.notes || metadata.notes || '',
-          platform: app.platform || metadata.platform || 'Web',
-          lastReviewDate: metadata.lastReviewDate || app.lastReviewDate,
-          nextReviewDate: metadata.nextReviewDate || app.nextReviewDate,
-          reviewCycle: metadata.reviewCycle || app.reviewCycle || 90
-        };
+          // Merge: remote metadata fills in missing local fields
+          const updatedApp = {
+            ...app,
+            description: app.description || metadata.description || '',
+            notes: app.notes || metadata.notes || '',
+            platform: app.platform || metadata.platform || 'Web',
+            lastReviewDate: metadata.lastReviewDate || app.lastReviewDate,
+            nextReviewDate: metadata.nextReviewDate || app.nextReviewDate,
+            reviewCycle: metadata.reviewCycle || app.reviewCycle || 90
+          };
 
-        // Only update if something changed
-        if (JSON.stringify(updatedApp) !== JSON.stringify(app)) {
-          await dataStore.saveApp(updatedApp);
-          updates.push(updatedApp);
+          // Check if any metadata field actually changed
+          const hasChanges =
+            updatedApp.description !== app.description ||
+            updatedApp.notes !== app.notes ||
+            updatedApp.platform !== app.platform ||
+            updatedApp.lastReviewDate !== app.lastReviewDate ||
+            updatedApp.nextReviewDate !== app.nextReviewDate ||
+            updatedApp.reviewCycle !== app.reviewCycle;
+
+          if (hasChanges) {
+            await dataStore.saveApp(updatedApp);
+            return updatedApp;
+          }
+          return null;
+        } catch (_) {
+          return null;
         }
-      }
+      }));
+
+      const updates = results.filter(Boolean);
 
       if (updates.length > 0) {
-        const state = appState.getState();
-        const mergedPortfolio = state.portfolio.map(a => {
-          const u = updates.find(x => x.id === a.id);
-          return u ? u : a;
-        });
-        appState.setPortfolio(mergedPortfolio);
-        const order = state.sortOrder || 'alphabetical';
-        this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
-        console.log(`Hydrated metadata for ${updates.length} apps from backend`);
+        this.applyPortfolioUpdates(updates, `Hydrated metadata for ${updates.length} apps from backend`);
       }
     } catch (err) {
       console.warn('Failed to hydrate metadata:', err);
     }
+  }
+
+  /**
+   * Helper to apply portfolio updates and refresh dashboard
+   * @param {Array} updates - Array of updated app objects
+   * @param {string} logMessage - Message to log on success
+   */
+  applyPortfolioUpdates(updates, logMessage = '') {
+    const state = appState.getState();
+    const mergedPortfolio = state.portfolio.map(a => {
+      const u = updates.find(x => x.id === a.id);
+      return u ? u : a;
+    });
+    appState.setPortfolio(mergedPortfolio);
+    const order = state.sortOrder || 'alphabetical';
+    this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
+    if (logMessage) console.log(logMessage);
   }
 
   /**
@@ -1015,11 +1032,12 @@ class App {
    * @param {string} notes - Developer notes
    * @returns {Promise<void>}
    */
-  async saveDeveloperNotes(appId, notes) {
+  async saveDeveloperNotes(appId, notesText) {
     try {
       const app = appState.getAppById(appId);
       if (app) {
-        const updatedApp = { ...app, developerNotes: notes, notes: notes };
+        // Use 'notes' as the single source of truth (synced to backend)
+        const updatedApp = { ...app, notes: notesText };
         await dataStore.saveApp(updatedApp);
         appState.updateApp(updatedApp);
 
@@ -1183,11 +1201,11 @@ class App {
         return;
       }
 
-      // Update the idea status to 'created'
+      // Update the idea status to 'created' (implemented)
       const updatedIdea = {
         ...idea,
         status: 'created',
-        createdDate: new Date().toISOString()
+        implementedDate: new Date().toISOString()
       };
 
       // Save to local storage
@@ -1221,11 +1239,11 @@ class App {
       // Refresh GitHub data
       this.fetchGitHubDataForApps(portfolio);
 
-      // Hydrate tasks from backend to update pending counts
-      this.hydrateTasksForApps(portfolio);
+      // Hydrate tasks from backend (sequential to avoid race conditions)
+      await this.hydrateTasksForApps(portfolio);
 
-      // Hydrate metadata from backend
-      this.hydrateMetadataForApps(portfolio);
+      // Hydrate metadata from backend (sequential to avoid race conditions)
+      await this.hydrateMetadataForApps(portfolio);
 
       appState.setLoading(false, 'portfolioLoading');
     } catch (error) {
