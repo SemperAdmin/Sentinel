@@ -151,7 +151,15 @@ class OfflineQueue {
         console.error(`Error processing queued operation:`, error);
         operation.retries = (operation.retries || 0) + 1;
         operation.lastError = error.message;
-        this.saveToStorage();
+
+        // Check MAX_RETRIES to prevent infinite queue buildup
+        if (operation.retries >= MAX_RETRIES) {
+          console.error(`Max retries reached for ${operation.type}:${operation.appId}, removing from queue`);
+          this.dequeue(operation.id);
+          this.notifyListeners('max-retries', operation);
+        } else {
+          this.saveToStorage();
+        }
         failCount++;
       }
     }
@@ -178,18 +186,19 @@ class OfflineQueue {
     const apiModule = await import('../data/ApiService.js');
     const api = apiModule.default;
 
+    // Pass skipQueue=true to prevent re-queuing during queue processing
     switch (operation.type) {
       case 'tasks':
-        const taskResult = await api.saveTasksViaContents(operation.appId, operation.data);
+        const taskResult = await api.saveTasksViaContents(operation.appId, operation.data, 0, true);
         return taskResult && taskResult.ok === true;
 
       case 'reviews':
-        const reviewResult = await api.saveAppReviews(operation.appId, operation.data);
+        const reviewResult = await api.saveAppReviews(operation.appId, operation.data, 0, true);
         return reviewResult && reviewResult.ok === true;
 
       case 'ideas':
-        const ideaResult = await api.saveIdeaYaml(operation.data);
-        return ideaResult === true;
+        const ideaResult = await api.saveIdeaYaml(operation.data, true);
+        return ideaResult && ideaResult.ok === true;
 
       default:
         console.warn(`Unknown operation type: ${operation.type}`);

@@ -463,12 +463,15 @@ export class TabbedDetail {
    * Show public improvement suggestion dialog
    */
   showPublicImprovementSuggestion() {
-    showImprovementModal(this.app, async (todo) => {
+    showImprovementModal(this.app, (todo) => {
       if (!this.app.todos) this.app.todos = [];
       this.app.todos.push(todo);
 
-      const { default: ApiService } = await import('../data/ApiService.js');
-      await ApiService.updateApp(this.app);
+      if (this.onNotesSave) {
+        this.onNotesSave(this.app);
+      }
+      this.syncTodosToApi('Improvement suggestion submitted');
+      this.activeTab = 'todo';
       this.render();
     });
   }

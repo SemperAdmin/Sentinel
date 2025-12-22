@@ -677,7 +677,14 @@ class ApiService {
     }
   }
 
-  async saveIdeaYaml(idea) {
+  async saveIdeaYaml(idea, skipQueue = false) {
+    // Check if offline - queue for later
+    if (!this.isOnline() && !skipQueue) {
+      console.log(`Offline: queuing idea save for ${idea.id}`);
+      this.queueForRetry('ideas', idea.id, idea);
+      return { ok: false, queued: true, message: 'Changes saved locally. Will sync when online.' };
+    }
+
     try {
       const sha = await this.getIdeaSha(idea.id);
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas/${idea.id}.yml`;
@@ -698,8 +705,8 @@ class ApiService {
         contactEmail: idea.contactEmail || '',
         comments: JSON.stringify(idea.comments || []),
       };
-      const yaml = this.toYaml(payload);
-      const content = this.encodeBase64(yaml);
+      const yamlContent = this.toYaml(payload);
+      const content = this.encodeBase64(yamlContent);
       const body = {
         message: `Save idea ${idea.id} as YAML`,
         content,
@@ -707,10 +714,27 @@ class ApiService {
         sha: sha || undefined
       };
       const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
-      return !!(res && res.ok);
+
+      if (res && res.ok) {
+        return { ok: true };
+      }
+
+      // Network error or other failure - queue for retry
+      if (!skipQueue) {
+        console.log(`Save failed, queuing idea for ${idea.id}`);
+        this.queueForRetry('ideas', idea.id, idea);
+        return { ok: false, queued: true, message: 'Save failed. Changes queued for retry.' };
+      }
+
+      return { ok: false };
     } catch (err) {
       console.warn('Saving idea YAML failed:', err);
-      return false;
+      // Queue on network errors
+      if (!skipQueue && (err.name === 'TypeError' || err.message.includes('network') || err.message.includes('fetch'))) {
+        this.queueForRetry('ideas', idea.id, idea);
+        return { ok: false, queued: true, message: 'Network error. Changes queued for retry.' };
+      }
+      return { ok: false, error: err.message };
     }
   }
 
