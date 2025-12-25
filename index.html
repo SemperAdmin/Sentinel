@@ -759,9 +759,17 @@
 
         .site-footer p {
             font-size: 0.8rem;
-            color: color-mix(in srgb, var(--text-metal) 60%, transparent);
+            color: var(--text-metal);
+            opacity: 0.6;
             text-transform: none;
             letter-spacing: 0.05em;
+        }
+
+        @supports (color: color-mix(in srgb, white, black)) {
+            .site-footer p {
+                color: color-mix(in srgb, var(--text-metal) 60%, transparent);
+                opacity: 1;
+            }
         }
 
         @media (max-width: 768px) {

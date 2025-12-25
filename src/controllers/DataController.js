@@ -295,9 +295,7 @@ export class DataController {
 
           // Persist merged ideas to local storage for consistency
           // This ensures remote ideas are available offline
-          for (const idea of merged) {
-            await dataStore.saveIdea(idea);
-          }
+          await Promise.all(merged.map(idea => dataStore.saveIdea(idea)));
 
           return merged;
         }
