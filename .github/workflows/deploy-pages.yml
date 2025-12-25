@@ -36,9 +36,17 @@ jobs:
 
       - name: Setup admin password
         run: npm run setup-password
-        continue-on-error: true
         env:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      - name: Verify auth config exists
+        run: |
+          if [ ! -f "public/auth-config.json" ]; then
+            echo "❌ auth-config.json was not created!"
+            echo "Check that ADMIN_PASSWORD secret is set correctly."
+            exit 1
+          fi
+          echo "✅ auth-config.json created successfully"
 
       - name: Build
         run: npm run build
