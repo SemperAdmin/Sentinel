@@ -371,6 +371,22 @@ const server = http.createServer(async (req, res) => {
           expiresAt: Date.now() + ttlSeconds * 1000
         })
       }
+    } else if (['PUT', 'POST', 'DELETE', 'PATCH'].includes(method)) {
+      // Invalidate cache for this path after mutations
+      // This ensures subsequent GETs fetch fresh data
+      const getKey = cacheKey('GET', target.toString())
+      cache.delete(getKey)
+      // Also invalidate without query params (for contents API)
+      const baseUrl = target.origin + target.pathname
+      cache.delete(cacheKey('GET', baseUrl))
+
+      // Invalidate parent directory cache for file operations
+      // e.g., creating data/ideas/new-idea.yml should invalidate data/ideas listing
+      const parentPath = baseUrl.replace(/\/[^\/]+$/, '')
+      if (parentPath !== baseUrl) {
+        cache.delete(cacheKey('GET', parentPath))
+        cache.delete(cacheKey('GET', parentPath + '?ref=main'))
+      }
     }
 
     return send(res, ghRes.status, { ...outHeaders, 'X-Cache': existing ? 'stale' : 'miss' }, buf)

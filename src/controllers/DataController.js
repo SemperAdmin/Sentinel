@@ -291,7 +291,15 @@ export class DataController {
       try {
         const remoteIdeas = await apiService.fetchIdeasFromRepo();
         if (Array.isArray(remoteIdeas) && remoteIdeas.length > 0) {
-          return this.mergeIdeas(localIdeas || [], remoteIdeas);
+          const merged = this.mergeIdeas(localIdeas || [], remoteIdeas);
+
+          // Persist merged ideas to local storage for consistency
+          // This ensures remote ideas are available offline
+          for (const idea of merged) {
+            await dataStore.saveIdea(idea);
+          }
+
+          return merged;
         }
       } catch (err) {
         console.warn('Failed to fetch remote ideas:', err);
