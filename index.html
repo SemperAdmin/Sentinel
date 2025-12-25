@@ -237,6 +237,45 @@
             border-color: #1f7a33;
         }
 
+        .marine-tools-section {
+            background: linear-gradient(135deg, rgba(28, 28, 28, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%);
+            border: 1px solid var(--border-seam);
+            border-left: 4px solid var(--accent-blood);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .marine-tools-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(160, 0, 0, 0.05));
+            pointer-events: none;
+        }
+
+        .marine-tools-title {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 1.4rem;
+            color: var(--accent-blood);
+            text-shadow: 0 0 8px rgba(160, 0, 0, 0.3);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.15em;
+        }
+
+        .marine-tools-description {
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text-metal);
+            text-transform: none;
+            letter-spacing: 0.02em;
+            max-width: 900px;
+            opacity: 0.9;
+        }
+
         .app-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1267,6 +1306,12 @@
                         <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
                     </div>
                 </div>
+                <section class="marine-tools-section">
+                    <h3 class="marine-tools-title">Mission-Critical Tools for Marines</h3>
+                    <p class="marine-tools-description">
+                        Administrative excellence is the backbone of every successful mission. These purpose-built applications eliminate the tedious manual work that pulls Marines away from their core duties. From formatting official correspondence to calculating critical career dates, each tool is designed to save time, reduce errors, and empower Marines to focus on what truly matters—leading and excelling in their roles.
+                    </p>
+                </section>
                 <div id="app-grid" class="app-grid">
                 </div>
             </div>
