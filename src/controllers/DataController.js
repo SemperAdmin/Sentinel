@@ -295,7 +295,11 @@ export class DataController {
 
           // Persist merged ideas to local storage for consistency
           // This ensures remote ideas are available offline
-          await Promise.all(merged.map(idea => dataStore.saveIdea(idea)));
+          const results = await Promise.allSettled(merged.map(idea => dataStore.saveIdea(idea)));
+          const failedSaves = results.filter(r => r.status === 'rejected');
+          if (failedSaves.length > 0) {
+            console.warn(`${failedSaves.length} ideas failed to save to local storage.`, failedSaves);
+          }
 
           return merged;
         }
