@@ -783,17 +783,29 @@ class App {
       const updates = [];
       for (const app of apps) {
         const local = Array.isArray(app.todos) ? app.todos : [];
-        const remoteResult = await apiService.fetchRepoTasks(app.id);
+        const remoteResult = await apiService.fetchRepoTasks(app.id, true); // bypass cache
         const remote = unwrapOr(remoteResult, []);
-        if (!Array.isArray(remote) || remote.length === 0) continue;
-        const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
-        const existingKeys = new Set(local.map(keyOf));
-        const toAdd = remote.filter((rt) => !existingKeys.has(keyOf(rt)));
-        if (toAdd.length === 0) continue;
-        const merged = [...local, ...toAdd];
-        const updatedApp = { ...app, todos: merged };
-        await dataStore.saveApp(updatedApp);
-        updates.push(updatedApp);
+
+        // If remote has data, use it as source of truth
+        // This ensures deleted tasks don't reappear
+        if (Array.isArray(remote) && remote.length > 0) {
+          // Check if local and remote are different
+          const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
+          const localKeys = new Set(local.map(keyOf));
+          const remoteKeys = new Set(remote.map(keyOf));
+
+          // Check if there are differences
+          const hasDiff = local.length !== remote.length ||
+            [...localKeys].some(k => !remoteKeys.has(k)) ||
+            [...remoteKeys].some(k => !localKeys.has(k));
+
+          if (hasDiff) {
+            // Remote is source of truth - use remote tasks
+            const updatedApp = { ...app, todos: remote };
+            await dataStore.saveApp(updatedApp);
+            updates.push(updatedApp);
+          }
+        }
       }
       if (updates.length > 0) {
         this.applyPortfolioUpdates(updates);
@@ -918,19 +930,26 @@ class App {
   async hydrateTasksFromRepo(app) {
     try {
       if (!app) return;
-      const remoteResult = await apiService.fetchRepoTasks(app.id);
+      const remoteResult = await apiService.fetchRepoTasks(app.id, true); // bypass cache
       const remote = unwrapOr(remoteResult, []);
-      if (!Array.isArray(remote) || remote.length === 0) return;
+
+      // Remote is source of truth when available
+      if (!Array.isArray(remote)) return;
 
       const local = Array.isArray(app.todos) ? app.todos : [];
       const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
-      const existingKeys = new Set(local.map(keyOf));
-      const toAdd = remote.filter((rt) => !existingKeys.has(keyOf(rt)));
+      const localKeys = new Set(local.map(keyOf));
+      const remoteKeys = new Set(remote.map(keyOf));
 
-      if (toAdd.length === 0) return;
+      // Check if there are differences
+      const hasDiff = local.length !== remote.length ||
+        [...localKeys].some(k => !remoteKeys.has(k)) ||
+        [...remoteKeys].some(k => !localKeys.has(k));
 
-      const merged = [...local, ...toAdd];
-      const updatedApp = { ...app, todos: merged };
+      if (!hasDiff) return;
+
+      // Use remote as source of truth
+      const updatedApp = { ...app, todos: remote };
       await dataStore.saveApp(updatedApp);
       appState.updateApp(updatedApp);
       if (this.tabbedDetail) this.tabbedDetail.update(updatedApp);
