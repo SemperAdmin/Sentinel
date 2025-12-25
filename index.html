@@ -240,21 +240,10 @@
         .marine-tools-section {
             background: linear-gradient(135deg, rgba(28, 28, 28, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%);
             border: 1px solid var(--border-seam);
-            border-left: 4px solid var(--accent-blood);
-            padding: 1.5rem 2rem;
+            border-bottom: 3px solid var(--accent-blood);
+            padding: 2rem;
             margin-bottom: 2rem;
-            position: relative;
-        }
-
-        .marine-tools-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100px;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(160, 0, 0, 0.05));
-            pointer-events: none;
+            text-align: center;
         }
 
         .marine-tools-title {
@@ -273,6 +262,7 @@
             text-transform: none;
             letter-spacing: 0.02em;
             max-width: 900px;
+            margin: 0 auto;
             opacity: 0.9;
         }
 
@@ -757,6 +747,22 @@
 
         .empty-state .loading-spinner {
             margin: 1rem auto;
+        }
+
+        .site-footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-seam);
+            background: linear-gradient(180deg, transparent 0%, rgba(10, 10, 10, 0.8) 100%);
+        }
+
+        .site-footer p {
+            font-size: 0.8rem;
+            color: var(--text-metal);
+            opacity: 0.6;
+            text-transform: none;
+            letter-spacing: 0.05em;
         }
 
         @media (max-width: 768px) {
@@ -1466,6 +1472,10 @@
                 </div>
             </div>
         </main>
+
+        <footer class="site-footer">
+            <p>Built with dedication for the Marine Corps community</p>
+        </footer>
 
         <div id="loading-overlay" class="loading-overlay hidden">
             <div class="loading-spinner"></div>
