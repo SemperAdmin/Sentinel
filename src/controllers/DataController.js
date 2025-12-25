@@ -344,6 +344,8 @@ export class DataController {
         initialFeatures: ri.initialFeatures || (localIdea?.initialFeatures || ''),
         submittedBy: ri.submittedBy || (localIdea?.submittedBy || ''),
         contactEmail: ri.contactEmail || (localIdea?.contactEmail || ''),
+        status: ri.status || (localIdea?.status || null),
+        implementedDate: ri.implementedDate || (localIdea?.implementedDate || null),
         comments: mergedComments
       });
 
