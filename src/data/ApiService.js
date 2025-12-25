@@ -250,24 +250,16 @@ class ApiService {
       'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json'
     };
-    // Merge remote tasks to avoid overwriting existing entries
-    let merged = Array.isArray(tasks) ? tasks.slice() : [];
-    try {
-      const remoteResult = await this.fetchRepoTasks(normalizedId);
-      const remote = remoteResult.success ? (remoteResult.data || []) : [];
-      const keyOf = (t) => (t && t.id ? String(t.id) : `${t?.title || ''}|${t?.dueDate || ''}`);
-      const keys = new Set(merged.map(keyOf));
-      const toAdd = remote.filter(rt => !keys.has(keyOf(rt)));
-      merged = [...merged, ...toAdd];
-      merged.sort((a,b) => String(a.id||'').localeCompare(String(b.id||'')));
-    } catch (e) {
-      console.warn('Could not merge remote tasks, proceeding with local tasks only:', e);
-    }
+    // Use local tasks as source of truth - don't merge with remote
+    // This ensures deletions are properly saved
+    const tasksToSave = Array.isArray(tasks) ? tasks.slice() : [];
+    tasksToSave.sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+
     const body = {
       event_type: 'save_tasks',
       client_payload: {
         app_id: normalizedId,
-        tasks_json: JSON.stringify(merged)
+        tasks_json: JSON.stringify(tasksToSave)
       }
     };
     const url = `${this.baseUrl}/repos/${this.managerRepo}/dispatches`;
@@ -279,7 +271,7 @@ class ApiService {
       console.warn('Dispatch error, falling back to direct contents API:', err);
     }
     // saveTasksViaContents returns { ok: boolean, conflict?: boolean, message?: string }
-    return await this.saveTasksViaContents(normalizedId, merged);
+    return await this.saveTasksViaContents(normalizedId, tasksToSave);
   }
 
   async fetchRepoTasks(appId, bypassCache = false) {
