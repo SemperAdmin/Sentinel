@@ -1,9 +1,6 @@
 # Environment files
 .env*
 
-# Authentication config (contains hashed password)
-auth-config.json
-
 # Build output
 dist/
 
