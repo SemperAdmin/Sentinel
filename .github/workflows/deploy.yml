@@ -33,9 +33,15 @@ jobs:
           
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Setup admin password
-        run: npm run setup-password
+        run: |
+          if [ -f "public/auth-config.json" ]; then
+            echo "✅ auth-config.json already exists in repo, skipping generation"
+          else
+            echo "Generating auth-config.json from secret..."
+            npm run setup-password
+          fi
         env:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
