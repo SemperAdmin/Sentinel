@@ -787,8 +787,8 @@ class App {
         const remote = unwrapOr(remoteResult, []);
 
         // If remote has data, use it as source of truth
-        // This ensures deleted tasks don't reappear
-        if (Array.isArray(remote) && remote.length > 0) {
+        // This ensures deleted tasks don't reappear (including when all are deleted)
+        if (Array.isArray(remote)) {
           // Check if local and remote are different
           const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
           const localKeys = new Set(local.map(keyOf));
