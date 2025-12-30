@@ -70,41 +70,37 @@ export class AuthService {
       // Fetch the auth configuration file
       console.log('Loading authentication configuration...');
 
-      // Detect base URL using multiple methods for maximum compatibility
-      let baseUrl = '/';
-
-      // Method 1: Try import.meta.env.BASE_URL (works in dev and some builds)
-      try {
-        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) {
-          baseUrl = import.meta.env.BASE_URL;
-          console.log('Base URL from import.meta.env:', baseUrl);
-        }
-      } catch (e) {
-        console.log('import.meta.env not available, using fallback');
-      }
-
-      // Method 2: Check <base> tag if present
-      if (baseUrl === '/') {
-        const baseTag = document.querySelector('base');
-        if (baseTag && baseTag.href) {
-          const url = new URL(baseTag.href);
-          baseUrl = url.pathname;
-          console.log('Base URL from <base> tag:', baseUrl);
-        }
-      }
-
-      // Method 3: Detect from pathname (e.g., /Sentinel/)
-      if (baseUrl === '/' && window.location.pathname.includes('/Sentinel/')) {
-        baseUrl = '/Sentinel/';
-        console.log('Base URL detected from pathname:', baseUrl);
-      }
-
+      // Use Vite's BASE_URL which is always available at build time
+      // This is set in vite.config.js based on VITE_BASE_PATH env var or defaults to '/Sentinel/'
+      const baseUrl = import.meta.env.BASE_URL || '/';
       const configPath = `${baseUrl}auth-config.json`;
       console.log('Fetching auth config from:', configPath);
-      const response = await fetch(configPath);
+
+      let response = await fetch(configPath);
+
+      // Fallback: if fetch fails, try alternative paths for different deployment scenarios
+      if (!response.ok) {
+        console.log('Primary path failed, trying fallback paths...');
+        const fallbackPaths = [
+          '/auth-config.json',           // Root path
+          './auth-config.json',          // Relative path
+          '/Sentinel/auth-config.json'   // Explicit GitHub Pages path
+        ].filter(p => p !== configPath); // Don't retry the same path
+
+        for (const fallbackPath of fallbackPaths) {
+          console.log('Trying fallback path:', fallbackPath);
+          const fallbackResponse = await fetch(fallbackPath);
+          if (fallbackResponse.ok) {
+            response = fallbackResponse;
+            console.log('✅ Found auth-config.json at:', fallbackPath);
+            break;
+          }
+        }
+      }
 
       if (!response.ok) {
-        console.error('❌ Failed to load auth-config.json:', response.status);
+        console.error('❌ Failed to load auth-config.json from any path. Status:', response.status);
+        console.error('Tried paths:', [configPath, '/auth-config.json', './auth-config.json', '/Sentinel/auth-config.json']);
         return {
           success: false,
           error: 'Authentication configuration not found. Please run: node scripts/setup-password.js'
