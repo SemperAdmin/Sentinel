@@ -26,19 +26,6 @@
     "status": "Draft"
   },
   {
-    "id": "1763945896219",
-    "title": "Facebook API",
-    "description": "Need to fix issues with API not rendering.\n\napp.js?v=23:972 \u274c [Semper Admin] Facebook API error: \nObject\ndetails\n: \nerror\n: \n\"Failed to fetch Semper Admin posts\"\nmessage\n: \n\"Request failed with status code 401\"\nsuccess\n: \nfalse\n[[Prototype]]\n: \nObject\nerrorText\n: \n\"{\\\"success\\\":false,\\\"error\\\":\\\"Failed to fetch Semper Admin posts\\\",\\\"message\\\":\\\"Request failed with status code 401\\\"}\"\nstatus\n: \n401\nstatusText\n: \n\"\"\n[[Prototype]]\n: \nObject\nfetchSemperAdminPosts\t@\tapp.js?v=23:972",
-    "priority": "medium",
-    "dueDate": null,
-    "completed": false,
-    "createdAt": "2025-11-24T00:58:16.219Z",
-    "source": "Other",
-    "feedbackSummary": "",
-    "submittedBy": "",
-    "status": "Draft"
-  },
-  {
     "id": "1764020606804",
     "title": "Replace emojis with an icon from fontawesome",
     "description": "Enhance the look and feed with the use of with an icon from font awesome vice emoji. ",
