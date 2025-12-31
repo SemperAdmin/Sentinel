@@ -326,6 +326,36 @@ body {
   font-weight: 500;
 }
 
+.app-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-card-open-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--gray-500);
+  background-color: var(--gray-100);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.app-card-open-link:hover {
+  color: var(--primary-color);
+  background-color: var(--gray-200);
+  transform: scale(1.1);
+}
+
+.app-card-open-link svg {
+  width: 16px;
+  height: 16px;
+}
+
 .app-card-description {
   font-size: 0.8125rem;
   color: var(--gray-600);
