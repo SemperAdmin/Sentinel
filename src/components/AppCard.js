@@ -2,7 +2,7 @@
  * AppCard Component - Displays individual app information in a card format
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, getPendingTodosCount } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, getPendingTodosCount, parseGitHubUrl } from '../utils/helpers.js';
 
 export class AppCard {
   constructor(app, onClick) {
@@ -16,15 +16,9 @@ export class AppCard {
    * Converts GitHub repo URL to GitHub Pages URL
    */
   getAppUrl() {
-    if (!this.app.repoUrl) return null;
-
-    // Extract owner and repo from GitHub URL
-    // https://github.com/SemperAdmin/EventCall -> https://semperadmin.github.io/EventCall/
-    const match = this.app.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-    if (match) {
-      const [, owner, repo] = match;
-      const cleanRepo = repo.replace(/\.git$/, '');
-      return `https://${owner.toLowerCase()}.github.io/${cleanRepo}/`;
+    const parsed = parseGitHubUrl(this.app.repoUrl);
+    if (parsed) {
+      return `https://${parsed.owner.toLowerCase()}.github.io/${parsed.repo}/`;
     }
     return null;
   }
