@@ -31,16 +31,16 @@
     "description": "Enhance the look and feed with the use of with an icon from font awesome vice emoji. ",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-24T21:43:26.804Z",
     "source": "Teams",
     "feedbackSummary": "Also, what are your thoughts on replacing the \ud83e\udd16 emoji in front of AI Summary with an icon from fontawesome? More polished look.\nI recommend this one, pull it by calling the fontawesome style sheet and then ref the i class where you would have the robot emoji\n \nhttps://fontawesome.com/icons/wand-magic-sparkles?f=classic&s=solid",
     "submittedBy": "Proffitt GySgt Darrick K",
-    "status": "In Development",
+    "status": "Complete",
     "submitterName": "",
     "submitterEmail": "",
     "effortEstimate": "Small",
-    "completionDate": null,
+    "completionDate": "2025-12-30",
     "rejectionReason": ""
   }
 ]
