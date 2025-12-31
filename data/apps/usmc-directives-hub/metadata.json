@@ -1,10 +1,10 @@
 {
   "id": "usmc-directives-hub",
   "description": "",
-  "notes": "Real-time tracker for USMC MARADMINs and directives. Monitor official Marine Corps publications with advanced filtering and search.",
+  "notes": "Unbiased FITREP marking assistance tool",
   "platform": "Web",
   "lastReviewDate": null,
-  "nextReviewDate": "2026-03-30",
+  "nextReviewDate": "2026-03-28",
   "reviewCycle": 90,
-  "updatedAt": "2025-12-31T05:17:12.677Z"
+  "updatedAt": "2025-12-31T05:17:46.076Z"
 }
