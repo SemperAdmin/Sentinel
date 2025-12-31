@@ -23,12 +23,17 @@
     "description": "Need to migrate json data to sql tables",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:07:37.238Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "2025-12-28",
+    "rejectionReason": ""
   },
   {
     "id": "1764277902625",
