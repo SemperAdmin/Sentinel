@@ -5,12 +5,17 @@
     "description": "Need to establish account and event tables in supabase SQL database ",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:06:55.639Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "2025-12-28",
+    "rejectionReason": ""
   },
   {
     "id": "1764277657238",
@@ -18,12 +23,17 @@
     "description": "Need to migrate json data to sql tables",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:07:37.238Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "2025-12-28",
+    "rejectionReason": ""
   },
   {
     "id": "1764277902625",
@@ -31,12 +41,17 @@
     "description": "Create tables for tasks and ideas ",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:11:42.625Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "2025-12-28",
+    "rejectionReason": ""
   },
   {
     "id": "1764277992725",
