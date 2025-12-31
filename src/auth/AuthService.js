@@ -72,7 +72,8 @@ export class AuthService {
 
       // Use Vite's BASE_URL which is always available at build time
       // This is set in vite.config.js based on VITE_BASE_PATH env var or defaults to '/Sentinel/'
-      const baseUrl = import.meta.env.BASE_URL || '/';
+      // Use optional chaining for safety in edge cases where import.meta.env might be undefined
+      const baseUrl = import.meta?.env?.BASE_URL || '/';
       const configPath = `${baseUrl}auth-config.json`;
       console.log('Fetching auth config from:', configPath);
 
