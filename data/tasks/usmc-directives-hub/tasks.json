@@ -36,6 +36,11 @@
     "source": "Teams",
     "feedbackSummary": "Also, what are your thoughts on replacing the \ud83e\udd16 emoji in front of AI Summary with an icon from fontawesome? More polished look.\nI recommend this one, pull it by calling the fontawesome style sheet and then ref the i class where you would have the robot emoji\n \nhttps://fontawesome.com/icons/wand-magic-sparkles?f=classic&s=solid",
     "submittedBy": "Proffitt GySgt Darrick K",
-    "status": "Draft"
+    "status": "In Development",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": null,
+    "rejectionReason": ""
   }
 ]
