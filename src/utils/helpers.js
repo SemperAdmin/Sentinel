@@ -300,6 +300,16 @@ export function parseGitHubUrl(url) {
 }
 
 /**
+ * Get GitHub Pages URL from a repository URL
+ * @param {string} repoUrl - GitHub repository URL
+ * @returns {string|null} GitHub Pages URL or null
+ */
+export function getGitHubPagesUrl(repoUrl) {
+  const parsed = parseGitHubUrl(repoUrl);
+  return parsed ? `https://${parsed.owner.toLowerCase()}.github.io/${parsed.repo}/` : null;
+}
+
+/**
  * Format file size
  */
 export function formatFileSize(bytes) {
