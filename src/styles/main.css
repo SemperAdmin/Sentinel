@@ -346,7 +346,7 @@ body {
 }
 
 .app-card-open-link:hover {
-  color: var(--primary-color);
+  color: var(--primary-blue);
   background-color: var(--gray-200);
   transform: scale(1.1);
 }

@@ -23,7 +23,8 @@ export class AppCard {
     const match = this.app.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (match) {
       const [, owner, repo] = match;
-      return `https://${owner.toLowerCase()}.github.io/${repo}/`;
+      const cleanRepo = repo.replace(/\.git$/, '');
+      return `https://${owner.toLowerCase()}.github.io/${cleanRepo}/`;
     }
     return null;
   }
@@ -58,8 +59,7 @@ export class AppCard {
          target="_blank"
          rel="noopener noreferrer"
          class="app-card-open-link"
-         title="Open ${this.escapeHtml(this.app.id)}"
-         onclick="event.stopPropagation();">
+         title="Open ${this.escapeHtml(this.app.id)}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
           <polyline points="15 3 21 3 21 9"></polyline>
@@ -105,7 +105,15 @@ export class AppCard {
         View App
       </button>
     `;
-    
+
+    // Attach event listener to prevent card click when clicking open link
+    const openLink = card.querySelector('.app-card-open-link');
+    if (openLink) {
+      openLink.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
+    }
+
     this.element = card;
     return card;
   }
