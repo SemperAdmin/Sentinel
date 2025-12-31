@@ -12,6 +12,23 @@ export class AppCard {
   }
 
   /**
+   * Get the live app URL from the repo URL
+   * Converts GitHub repo URL to GitHub Pages URL
+   */
+  getAppUrl() {
+    if (!this.app.repoUrl) return null;
+
+    // Extract owner and repo from GitHub URL
+    // https://github.com/SemperAdmin/EventCall -> https://semperadmin.github.io/EventCall/
+    const match = this.app.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (match) {
+      const [, owner, repo] = match;
+      return `https://${owner.toLowerCase()}.github.io/${repo}/`;
+    }
+    return null;
+  }
+
+  /**
    * Create the card element
    */
   render() {
@@ -19,6 +36,7 @@ export class AppCard {
     const healthColor = getHealthColor(health);
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
     const pendingTodos = getPendingTodosCount(this.app);
+    const appUrl = this.getAppUrl();
 
     const card = document.createElement('div');
     card.className = 'app-card';
@@ -34,13 +52,32 @@ export class AppCard {
       ? `<span style="color: ${pendingTodos > 5 ? '#dc3545' : pendingTodos > 2 ? '#ffc107' : '#28a745'}; font-weight: 600;">${pendingTodos}</span>`
       : '<span style="color: #6c757d;">0</span>';
 
+    // Create the open app link HTML (only if appUrl exists)
+    const openAppLink = appUrl ? `
+      <a href="${this.escapeHtml(appUrl)}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="app-card-open-link"
+         title="Open ${this.escapeHtml(this.app.id)}"
+         onclick="event.stopPropagation();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
+    ` : '';
+
     card.innerHTML = `
       <div class="app-card-header">
         <h3 class="app-card-title">
           <span class="health-indicator" style="background-color: ${healthColor}"></span>
           ${this.escapeHtml(this.app.id)}
         </h3>
-        <span class="app-card-platform">${this.escapeHtml(this.app.platform)}</span>
+        <div class="app-card-header-actions">
+          ${openAppLink}
+          <span class="app-card-platform">${this.escapeHtml(this.app.platform)}</span>
+        </div>
       </div>
 
       ${truncatedDesc ? `<p class="app-card-description">${this.escapeHtml(truncatedDesc)}</p>` : ''}
