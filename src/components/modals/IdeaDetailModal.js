@@ -171,7 +171,6 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
             
             ${isImplemented ? '<span style="color: #28a745; align-self: center; margin-right: auto;">✓ This idea has been implemented</span>' : ''}
             ${isRejected ? '<span style="color: #dc3545; align-self: center; margin-right: auto;">✕ This idea has been rejected</span>' : ''}
-            
             <button class="btn btn-secondary" id="edit-idea-btn">Edit</button>
           ` : ''}
           <button class="btn btn-secondary" id="close-idea-btn">Close</button>

@@ -5,7 +5,6 @@
 
 import dataStore from '../data/DataStore.js';
 import { supabaseService } from '../data/SupabaseService.js';
-
 const AUTH_STORAGE_KEY = 'sentinel-auth-session';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -160,7 +159,6 @@ export class AuthService {
         return { success: false, error: 'Invalid password' };
       }
     }
-
     // ⚠️ SECURITY NOTE: This uses bcrypt-hashed password stored in auth-config.json
     // The hash is secure and cannot be reversed, but this is still client-side auth.
     // For production apps with sensitive data, use proper backend authentication.

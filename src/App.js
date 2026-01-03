@@ -193,6 +193,7 @@ class App {
             console.log(`GitHub rate (core): ${r.remaining}/${r.limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
           }
         } catch (_) {}
+
         try {
           const res = await fetch(`${apiService.baseUrl}/health`, { method: 'GET' });
           if (res.ok) {
@@ -609,7 +610,6 @@ class App {
             </h3>
             <div id="ideas-list-rejected" class="ideas-list"></div>
           </div>
-
           <div id="idea-form-container" class="idea-form-container hidden">
             <h3>DOCUMENT NEW CONCEPT</h3>
             <form id="idea-form" class="idea-form">
@@ -981,7 +981,6 @@ class App {
   async hydrateMetadataForApps(apps) {
     // If using Supabase, metadata is already loaded
     if (dataStore.useSupabase) return;
-
     try {
       // Fetch all metadata in parallel for better performance
       const results = await Promise.all(apps.map(async (app) => {
@@ -1205,7 +1204,6 @@ class App {
     } else {
       renderIdeasList(completed, completedList, callbacks);
     }
-
     // Render rejected ideas
     if (rejectedList) {
       if (rejected.length === 0) {

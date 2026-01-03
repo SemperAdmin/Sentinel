@@ -251,7 +251,6 @@ export function showEditTodoDialog(todo, onSubmit) {
       }
     });
   }
-
   const form = dialog.querySelector('#edit-todo-form');
   const statusEl = dialog.querySelector('#todo-status');
   const rejectionGroup = dialog.querySelector('#rejection-group');

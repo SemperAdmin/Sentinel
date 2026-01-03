@@ -61,7 +61,6 @@ export function showImprovementModal(app, onSubmit) {
       document.body.removeChild(dialog);
     }
   };
-
   // Handle form submission
   dialog.querySelector('#public-improvement-form').addEventListener('submit', async (e) => {
     e.preventDefault();
