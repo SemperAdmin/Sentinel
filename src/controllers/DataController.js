@@ -8,6 +8,7 @@ import apiService from '../data/ApiService.js';
 import { unwrapOr } from '../utils/result.js';
 import { batchProcess } from '../utils/batchProcessor.js';
 import errorHandler, { ErrorType, ErrorSeverity, RecoveryStrategies } from '../utils/errorHandler.js';
+import { normalizeAppId } from '../utils/helpers.js';
 import {
   REVIEW_CYCLE_DAYS,
   GITHUB_API_DELAY_MS,
@@ -31,7 +32,32 @@ export class DataController {
    * @returns {Promise<App[]>}
    */
   async loadPortfolioData() {
+    let supabaseError = false;
+
     try {
+      // Check if using Supabase backend
+      if (dataStore.useSupabase) {
+        console.log('Loading portfolio data from Supabase...');
+        try {
+          const supabaseData = await dataStore.getPortfolio();
+          if (supabaseData && supabaseData.length > 0) {
+            console.log(`Loaded ${supabaseData.length} apps from Supabase`);
+            return this.filterPortfolio(supabaseData);
+          }
+          console.log('Supabase returned no data.');
+        } catch (err) {
+           console.error('Supabase load failed:', err);
+           supabaseError = true;
+        }
+      }
+
+      // If Supabase is enabled and returned empty (success), return empty to avoid API spam.
+      // But if Supabase FAILED (error), we fall back to other sources.
+      if (dataStore.useSupabase && !supabaseError) {
+          console.warn('Supabase is enabled but returned no data. Returning empty portfolio.');
+          return [];
+      }
+
       // Triple-fallback: repo JSON → local storage → fresh GitHub fetch
       const portfolio = await RecoveryStrategies.withFallback(
         // Primary: fetch from repo
@@ -109,19 +135,8 @@ export class DataController {
    */
   async fetchUserRepositories() {
     try {
-      // Check if API key is configured
-      let repos;
-      if (!apiService.isApiKeyConfigured()) {
-        repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
-      } else {
-        console.log('Fetching user repositories from GitHub...');
-        try {
-          repos = await apiService.fetchUserRepos();
-        } catch (err) {
-          console.warn('Authenticated repo fetch failed, falling back to public repos:', err);
-          repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
-        }
-      }
+      // Always fetch public repos for the default user for the main portfolio view
+      const repos = await apiService.fetchPublicReposForUser(this.defaultGitHubUser);
 
       // Filter to only public repositories and exclude image/asset repos
       const publicRepos = repos.filter(repo => !repo.private && !EXCLUDED_REPO_NAMES.includes(repo.name));
@@ -146,7 +161,7 @@ export class DataController {
    */
   convertRepoToApp(repo) {
     return {
-      id: repo.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      id: normalizeAppId(repo.name),
       repoUrl: repo.html_url,
       platform: 'Web',
       status: 'Active',
@@ -161,7 +176,6 @@ export class DataController {
       isPrivate: repo.private,
       archived: repo.archived,
       todos: [],
-      improvements: [],
       developerNotes: '',
       improvementBudget: IMPROVEMENT_BUDGET_PERCENT,
       currentSprint: 'Q1 2025'
@@ -225,11 +239,29 @@ export class DataController {
 
     // Process function for each app
     const processApp = async (app) => {
-      const repoData = await apiService.getComprehensiveRepoData(app.repoUrl);
+      // If using Supabase, we don't need to fetch tasks from GitHub
+      // We only fetch repo metadata
+      const fetchTasks = !dataStore.useSupabase;
+
+      const promises = [
+        apiService.getComprehensiveRepoData(app.repoUrl)
+      ];
+
+      if (fetchTasks) {
+        promises.push(apiService.fetchRepoTasks(app.id));
+      }
+
+      const [repoData, tasksResult] = await Promise.all(promises);
 
       // If fetch failed, throw error for proper failure tracking
       if (!repoData) {
         throw new Error(`Failed to fetch GitHub data for ${app.id}`);
+      }
+
+      // Logic to determine todos
+      let todos = app.todos || [];
+      if (fetchTasks && tasksResult && tasksResult.success) {
+        todos = tasksResult.data;
       }
 
       // Update app with GitHub data
@@ -238,7 +270,9 @@ export class DataController {
         lastCommitDate: repoData.lastCommitDate,
         latestTag: repoData.latestTag,
         description: repoData.description || app.description,
-        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate)
+        nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate),
+        recentViews: repoData.recentViews,
+        todos: todos
       };
 
       // Save to data store
@@ -288,13 +322,28 @@ export class DataController {
    */
   async loadIdeas() {
     try {
+      if (dataStore.useSupabase) {
+        console.log('Loading ideas from Supabase...');
+        return await dataStore.getIdeas();
+      }
+
       const localIdeas = await dataStore.getIdeas();
 
       // Try to fetch remote ideas
       try {
         const remoteIdeas = await apiService.fetchIdeasFromRepo();
         if (Array.isArray(remoteIdeas) && remoteIdeas.length > 0) {
-          return this.mergeIdeas(localIdeas || [], remoteIdeas);
+          const merged = this.mergeIdeas(localIdeas || [], remoteIdeas);
+
+          // Persist merged ideas to local storage for consistency
+          // This ensures remote ideas are available offline
+          const results = await Promise.allSettled(merged.map(idea => dataStore.saveIdea(idea)));
+          const failedSaves = results.filter(r => r.status === 'rejected');
+          if (failedSaves.length > 0) {
+            console.warn(`${failedSaves.length} ideas failed to save to local storage.`, failedSaves);
+          }
+
+          return merged;
         }
       } catch (err) {
         console.warn('Failed to fetch remote ideas:', err);
@@ -315,23 +364,74 @@ export class DataController {
    */
   mergeIdeas(localIdeas, remoteIdeas) {
     const byId = new Map(localIdeas.map(i => [i.id, i]));
-    const merged = [...localIdeas];
+    const merged = [];
 
+    // Process all remote ideas first (they are the source of truth)
     for (const ri of remoteIdeas) {
-      if (!byId.has(ri.id)) {
-        merged.push({
-          id: ri.id,
-          conceptName: ri.conceptName || ri.id,
-          problemSolved: ri.problemSolved || '',
-          targetAudience: ri.targetAudience || '',
-          techStack: ri.techStack || 'Web',
-          riskRating: ri.riskRating || 'Medium',
-          dateCreated: ri.dateCreated || new Date().toISOString()
-        });
-      }
+      const localIdea = byId.get(ri.id);
+      const remoteComments = Array.isArray(ri.comments) ? ri.comments : [];
+      const localComments = localIdea && Array.isArray(localIdea.comments) ? localIdea.comments : [];
+
+      // Merge comments - combine and deduplicate by timestamp
+      const mergedComments = this.mergeComments(localComments, remoteComments);
+
+      merged.push({
+        id: ri.id,
+        conceptName: ri.conceptName || ri.id,
+        problemSolved: ri.problemSolved || '',
+        targetAudience: ri.targetAudience || '',
+        techStack: ri.techStack || 'Web',
+        riskRating: ri.riskRating || 'Medium',
+        dateCreated: ri.dateCreated || new Date().toISOString(),
+        initialFeatures: ri.initialFeatures || (localIdea?.initialFeatures || ''),
+        submittedBy: ri.submittedBy || (localIdea?.submittedBy || ''),
+        contactEmail: ri.contactEmail || (localIdea?.contactEmail || ''),
+        status: ri.status || (localIdea?.status || null),
+        implementedDate: ri.implementedDate || (localIdea?.implementedDate || null),
+        comments: mergedComments
+      });
+
+      byId.delete(ri.id);
+    }
+
+    // Add any local-only ideas (not in remote)
+    for (const [, localIdea] of byId) {
+      merged.push(localIdea);
     }
 
     return merged;
+  }
+
+  /**
+   * Merge local and remote comments, deduplicating by createdAt timestamp
+   * @param {Array} localComments
+   * @param {Array} remoteComments
+   * @returns {Array}
+   */
+  mergeComments(localComments, remoteComments) {
+    const seen = new Set();
+    const merged = [];
+
+    // Add remote comments first (source of truth)
+    for (const comment of remoteComments) {
+      const key = `${comment.createdAt}-${comment.author || 'Anonymous'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(comment);
+      }
+    }
+
+    // Add local comments that aren't already in remote
+    for (const comment of localComments) {
+      const key = `${comment.createdAt}-${comment.author || 'Anonymous'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(comment);
+      }
+    }
+
+    // Sort by date (oldest first)
+    return merged.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }
 }
 

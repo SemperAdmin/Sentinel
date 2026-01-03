@@ -18,104 +18,116 @@ export class IdeaForm {
    */
   render() {
     const container = document.createElement('div');
-    container.className = 'idea-form-container';
+    container.className = 'idea-form-dialog todo-dialog';
     
     container.innerHTML = `
-      <h3>${this.editingIdea ? 'Edit Idea' : 'Document New Concept'}</h3>
-      <form id="idea-form" class="idea-form">
-        <div class="form-group">
-          <label for="concept-name">Concept Name *</label>
-          <input 
-            type="text" 
-            id="concept-name" 
-            name="conceptName"
-            value="${this.escapeHtml(this.editingIdea?.conceptName || '')}"
-            required 
-            placeholder="Enter a descriptive name for your concept"
-          >
+      <div class="dialog-overlay">
+        <div class="dialog-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+          <div class="idea-detail-header" style="margin-bottom: 1.5rem;">
+            <h3 style="margin: 0;">${this.editingIdea ? 'Edit Idea' : 'Document New Concept'}</h3>
+            <button class="dialog-close" id="close-idea-form" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+          </div>
+
+          <form id="idea-form" class="idea-form">
+            <div class="form-group">
+              <label for="concept-name">Concept Name *</label>
+              <input 
+                type="text" 
+                id="concept-name" 
+                name="conceptName"
+                value="${this.escapeHtml(this.editingIdea?.conceptName || '')}"
+                required 
+                placeholder="Enter a descriptive name for your concept"
+                style="background: #2a2a2a; border: 1px solid #444; color: #eee;"
+              >
+            </div>
+            
+            <div class="form-group">
+              <label for="problem-solved">Problem Solved *</label>
+              <textarea 
+                id="problem-solved" 
+                name="problemSolved"
+                required 
+                placeholder="What value proposition does this idea offer? Describe the problem you're solving..."
+                rows="3"
+                style="background: #2a2a2a; border: 1px solid #444; color: #eee;"
+              >${this.escapeHtml(this.editingIdea?.problemSolved || '')}</textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="target-audience">Target Audience *</label>
+              <input 
+                type="text" 
+                id="target-audience" 
+                name="targetAudience"
+                value="${this.escapeHtml(this.editingIdea?.targetAudience || '')}"
+                required 
+                placeholder="Who will use this app? (e.g., busy professionals, students, parents)"
+                style="background: #2a2a2a; border: 1px solid #444; color: #eee;"
+              >
+            </div>
+            
+            <div class="form-group">
+              <label for="initial-features">Initial Feature Set (MVP) *</label>
+              <textarea 
+                id="initial-features" 
+                name="initialFeatures"
+                required 
+                placeholder="Define the scope for the minimum viable product. What are the core features needed for launch?"
+                rows="4"
+                style="background: #2a2a2a; border: 1px solid #444; color: #eee;"
+              >${this.escapeHtml(this.editingIdea?.initialFeatures || '')}</textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="tech-stack">Technology Stack (Proposed) *</label>
+              <select id="tech-stack" name="techStack" required style="background: #2a2a2a; border: 1px solid #444; color: #eee;">
+                <option value="">Select Technology</option>
+                <option value="React Native" ${this.editingIdea?.techStack === 'React Native' ? 'selected' : ''}>
+                  React Native
+                </option>
+                <option value="Flutter" ${this.editingIdea?.techStack === 'Flutter' ? 'selected' : ''}>
+                  Flutter
+                </option>
+                <option value="Web" ${this.editingIdea?.techStack === 'Web' ? 'selected' : ''}>
+                  Web (React/Vue/Angular)
+                </option>
+                <option value="iOS Native" ${this.editingIdea?.techStack === 'iOS Native' ? 'selected' : ''}>
+                  iOS Native (Swift)
+                </option>
+                <option value="Android Native" ${this.editingIdea?.techStack === 'Android Native' ? 'selected' : ''}>
+                  Android Native (Kotlin/Java)
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="risk-rating">Risk/Complexity Rating *</label>
+              <select id="risk-rating" name="riskRating" required style="background: #2a2a2a; border: 1px solid #444; color: #eee;">
+                <option value="">Select Rating</option>
+                <option value="Low" ${this.editingIdea?.riskRating === 'Low' ? 'selected' : ''}>
+                  Low - Straightforward implementation
+                </option>
+                <option value="Medium" ${this.editingIdea?.riskRating === 'Medium' ? 'selected' : ''}>
+                  Medium - Some technical challenges
+                </option>
+                <option value="High" ${this.editingIdea?.riskRating === 'High' ? 'selected' : ''}>
+                  High - Complex or risky implementation
+                </option>
+              </select>
+            </div>
+            
+            <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #444;">
+              <button type="button" class="btn btn-secondary" id="cancel-idea">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                ${this.editingIdea ? 'Update Idea' : 'Save Idea'}
+              </button>
+            </div>
+          </form>
         </div>
-        
-        <div class="form-group">
-          <label for="problem-solved">Problem Solved *</label>
-          <textarea 
-            id="problem-solved" 
-            name="problemSolved"
-            required 
-            placeholder="What value proposition does this idea offer? Describe the problem you're solving..."
-            rows="3"
-          >${this.escapeHtml(this.editingIdea?.problemSolved || '')}</textarea>
-        </div>
-        
-        <div class="form-group">
-          <label for="target-audience">Target Audience *</label>
-          <input 
-            type="text" 
-            id="target-audience" 
-            name="targetAudience"
-            value="${this.escapeHtml(this.editingIdea?.targetAudience || '')}"
-            required 
-            placeholder="Who will use this app? (e.g., busy professionals, students, parents)"
-          >
-        </div>
-        
-        <div class="form-group">
-          <label for="initial-features">Initial Feature Set (MVP) *</label>
-          <textarea 
-            id="initial-features" 
-            name="initialFeatures"
-            required 
-            placeholder="Define the scope for the minimum viable product. What are the core features needed for launch?"
-            rows="4"
-          >${this.escapeHtml(this.editingIdea?.initialFeatures || '')}</textarea>
-        </div>
-        
-        <div class="form-group">
-          <label for="tech-stack">Technology Stack (Proposed) *</label>
-          <select id="tech-stack" name="techStack" required>
-            <option value="">Select Technology</option>
-            <option value="React Native" ${this.editingIdea?.techStack === 'React Native' ? 'selected' : ''}>
-              React Native
-            </option>
-            <option value="Flutter" ${this.editingIdea?.techStack === 'Flutter' ? 'selected' : ''}>
-              Flutter
-            </option>
-            <option value="Web" ${this.editingIdea?.techStack === 'Web' ? 'selected' : ''}>
-              Web (React/Vue/Angular)
-            </option>
-            <option value="iOS Native" ${this.editingIdea?.techStack === 'iOS Native' ? 'selected' : ''}>
-              iOS Native (Swift)
-            </option>
-            <option value="Android Native" ${this.editingIdea?.techStack === 'Android Native' ? 'selected' : ''}>
-              Android Native (Kotlin/Java)
-            </option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="risk-rating">Risk/Complexity Rating *</label>
-          <select id="risk-rating" name="riskRating" required>
-            <option value="">Select Rating</option>
-            <option value="Low" ${this.editingIdea?.riskRating === 'Low' ? 'selected' : ''}>
-              Low - Straightforward implementation
-            </option>
-            <option value="Medium" ${this.editingIdea?.riskRating === 'Medium' ? 'selected' : ''}>
-              Medium - Some technical challenges
-            </option>
-            <option value="High" ${this.editingIdea?.riskRating === 'High' ? 'selected' : ''}>
-              High - Complex or risky implementation
-            </option>
-          </select>
-        </div>
-        
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" id="cancel-idea">
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary">
-            ${this.editingIdea ? 'Update Idea' : 'Save Idea'}
-          </button>
-        </div>
-      </form>
+      </div>
     `;
     
     this.element = container;
@@ -142,6 +154,32 @@ export class IdeaForm {
     cancelBtn.addEventListener('click', () => {
       this.handleCancel();
     });
+
+    // Close button
+    const closeBtn = this.element.querySelector('#close-idea-form');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        this.handleCancel();
+      });
+    }
+
+    // Click outside to close
+    const overlay = this.element.querySelector('.dialog-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          this.handleCancel();
+        }
+      });
+    }
+
+    // Esc key to close
+    this.handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        this.handleCancel();
+      }
+    };
+    document.addEventListener('keydown', this.handleEsc);
     
     // Auto-save functionality
     const inputs = this.element.querySelectorAll('input, textarea, select');
@@ -436,8 +474,15 @@ export class IdeaForm {
    * Destroy the form
    */
   destroy() {
+    // Remove global event listeners
+    if (this.handleEsc) {
+      document.removeEventListener('keydown', this.handleEsc);
+      this.handleEsc = null;
+    }
+
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
+    this.element = null;
   }
 }

@@ -1,0 +1,10 @@
+{
+  "id": "naval-letter-formatter",
+  "description": "",
+  "notes": "Naval Letter Format Generator - SECNAV M-5216.5 Compliant by Semper Admin",
+  "platform": "Web",
+  "lastReviewDate": null,
+  "nextReviewDate": "2026-03-30",
+  "reviewCycle": 90,
+  "updatedAt": "2025-12-31T02:28:09.672Z"
+}

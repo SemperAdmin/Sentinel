@@ -36,7 +36,7 @@ export const HEALTH_COLORS = {
 
 // Task/Todo configuration
 export const TODO_PRIORITY_LEVELS = ['P0', 'P1', 'P2'];
-export const TODO_STATUS_VALUES = ['Draft', 'Submitted', 'Rejected', 'Complete'];
+export const TODO_STATUS_VALUES = ['Pending', 'Submitted', 'Rejected', 'Complete'];
 export const TODO_EFFORT_ESTIMATES = ['Small', 'Medium', 'Large'];
 
 // Improvement budget (percentage of time allocated to improvements)

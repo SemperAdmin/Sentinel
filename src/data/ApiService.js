@@ -4,6 +4,8 @@
  */
 
 import { ok, err } from '../utils/result.js';
+import { normalizeAppId } from '../utils/helpers.js';
+import offlineQueue from '../utils/offlineQueue.js';
 import {
   GITHUB_API_RETRY_ATTEMPTS,
   GITHUB_API_RETRY_BASE_DELAY,
@@ -28,6 +30,56 @@ class ApiService {
     this.requestTimeout = GITHUB_API_REQUEST_TIMEOUT;
     this.managerRepo = window.MANAGER_REPO_FULL_NAME || DEFAULT_MANAGER_REPO;
     this.tasksCache = new Map();
+    // SHA cache for optimistic locking - stores {sha, fetchedAt} for each file
+    this.shaCache = new Map();
+    // Maximum number of conflict retries
+    this.maxConflictRetries = 3;
+  }
+
+  /**
+   * Store SHA in cache when fetching a file
+   */
+  cacheSha(fileKey, sha) {
+    this.shaCache.set(fileKey, {
+      sha,
+      fetchedAt: Date.now()
+    });
+  }
+
+  /**
+   * Get cached SHA for a file
+   */
+  getCachedSha(fileKey) {
+    const cached = this.shaCache.get(fileKey);
+    return cached ? cached.sha : null;
+  }
+
+  /**
+   * Clear cached SHA (e.g., after successful write)
+   */
+  clearCachedSha(fileKey) {
+    this.shaCache.delete(fileKey);
+  }
+
+  /**
+   * Check if a response indicates a SHA conflict (409 Conflict)
+   */
+  isConflictError(response) {
+    return response && response.status === 409;
+  }
+
+  /**
+   * Check if we're currently online
+   */
+  isOnline() {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  }
+
+  /**
+   * Queue an operation for later retry when offline
+   */
+  queueForRetry(type, appId, data) {
+    offlineQueue.enqueue({ type, appId, data });
   }
 
   /**
@@ -189,6 +241,7 @@ class ApiService {
    * Trigger repository_dispatch to save tasks via GitHub Actions
    */
   async triggerSaveTasks(appId, tasks) {
+    const normalizedId = normalizeAppId(appId);
     if (!this.managerRepo) {
       console.warn('Manager repository not configured (window.MANAGER_REPO_FULL_NAME)');
       return { ok: false, error: 'Manager repo not configured' };
@@ -197,47 +250,40 @@ class ApiService {
       'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json'
     };
-    // Merge remote tasks to avoid overwriting existing entries
-    let merged = Array.isArray(tasks) ? tasks.slice() : [];
-    try {
-      const remoteResult = await this.fetchRepoTasks(appId);
-      const remote = (remoteResult && remoteResult.success === true && Array.isArray(remoteResult.data)) ? remoteResult.data : [];
-      const keyOf = (t) => (t && t.id ? String(t.id) : `${t?.title || ''}|${t?.dueDate || ''}`);
-      const keys = new Set(merged.map(keyOf));
-      const toAdd = remote.filter(rt => !keys.has(keyOf(rt)));
-      merged = [...merged, ...toAdd];
-      merged.sort((a,b) => String(a.id||'').localeCompare(String(b.id||'')));
-    } catch (e) {
-      console.warn('Could not merge remote tasks, proceeding with local tasks only:', e);
-    }
+    // Use local tasks as source of truth - don't merge with remote
+    // This ensures deletions are properly saved
+    const tasksToSave = Array.isArray(tasks) ? tasks.slice() : [];
+    tasksToSave.sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+
     const body = {
       event_type: 'save_tasks',
       client_payload: {
-        app_id: appId,
-        tasks_json: JSON.stringify(merged)
+        app_id: normalizedId,
+        tasks_json: JSON.stringify(tasksToSave)
       }
     };
     const url = `${this.baseUrl}/repos/${this.managerRepo}/dispatches`;
     try {
       const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), mode: 'cors' });
-      if (res && res.ok) return res;
+      if (res && res.ok) return { ok: true };
       console.warn('Dispatch failed, falling back to direct contents API');
     } catch (err) {
       console.warn('Dispatch error, falling back to direct contents API:', err);
     }
-    const fallback = await this.saveTasksViaContents(appId, merged);
-    return { ok: fallback };
+    // saveTasksViaContents returns { ok: boolean, conflict?: boolean, message?: string }
+    return await this.saveTasksViaContents(normalizedId, tasksToSave);
   }
 
-  async fetchRepoTasks(appId) {
+  async fetchRepoTasks(appId, bypassCache = false) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      if (!this.managerRepo || !appId) {
+      if (!this.managerRepo || !normalizedId) {
         return err('Manager repo or app ID not configured');
       }
-      if (this.tasksCache.has(appId)) {
-        return ok(this.tasksCache.get(appId));
+      if (!bypassCache && this.tasksCache.has(normalizedId)) {
+        return ok(this.tasksCache.get(normalizedId));
       }
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${normalizedId}/tasks.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) {
         return err('Failed to fetch tasks', res?.status);
@@ -246,7 +292,11 @@ class ApiService {
       const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
       const parsed = JSON.parse(content);
       const tasks = Array.isArray(parsed) ? parsed : [];
-      this.tasksCache.set(appId, tasks);
+      this.tasksCache.set(normalizedId, tasks);
+      // Cache SHA for optimistic locking
+      if (data.sha) {
+        this.cacheSha(`tasks:${normalizedId}`, data.sha);
+      }
       return ok(tasks);
     } catch (error) {
       return err(error);
@@ -282,9 +332,10 @@ class ApiService {
     }
   }
 
-  async fetchAppReviews(appId) {
+  async fetchAppReviews(appId, bypassCache = false) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${normalizedId}/reviews.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) {
         return err('Failed to fetch reviews', res?.status);
@@ -293,6 +344,10 @@ class ApiService {
       const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
       const parsed = JSON.parse(content);
       const reviews = Array.isArray(parsed) ? parsed : [];
+      // Cache SHA for optimistic locking
+      if (data.sha) {
+        this.cacheSha(`reviews:${normalizedId}`, data.sha);
+      }
       return ok(reviews);
     } catch (error) {
       return err(error);
@@ -300,8 +355,9 @@ class ApiService {
   }
 
   async getReviewsSha(appId) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${normalizedId}/reviews.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) return null;
       const data = await res.json();
@@ -311,32 +367,131 @@ class ApiService {
     }
   }
 
-  async saveAppReviews(appId, reviews) {
+  async saveAppReviews(appId, reviews, retryCount = 0, skipQueue = false) {
+    const normalizedId = normalizeAppId(appId);
+    const fileKey = `reviews:${normalizedId}`;
+    const reviewsArr = Array.isArray(reviews) ? reviews : [];
+
+    // Check if offline - queue for later
+    if (!this.isOnline() && !skipQueue) {
+      console.log(`Offline: queuing reviews save for ${normalizedId}`);
+      this.queueForRetry('reviews', normalizedId, reviewsArr);
+      return { ok: false, queued: true, message: 'Changes saved locally. Will sync when online.' };
+    }
+
     try {
-      const sha = await this.getReviewsSha(appId);
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${appId}/reviews.json`;
+      // Use cached SHA for optimistic locking, fallback to fresh fetch
+      let sha = this.getCachedSha(fileKey);
+      if (!sha) {
+        sha = await this.getReviewsSha(normalizedId);
+      }
+
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/reviews/${normalizedId}/reviews.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
       };
-      const pretty = JSON.stringify(Array.isArray(reviews) ? reviews : [], null, 2) + "\n";
+      const pretty = JSON.stringify(reviewsArr, null, 2) + "\n";
       const content = this.encodeBase64(pretty);
       const body = {
-        message: `Update reviews for ${appId}`,
+        message: `Update reviews for ${normalizedId}`,
         content,
         branch: 'main',
         sha: sha || undefined
       };
       const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
-      return !!(res && res.ok);
+
+      // Handle 409 Conflict - SHA mismatch
+      if (this.isConflictError(res)) {
+        console.warn(`SHA conflict detected for ${fileKey}, attempt ${retryCount + 1}`);
+
+        if (retryCount >= this.maxConflictRetries) {
+          console.error(`Max conflict retries (${this.maxConflictRetries}) reached for ${fileKey}`);
+          return { ok: false, conflict: true, message: 'File was modified by another user. Please refresh and try again.' };
+        }
+
+        // Clear stale SHA and refetch
+        this.clearCachedSha(fileKey);
+
+        // Fetch latest version
+        const remoteResult = await this.fetchAppReviews(normalizedId, true);
+        if (!remoteResult.success) {
+          return { ok: false, conflict: true, message: 'Failed to fetch latest version for merge.' };
+        }
+
+        // Merge reviews by ID
+        const remote = remoteResult.data || [];
+        const merged = this.mergeReviews(reviewsArr, remote);
+
+        // Retry with merged data
+        await this.delay(500 * (retryCount + 1));
+        return this.saveAppReviews(normalizedId, merged, retryCount + 1, skipQueue);
+      }
+
+      if (res && res.ok) {
+        // Update SHA cache with new SHA from response
+        try {
+          const responseData = await res.json();
+          if (responseData.content && responseData.content.sha) {
+            this.cacheSha(fileKey, responseData.content.sha);
+          }
+        } catch (_) {
+          this.clearCachedSha(fileKey);
+        }
+        return { ok: true };
+      }
+
+      // Network error or other failure - queue for retry
+      if (!skipQueue) {
+        console.log(`Save failed, queuing reviews for ${normalizedId}`);
+        this.queueForRetry('reviews', normalizedId, reviewsArr);
+        return { ok: false, queued: true, message: 'Save failed. Changes queued for retry.' };
+      }
+
+      return { ok: false };
     } catch (err) {
-      return false;
+      console.warn('Save reviews failed:', err);
+      // Queue on network errors
+      if (!skipQueue && (err.name === 'TypeError' || err.message.includes('network') || err.message.includes('fetch'))) {
+        this.queueForRetry('reviews', normalizedId, reviewsArr);
+        return { ok: false, queued: true, message: 'Network error. Changes queued for retry.' };
+      }
+      return { ok: false, error: err.message };
     }
   }
 
+  /**
+   * Merge local reviews with remote reviews, preserving local changes
+   */
+  mergeReviews(localReviews, remoteReviews) {
+    const localById = new Map();
+    const localArr = Array.isArray(localReviews) ? localReviews : [];
+    const remoteArr = Array.isArray(remoteReviews) ? remoteReviews : [];
+
+    for (const review of localArr) {
+      if (review && review.id) {
+        localById.set(String(review.id), review);
+      }
+    }
+
+    for (const remoteReview of remoteArr) {
+      if (remoteReview && remoteReview.id) {
+        const id = String(remoteReview.id);
+        if (!localById.has(id)) {
+          localById.set(id, remoteReview);
+        }
+      }
+    }
+
+    return Array.from(localById.values()).sort((a, b) =>
+      String(a.startedAt || '').localeCompare(String(b.startedAt || ''))
+    );
+  }
+
   async getFileSha(appId) {
+    const normalizedId = normalizeAppId(appId);
     try {
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json?ref=main`;
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${normalizedId}/tasks.json?ref=main`;
       const res = await this.makeApiRequest(url);
       if (!res || !res.ok) return null;
       const data = await res.json();
@@ -346,55 +501,322 @@ class ApiService {
     }
   }
 
-  async saveTasksViaContents(appId, tasks) {
+  async saveTasksViaContents(appId, tasks, retryCount = 0, skipQueue = false) {
+    const normalizedId = normalizeAppId(appId);
+    const fileKey = `tasks:${normalizedId}`;
+    const arr = Array.isArray(tasks) ? tasks.slice() : [];
+
+    // Check if offline - queue for later
+    if (!this.isOnline() && !skipQueue) {
+      console.log(`Offline: queuing tasks save for ${normalizedId}`);
+      this.queueForRetry('tasks', normalizedId, arr);
+      return { ok: false, queued: true, message: 'Changes saved locally. Will sync when online.' };
+    }
+
     try {
-      const sha = await this.getFileSha(appId);
-      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${appId}/tasks.json`;
+      // Use cached SHA for optimistic locking, fallback to fresh fetch
+      let sha = this.getCachedSha(fileKey);
+      if (!sha) {
+        sha = await this.getFileSha(normalizedId);
+      }
+
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/tasks/${normalizedId}/tasks.json`;
       const headers = {
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
       };
-      const arr = Array.isArray(tasks) ? tasks.slice() : [];
       arr.sort((a,b) => String(a.id||'').localeCompare(String(b.id||'')));
       const pretty = JSON.stringify(arr, null, 2) + "\n";
       const content = this.encodeBase64(pretty);
       const body = {
-        message: `Save tasks for ${appId} (direct contents API)`,
+        message: `Save tasks for ${normalizedId} (direct contents API)`,
         content,
         branch: 'main',
         sha: sha || undefined
       };
       const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
-      return !!(res && res.ok);
+
+      // Handle 409 Conflict - SHA mismatch (someone else modified the file)
+      if (this.isConflictError(res)) {
+        console.warn(`SHA conflict detected for ${fileKey}, attempt ${retryCount + 1}`);
+
+        if (retryCount >= this.maxConflictRetries) {
+          console.error(`Max conflict retries (${this.maxConflictRetries}) reached for ${fileKey}`);
+          return { ok: false, conflict: true, message: 'File was modified by another user. Please refresh and try again.' };
+        }
+
+        // Clear stale SHA and refetch with merge
+        this.clearCachedSha(fileKey);
+        this.tasksCache.delete(normalizedId);
+
+        // Fetch latest version
+        const remoteResult = await this.fetchRepoTasks(normalizedId, true);
+        if (!remoteResult.success) {
+          return { ok: false, conflict: true, message: 'Failed to fetch latest version for merge.' };
+        }
+
+        // Merge: keep local changes, add any remote-only items
+        const remote = remoteResult.data || [];
+        const merged = this.mergeTasks(arr, remote);
+
+        // Retry with merged data and new SHA
+        await this.delay(500 * (retryCount + 1)); // Backoff
+        return this.saveTasksViaContents(normalizedId, merged, retryCount + 1, skipQueue);
+      }
+
+      if (res && res.ok) {
+        // Update SHA cache with new SHA from response
+        try {
+          const responseData = await res.json();
+          if (responseData.content && responseData.content.sha) {
+            this.cacheSha(fileKey, responseData.content.sha);
+          }
+        } catch (_) {
+          // Clear cache if we can't get new SHA
+          this.clearCachedSha(fileKey);
+        }
+        this.tasksCache.delete(normalizedId); // Invalidate task cache
+        return { ok: true };
+      }
+
+      // Network error or other failure - queue for retry if not already queued
+      if (!skipQueue) {
+        console.log(`Save failed, queuing tasks for ${normalizedId}`);
+        this.queueForRetry('tasks', normalizedId, arr);
+        return { ok: false, queued: true, message: 'Save failed. Changes queued for retry.' };
+      }
+
+      return { ok: false };
     } catch (err) {
       console.warn('Direct contents API save failed:', err);
-      return false;
+      // Queue on network errors
+      if (!skipQueue && (err.name === 'TypeError' || err.message.includes('network') || err.message.includes('fetch'))) {
+        this.queueForRetry('tasks', normalizedId, arr);
+        return { ok: false, queued: true, message: 'Network error. Changes queued for retry.' };
+      }
+      return { ok: false, error: err.message };
     }
   }
 
+  /**
+   * Merge local tasks with remote tasks, preserving local changes
+   * and adding any remote-only items
+   */
+  mergeTasks(localTasks, remoteTasks) {
+    const localById = new Map();
+    const localArr = Array.isArray(localTasks) ? localTasks : [];
+    const remoteArr = Array.isArray(remoteTasks) ? remoteTasks : [];
+
+    // Index local tasks by ID
+    for (const task of localArr) {
+      if (task && task.id) {
+        localById.set(String(task.id), task);
+      }
+    }
+
+    // Add remote-only tasks (tasks that exist remotely but not locally)
+    for (const remoteTask of remoteArr) {
+      if (remoteTask && remoteTask.id) {
+        const id = String(remoteTask.id);
+        if (!localById.has(id)) {
+          localById.set(id, remoteTask);
+        }
+        // Local version takes precedence for existing tasks
+      }
+    }
+
+    // Return merged array sorted by ID
+    return Array.from(localById.values()).sort((a, b) =>
+      String(a.id || '').localeCompare(String(b.id || ''))
+    );
+  }
+
+  // ==================== APP METADATA SYNC ====================
+
+  /**
+   * Get SHA for app metadata file
+   * @param {string} appId - App identifier
+   * @returns {Promise<string|null>} - SHA or null if not found
+   */
+  async getAppMetadataSha(appId) {
+    const normalizedId = normalizeAppId(appId);
+    try {
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/apps/${normalizedId}/metadata.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) return null;
+      const data = await res.json();
+      return data.sha || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch app metadata from backend
+   * @param {string} appId - App identifier
+   * @returns {Promise<Result>} - Result with metadata object or error
+   */
+  async fetchAppMetadata(appId) {
+    const normalizedId = normalizeAppId(appId);
+    try {
+      if (!this.managerRepo || !normalizedId) {
+        return err('Manager repo or app ID not configured');
+      }
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/apps/${normalizedId}/metadata.json?ref=main`;
+      const res = await this.makeApiRequest(url);
+      if (!res || !res.ok) {
+        // 404 is expected for apps without metadata file yet
+        if (res?.status === 404) {
+          return ok(null);
+        }
+        return err('Failed to fetch app metadata', res?.status);
+      }
+      const data = await res.json();
+      const content = typeof atob !== 'undefined' ? atob(data.content) : Buffer.from(data.content, 'base64').toString('utf-8');
+      const parsed = JSON.parse(content);
+      // Cache SHA for optimistic locking
+      if (data.sha) {
+        this.cacheSha(`metadata:${normalizedId}`, data.sha);
+      }
+      return ok(parsed);
+    } catch (error) {
+      return err(error);
+    }
+  }
+
+  /**
+   * Save app metadata to backend
+   * @param {string} appId - App identifier
+   * @param {Object} metadata - Metadata object to save
+   * @param {number} retryCount - Current retry count for conflict resolution
+   * @param {boolean} skipQueue - Skip offline queue (used during queue processing)
+   * @returns {Promise<Object>} - Result object { ok, conflict?, queued?, message? }
+   */
+  async saveAppMetadata(appId, metadata, retryCount = 0, skipQueue = false) {
+    const normalizedId = normalizeAppId(appId);
+    const fileKey = `metadata:${normalizedId}`;
+
+    // Extract only the fields we want to persist
+    const metadataToSave = {
+      id: normalizedId,
+      description: metadata.description || '',
+      notes: metadata.notes || '',
+      platform: metadata.platform || 'Web',
+      lastReviewDate: metadata.lastReviewDate || null,
+      nextReviewDate: metadata.nextReviewDate || null,
+      reviewCycle: metadata.reviewCycle || 90,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Check if offline - queue for later
+    if (!this.isOnline() && !skipQueue) {
+      console.log(`Offline: queuing metadata save for ${normalizedId}`);
+      this.queueForRetry('metadata', normalizedId, metadataToSave);
+      return { ok: false, queued: true, message: 'Changes saved locally. Will sync when online.' };
+    }
+
+    try {
+      // Use cached SHA for optimistic locking, fallback to fresh fetch
+      let sha = this.getCachedSha(fileKey);
+      if (!sha) {
+        sha = await this.getAppMetadataSha(normalizedId);
+      }
+
+      const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/apps/${normalizedId}/metadata.json`;
+      const headers = {
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      };
+      const pretty = JSON.stringify(metadataToSave, null, 2) + "\n";
+      const content = this.encodeBase64(pretty);
+      const body = {
+        message: `Update metadata for ${normalizedId}`,
+        content,
+        branch: 'main',
+        sha: sha || undefined
+      };
+      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
+
+      // Handle 409 Conflict - SHA mismatch
+      if (this.isConflictError(res)) {
+        console.warn(`SHA conflict detected for ${fileKey}, attempt ${retryCount + 1}`);
+
+        if (retryCount >= this.maxConflictRetries) {
+          console.error(`Max conflict retries (${this.maxConflictRetries}) reached for ${fileKey}`);
+          return { ok: false, conflict: true, message: 'File was modified. Please refresh and try again.' };
+        }
+
+        // Clear stale SHA and refetch
+        this.clearCachedSha(fileKey);
+
+        // Fetch latest version and merge (local takes precedence)
+        const remoteResult = await this.fetchAppMetadata(normalizedId);
+        if (!remoteResult.success) {
+          return { ok: false, conflict: true, message: 'Failed to fetch latest version for merge.' };
+        }
+
+        // Merge: local values take precedence, remote fills gaps
+        const remote = remoteResult.data || {};
+        const merged = { ...remote, ...metadataToSave };
+
+        // Retry with merged data
+        await this.delay(500 * (retryCount + 1));
+        return this.saveAppMetadata(normalizedId, merged, retryCount + 1, skipQueue);
+      }
+
+      if (res && res.ok) {
+        // Update SHA cache with new SHA from response
+        try {
+          const responseData = await res.json();
+          if (responseData.content && responseData.content.sha) {
+            this.cacheSha(fileKey, responseData.content.sha);
+          }
+        } catch (_) {
+          this.clearCachedSha(fileKey);
+        }
+        return { ok: true };
+      }
+
+      // Network error or other failure - queue for retry
+      if (!skipQueue) {
+        console.log(`Save failed, queuing metadata for ${normalizedId}`);
+        this.queueForRetry('metadata', normalizedId, metadataToSave);
+        return { ok: false, queued: true, message: 'Save failed. Changes queued for retry.' };
+      }
+
+      return { ok: false };
+    } catch (err) {
+      console.warn('Save metadata failed:', err);
+      // Queue on network errors
+      if (!skipQueue && (err.name === 'TypeError' || err.message.includes('network') || err.message.includes('fetch'))) {
+        this.queueForRetry('metadata', normalizedId, metadataToSave);
+        return { ok: false, queued: true, message: 'Network error. Changes queued for retry.' };
+      }
+      return { ok: false, error: err.message };
+    }
+  }
+
+  // ==================== YAML UTILITIES ====================
+
+  /**
+   * Convert object to YAML string (simple flat objects only)
+   * @param {Object} obj - Object to serialize
+   * @returns {string} - YAML string
+   */
   toYaml(obj) {
     const lines = [];
-    const write = (key, value, indent = '') => {
-      if (value === null || value === undefined) return;
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        lines.push(`${indent}${key}:`);
-        Object.keys(value).forEach(k => write(k, value[k], indent + '  '));
-      } else if (Array.isArray(value)) {
-        lines.push(`${indent}${key}:`);
-        value.forEach(v => {
-          if (typeof v === 'object') {
-            lines.push(`${indent}  -`);
-            Object.keys(v).forEach(k => write(k, v[k], indent + '    '));
-          } else {
-            lines.push(`${indent}  - ${String(v)}`);
-          }
-        });
-      } else {
-        const s = String(value).replace(/\r?\n/g, ' ');
-        lines.push(`${indent}${key}: ${s}`);
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null || value === undefined) continue;
+      // Escape strings that might cause YAML issues
+      let val = value;
+      if (typeof val === 'string') {
+        // Replace newlines with spaces for single-line YAML
+        val = val.replace(/\r?\n/g, ' ');
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val);
       }
-    };
-    Object.keys(obj).forEach(k => write(k, obj[k]));
+      lines.push(`${key}: ${val}`);
+    }
     return lines.join('\n') + '\n';
   }
 
@@ -410,7 +832,14 @@ class ApiService {
     }
   }
 
-  async saveIdeaYaml(idea) {
+  async saveIdeaYaml(idea, skipQueue = false) {
+    // Check if offline - queue for later
+    if (!this.isOnline() && !skipQueue) {
+      console.log(`Offline: queuing idea save for ${idea.id}`);
+      this.queueForRetry('ideas', idea.id, idea);
+      return { ok: false, queued: true, message: 'Changes saved locally. Will sync when online.' };
+    }
+
     try {
       const sha = await this.getIdeaSha(idea.id);
       const url = `${this.baseUrl}/repos/${this.managerRepo}/contents/data/ideas/${idea.id}.yml`;
@@ -427,9 +856,14 @@ class ApiService {
         riskRating: idea.riskRating || '',
         dateCreated: idea.dateCreated || new Date().toISOString(),
         initialFeatures: idea.initialFeatures || '',
+        submittedBy: idea.submittedBy || '',
+        contactEmail: idea.contactEmail || '',
+        status: idea.status || null,
+        implementedDate: idea.implementedDate || idea.createdDate || null,
+        comments: JSON.stringify(idea.comments || []),
       };
-      const yaml = this.toYaml(payload);
-      const content = this.encodeBase64(yaml);
+      const yamlContent = this.toYaml(payload);
+      const content = this.encodeBase64(yamlContent);
       const body = {
         message: `Save idea ${idea.id} as YAML`,
         content,
@@ -437,10 +871,27 @@ class ApiService {
         sha: sha || undefined
       };
       const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body), mode: 'cors' });
-      return !!(res && res.ok);
+
+      if (res && res.ok) {
+        return { ok: true };
+      }
+
+      // Network error or other failure - queue for retry
+      if (!skipQueue) {
+        console.log(`Save failed, queuing idea for ${idea.id}`);
+        this.queueForRetry('ideas', idea.id, idea);
+        return { ok: false, queued: true, message: 'Save failed. Changes queued for retry.' };
+      }
+
+      return { ok: false };
     } catch (err) {
       console.warn('Saving idea YAML failed:', err);
-      return false;
+      // Queue on network errors
+      if (!skipQueue && (err.name === 'TypeError' || err.message.includes('network') || err.message.includes('fetch'))) {
+        this.queueForRetry('ideas', idea.id, idea);
+        return { ok: false, queued: true, message: 'Network error. Changes queued for retry.' };
+      }
+      return { ok: false, error: err.message };
     }
   }
 
@@ -486,9 +937,9 @@ class ApiService {
         archived: repoData.archived,
         updatedAt: repoData.updated_at,
         url: repoData.html_url,
-        recentViews: views.status === 'fulfilled' ? views.value.count || 0 : 0,
-        recentClones: clones.status === 'fulfilled' ? clones.value.count || 0 : 0,
-        uniqueViews: views.status === 'fulfilled' ? views.value.uniques || 0 : 0,
+        recentViews: views.status === 'fulfilled' && views.value ? views.value.count || 0 : 0,
+        recentClones: clones.status === 'fulfilled' && clones.value ? clones.value.count || 0 : 0,
+        uniqueViews: views.status === 'fulfilled' && views.value ? views.value.uniques || 0 : 0,
         uniqueClones: clones.status === 'fulfilled' ? clones.value.uniques || 0 : 0,
         isFallback: false
       };
@@ -560,19 +1011,68 @@ class ApiService {
     }
   }
 
+  /**
+   * Parse simple YAML string to object (inline implementation)
+   * Handles flat key-value YAML without external dependencies
+   * @param {string} text - YAML string to parse
+   * @returns {Object} - Parsed object
+   */
   parseSimpleYaml(text) {
-    const obj = {};
-    const lines = String(text || '').split(/\r?\n/);
-    for (const raw of lines) {
-      const line = raw.trim();
-      if (!line || line.startsWith('#')) continue;
-      const idx = line.indexOf(':');
-      if (idx === -1) continue;
-      const key = line.slice(0, idx).trim();
-      const val = line.slice(idx + 1).trim();
-      obj[key] = val;
+    try {
+      const obj = {};
+      const lines = String(text || '').split(/\r?\n/);
+
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) continue;
+
+        const idx = line.indexOf(':');
+        if (idx === -1) continue;
+
+        const key = line.slice(0, idx).trim();
+        let val = line.slice(idx + 1).trim();
+
+        // Handle quoted strings
+        if ((val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+
+        // Handle booleans
+        if (val === 'true') val = true;
+        else if (val === 'false') val = false;
+        // Handle null
+        else if (val === 'null' || val === '~' || val === '') val = null;
+        // Handle numbers
+        else if (/^-?\d+$/.test(val)) val = parseInt(val, 10);
+        else if (/^-?\d+\.\d+$/.test(val)) val = parseFloat(val);
+        // Handle JSON arrays/objects embedded in YAML
+        else if ((val.startsWith('[') && val.endsWith(']')) ||
+                 (val.startsWith('{') && val.endsWith('}'))) {
+          try {
+            val = JSON.parse(val);
+          } catch (_) {
+            // Keep as string if JSON parse fails
+          }
+        }
+
+        obj[key] = val;
+      }
+
+      // Handle special case: comments field that's stored as JSON string
+      if (obj.comments && typeof obj.comments === 'string') {
+        try {
+          obj.comments = JSON.parse(obj.comments);
+        } catch (_) {
+          obj.comments = [];
+        }
+      }
+
+      return obj;
+    } catch (error) {
+      console.error('Error parsing YAML:', error);
+      return {};
     }
-    return obj;
   }
 
   async listIdeaFiles() {

@@ -1,5 +1,11 @@
 import http from 'node:http'
 import { URL } from 'node:url'
+import path from 'node:path'
+import fs from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const distPath = path.join(__dirname, '..', 'dist')
 
 // Constants
 const DEFAULT_API_PORT = 4000
@@ -200,8 +206,52 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { 'Content-Type': 'application/json' }, Buffer.from(JSON.stringify(info)))
   }
 
+  // Serve static files for non-API routes
   if (!url.pathname.startsWith('/api/')) {
-    return send(res, 404, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'not_found' }))
+    try {
+      let filePath = path.join(distPath, url.pathname === '/' ? 'index.html' : url.pathname)
+
+      // Try to read the file
+      const stat = await fs.stat(filePath).catch(() => null)
+
+      // If not found or is directory, serve index.html (SPA fallback)
+      if (!stat || stat.isDirectory()) {
+        filePath = path.join(distPath, 'index.html')
+      }
+
+      const content = await fs.readFile(filePath)
+      const ext = path.extname(filePath)
+      const contentTypes = {
+        '.html': 'text/html; charset=utf-8',
+        '.js': 'application/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.json': 'application/json',
+        '.ico': 'image/x-icon',
+        '.svg': 'image/svg+xml',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2'
+      }
+
+      return send(res, 200, {
+        'Content-Type': contentTypes[ext] || 'application/octet-stream',
+        'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000'
+      }, content)
+    } catch (err) {
+      // If file read fails, serve index.html for SPA routing
+      try {
+        const indexPath = path.join(distPath, 'index.html')
+        const content = await fs.readFile(indexPath)
+        return send(res, 200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache'
+        }, content)
+      } catch {
+        return send(res, 404, { 'Content-Type': 'text/plain' }, 'Not Found')
+      }
+    }
   }
 
   // Health endpoint
@@ -320,6 +370,22 @@ const server = http.createServer(async (req, res) => {
           etag,
           expiresAt: Date.now() + ttlSeconds * 1000
         })
+      }
+    } else if (['PUT', 'POST', 'DELETE', 'PATCH'].includes(method)) {
+      // Invalidate cache for this path after mutations
+      // This ensures subsequent GETs fetch fresh data
+      const getKey = cacheKey('GET', target.toString())
+      cache.delete(getKey)
+      // Also invalidate without query params (for contents API)
+      const baseUrl = target.origin + target.pathname
+      cache.delete(cacheKey('GET', baseUrl))
+
+      // Invalidate parent directory cache for file operations
+      // e.g., creating data/ideas/new-idea.yml should invalidate data/ideas listing
+      const parentPath = baseUrl.replace(/\/[^\/]+$/, '')
+      if (parentPath !== baseUrl) {
+        cache.delete(cacheKey('GET', parentPath))
+        cache.delete(cacheKey('GET', parentPath + '?ref=main'))
       }
     }
 

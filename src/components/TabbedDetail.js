@@ -2,9 +2,12 @@
  * TabbedDetail Component - Tabbed interface for app detail view
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify, getSourceIcon } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, SOURCE_OPTIONS, slugify, getSourceIcon, getPendingTodosCount } from '../utils/helpers.js';
 import appState from '../state/AppState.js';
 import { unwrapOr } from '../utils/result.js';
+import { toastManager } from '../utils/uiComponents.js';
+import { showAddTodoDialog, showEditTodoDialog } from './modals/TodoDialog.js';
+import { showImprovementModal } from './modals/ImprovementModal.js';
 
 export class TabbedDetail {
   constructor(app, onNotesSave, onTabChange, onReviewComplete) {
@@ -17,9 +20,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Clear completed todos
+   * Clear completed todos (admin only)
    */
   clearCompletedTodos() {
+    // Security check: Only admins can clear todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     if (!this.app.todos || this.app.todos.length === 0) return;
     
     const activeTodos = this.app.todos.filter(todo => !todo.completed);
@@ -36,25 +44,22 @@ export class TabbedDetail {
       if (this.onNotesSave) {
         this.onNotesSave(this.app);
       }
-      (async () => {
-        try {
-          const apiModule = await import('../data/ApiService.js');
-          const api = apiModule.default;
-          const appId = this.app.id;
-          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-          await api.triggerSaveTasks(appId, todos);
-        } catch (_) {}
-      })();
-      
+      this.syncTodosToApi(`Cleared ${completedCount} completed task${completedCount > 1 ? 's' : ''}`);
+
       this.activeTab = 'todo';
       this.render();
     }
   }
 
   /**
-   * Export todos to JSON/CSV
+   * Export todos to JSON/CSV (admin only)
    */
   exportTodos() {
+    // Security check: Only admins can export todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     const todos = this.app.todos || [];
     
     if (todos.length === 0) {
@@ -63,15 +68,17 @@ export class TabbedDetail {
     }
     
     const headers = ['Title','Description','Priority','Due Date','Completed','Created At'];
-    const rows = [headers].concat(todos.map(t => [
-      String(t.title||'').replace(/"/g,'""'),
-      String(t.description||'').replace(/"/g,'""'),
-      String(t.priority||'').replace(/"/g,'""'),
-      String(t.dueDate||'').replace(/"/g,'""'),
-      String(t.completed||false),
-      String(t.createdAt||'').replace(/"/g,'""')
-    ].map(v => `"${v}"`)));
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const allRows = [headers, ...todos.map(t => [
+        t.title,
+        t.description,
+        t.priority,
+        t.dueDate,
+        t.completed ?? false,
+        t.createdAt
+    ])];
+    const csv = allRows.map(row =>
+        row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
     const bom = '\ufeff';
     const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -93,14 +100,17 @@ export class TabbedDetail {
       return null;
     }
     
+    // Update tabs HTML
+    const tabsContainer = document.querySelector('.tabs');
+    if (tabsContainer) {
+      tabsContainer.innerHTML = `
+        <button class="tab-btn ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
+        <button class="tab-btn ${this.activeTab === 'todo' ? 'active' : ''}" data-tab="todo">Tasks ${getPendingTodosCount(this.app)}</button>
+      `;
+    }
+    
     // Update the tab content
     tabContent.innerHTML = this.renderTabContent();
-    
-    // Update tab button states
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(button => {
-      button.classList.toggle('active', button.dataset.tab === this.activeTab);
-    });
     
     // Attach event listeners to existing tab buttons
     this.element = tabContent;
@@ -157,10 +167,6 @@ export class TabbedDetail {
                 ${this.app.status}
               </span>
             </div>
-            <div class="status-item">
-              <label>Pending Tasks:</label>
-              <span>${this.app.pendingTodos || 0}</span>
-            </div>
           </div>
         </div>
         
@@ -176,10 +182,6 @@ export class TabbedDetail {
             <div class="status-item">
               <label>Last Reviewed:</label>
               <span>${formatDate(lastReviewedDate, { relative: true }) || 'Never'}</span>
-            </div>
-            <div class="status-item">
-              <label>Recent Activity:</label>
-              <span>${this.app.recentViews || 0} views · ${this.app.recentClones || 0} clones (14d)</span>
             </div>
             <div class="status-item">
               <label>Platform:</label>
@@ -203,9 +205,11 @@ export class TabbedDetail {
               </span>
             </div>
           </div>
-          <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
-            ▶ Start Review Checklist
-          </button>
+          ${appState.isAdmin() ? `
+            <button class="btn btn-primary" id="start-review-checklist" style="margin-top: 1rem;">
+              ▶ Start Review Checklist
+            </button>
+          ` : ''}
         </div>
 
         <div class="detail-section">
@@ -222,15 +226,17 @@ export class TabbedDetail {
   renderTodoTab() {
     const todos = this.app.todos || [];
     const completedTodos = todos.filter(todo => todo.completed);
-    const pendingTodos = todos.filter(todo => !todo.completed && String(todo.status||'') === 'Draft');
-    const activeTodos = todos.filter(todo => !todo.completed && String(todo.status||'') !== 'Draft');
+    const pendingTodos = todos.filter(todo => !todo.completed && ['Draft', 'Pending'].includes(String(todo.status||'')));
+    const activeTodos = todos.filter(todo => !todo.completed && !['Draft', 'Pending'].includes(String(todo.status||'')));
     
     return `
       <div id="todo-tab" class="tab-pane active">
         <div class="detail-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3>To-Do Dashboard</h3>
-            <button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>
+            <div style="display: flex; gap: 0.5rem;">
+              ${appState.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : '<button class="btn btn-success" id="suggest-improvement-btn">💡 Suggest Improvement</button>'}
+            </div>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
             <div class="app-card">
@@ -278,13 +284,15 @@ export class TabbedDetail {
           </div>
         </div>
 
-        <div class="detail-section">
-          <h3>Quick Actions</h3>
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
-            <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
+        ${appState.isAdmin() ? `
+          <div class="detail-section">
+            <h3>Quick Actions</h3>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
+              <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
+            </div>
           </div>
-        </div>
+        ` : ''}
       </div>
     `;
   }
@@ -293,6 +301,7 @@ export class TabbedDetail {
    * Render individual todo item
    */
   renderTodoItem(todo) {
+    const isPublicSubmission = todo.status === 'public-submission';
     const priorityClass = todo.priority ? `priority-${String(todo.priority).toLowerCase()}` : '';
     const dueDateClass = todo.dueDate && new Date(todo.dueDate) < new Date() ? 'overdue' : '';
     const sourceKey = slugify(String(todo.source||'other').replace(/\([^)]*\)/g,'').trim());
@@ -312,29 +321,45 @@ export class TabbedDetail {
     };
     const borderMap = { 'low': '#28a745', 'medium': '#ffc107', 'high': '#dc3545' };
     const bgColor = bgMap[sourceKey] || bgMap['other'];
-    const borderColor = borderMap[pr] || borderMap['medium'];
+    const borderColor = isPublicSubmission ? 'var(--primary-blue)' : (borderMap[pr] || borderMap['medium']);
     const styleStr = `background-color: ${bgColor}; border: 4px solid ${borderColor}; padding: 4px 12px;`;
-    
+
     return `
-      <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass}" data-todo-id="${todo.id}" style="${styleStr}">
+      <div class="todo-item ${todo.completed ? 'completed' : ''} ${dueDateClass} ${priorityClass} ${sourceClass} ${isPublicSubmission ? 'public-submission' : ''}" data-todo-id="${todo.id}" style="${styleStr}">
         <div class="todo-content">
-          <div class="todo-title"><span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}</div>
-          
+          <div class="todo-title">
+            <span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}
+            ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;">PUBLIC FEEDBACK</span>' : ''}
+          </div>
+
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
+          ${appState.isAdmin() && isPublicSubmission ? `
+            <div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+              ${todo.submitterName ? `<span>👤 ${this.escapeHtml(todo.submitterName)}</span>` : ''}
+              ${todo.submitterEmail ? `<span>📧 ${this.escapeHtml(todo.submitterEmail)}</span>` : ''}
+            </div>
+          ` : ''}
         </div>
-        <div class="todo-actions">
-          <button class="btn-icon" data-action="edit" data-todo-id="${todo.id}">✏️</button>
-          <button class="btn-icon" data-action="delete" data-todo-id="${todo.id}">🗑️</button>
-        </div>
+        ${appState.isAdmin() ? `
+          <div class="todo-actions">
+            <button class="btn-icon" data-action="edit" data-todo-id="${todo.id}">✏️</button>
+            <button class="btn-icon" data-action="delete" data-todo-id="${todo.id}">🗑️</button>
+          </div>
+        ` : ''}
       </div>
     `;
   }
 
   /**
-   * Add new todo item
+   * Add new todo item (admin only)
    */
   addTodo(title, description = '', priority = 'medium', dueDate = null, extra = {}) {
+    // Security check: Only admins can add todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     const todo = {
       id: Date.now().toString(),
       title,
@@ -353,16 +378,8 @@ export class TabbedDetail {
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
-    (async () => {
-      try {
-        const apiModule = await import('../data/ApiService.js');
-        const api = apiModule.default;
-        const appId = this.app.id;
-        const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-        await api.triggerSaveTasks(appId, todos);
-      } catch (_) {}
-    })();
-    
+    this.syncTodosToApi('Task added successfully');
+
     // Re-render the todo tab
     this.activeTab = 'todo';
     this.render();
@@ -373,24 +390,17 @@ export class TabbedDetail {
    */
   toggleTodo(todoId) {
     if (!this.app.todos) return;
-    
+
     const todo = this.app.todos.find(t => t.id === todoId);
     if (todo) {
       todo.completed = !todo.completed;
-      
+
       if (this.onNotesSave) {
         this.onNotesSave(this.app);
       }
-      (async () => {
-        try {
-          const apiModule = await import('../data/ApiService.js');
-          const api = apiModule.default;
-          const appId = this.app.id;
-          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-          await api.triggerSaveTasks(appId, todos);
-        } catch (_) {}
-      })();
-      
+      const statusMessage = todo.completed ? 'Task marked as complete' : 'Task marked as incomplete';
+      this.syncTodosToApi(statusMessage);
+
       this.activeTab = 'todo';
       this.render();
     }
@@ -407,263 +417,113 @@ export class TabbedDetail {
   }
 
   /**
-   * Delete todo item
+   * Delete todo item (admin only)
    */
   deleteTodo(todoId) {
+    // Security check: Only admins can delete todos
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     if (!this.app.todos) return;
-    
+
     this.app.todos = this.app.todos.filter(t => t.id !== todoId);
-    
+
     if (this.onNotesSave) {
       this.onNotesSave(this.app);
     }
+    this.syncTodosToApi('Task deleted');
+
+    this.activeTab = 'todo';
+    this.render();
+  }
+
+  showEditTodoDialog(todo) {
+    showEditTodoDialog(todo, (updatedTodo) => {
+      this.app.todos = this.app.todos.map(t => t.id === todo.id ? updatedTodo : t);
+      if (this.onNotesSave) this.onNotesSave(this.app);
+      this.syncTodosToApi('Task updated');
+      this.activeTab = 'todo';
+      this.render();
+    });
+  }
+
+  /**
+   * Show add todo dialog (admin only)
+   */
+  showAddTodoDialog() {
+    showAddTodoDialog((todoData) => {
+      this.addTodo(todoData.title, todoData.description, todoData.priority, todoData.dueDate, {
+        source: todoData.source,
+        feedbackSummary: todoData.feedbackSummary,
+        submittedBy: todoData.submittedBy,
+        status: todoData.status
+      });
+    });
+  }
+
+  /**
+   * Show public improvement suggestion dialog
+   */
+  showPublicImprovementSuggestion() {
+    showImprovementModal(this.app, (todo) => {
+      if (!this.app.todos) this.app.todos = [];
+      this.app.todos.push(todo);
+
+      if (this.onNotesSave) {
+        this.onNotesSave(this.app);
+      }
+      this.syncTodosToApi('Improvement suggestion submitted');
+      this.activeTab = 'todo';
+      this.render();
+    });
+  }
+
+  /**
+   * Sync todos to API (helper method)
+   * Shows toast notifications on success/failure
+   * Handles SHA conflict detection and offline queuing with user feedback
+   * @param {string} [successMessage] - Optional success message to show
+   */
+  syncTodosToApi(successMessage = null) {
     (async () => {
       try {
         const apiModule = await import('../data/ApiService.js');
         const api = apiModule.default;
         const appId = this.app.id;
         const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-        await api.triggerSaveTasks(appId, todos);
-      } catch (_) {}
+        const result = await api.triggerSaveTasks(appId, todos);
+
+        // Check if save was successful - handle both old boolean and new object format
+        const isSuccess = result && (result.ok === true || result.status === 204 || result === true);
+        const isConflict = result && result.conflict === true;
+        const isQueued = result && result.queued === true;
+
+        if (isSuccess) {
+          if (successMessage) {
+            toastManager.showSuccess(successMessage);
+          }
+        } else if (isQueued) {
+          // Operation queued for later (offline or network error)
+          toastManager.showInfo(result.message || 'Changes saved locally. Will sync when online.');
+        } else if (isConflict) {
+          // SHA conflict detected - file was modified by another user
+          toastManager.showError(result.message || 'Conflict: Data was modified elsewhere. Please refresh and try again.');
+        } else {
+          toastManager.showError('Failed to save tasks to server. Changes saved locally.');
+        }
+      } catch (error) {
+        console.error('Error syncing todos:', error);
+        toastManager.showError('Failed to save tasks. Please check your connection and try again.');
+      }
     })();
-    
-    this.activeTab = 'todo';
-    this.render();
-  }
-
-  showEditTodoDialog(todo) {
-    const existingDialog = document.querySelector('.todo-dialog');
-    if (existingDialog) existingDialog.remove();
-    const dialog = document.createElement('div');
-    dialog.className = 'todo-dialog';
-    const sourceOptionsHtml = SOURCE_OPTIONS.map(s => `<option value="${this.escapeHtml(s)}" ${todo.source === s ? 'selected' : ''}>${this.escapeHtml(s)}</option>`).join('');
-    const priorityOptionsHtml = ['low','medium','high'].map(p => `<option value="${p}" ${String(todo.priority||'medium')===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('');
-    const effortOptionsHtml = ['Small','Medium','Large'].map(e => `<option value="${e}" ${String(todo.effortEstimate||'')===e?'selected':''}>${e}</option>`).join('');
-    const statusOptionsHtml = ['Draft','Submitted','Review','Approved','In Development','Complete','Rejected']
-      .map(s => `<option ${String(todo.status||'Draft')===s?'selected':''}>${s}</option>`).join('');
-    dialog.innerHTML = `
-      <div class="dialog-overlay">
-        <div class="dialog-content">
-          <h3>Edit Task</h3>
-          <form id="edit-todo-form">
-            <h4>Task Definition</h4>
-            <div class="form-group">
-              <label>Title *</label>
-              <input type="text" id="todo-title" required value="${this.escapeHtml(todo.title || '')}">
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="todo-description" rows="3">${this.escapeHtml(todo.description || '')}</textarea>
-            </div>
-
-            <h4>Task Management & Triage</h4>
-            <div class="form-group">
-              <label>Priority</label>
-              <select id="todo-priority">${priorityOptionsHtml}</select>
-            </div>
-            <div class="form-group">
-              <label>Due Date</label>
-              <input type="date" id="todo-due-date" value="${todo.dueDate || ''}">
-            </div>
-            <div class="form-group">
-              <label>Effort Estimate</label>
-              <select id="todo-effort-estimate">${effortOptionsHtml}</select>
-            </div>
-
-            <h4>Task Origin & Context</h4>
-            <div class="form-group">
-              <label>Source</label>
-              <select id="todo-source">${sourceOptionsHtml}</select>
-            </div>
-            <div class="form-group">
-              <label>User Feedback Summary</label>
-              <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback">${this.escapeHtml(todo.feedbackSummary || '')}</textarea>
-            </div>
-            <div class="form-group">
-              <label>Submitted By</label>
-              <input type="text" id="todo-submitted-by" value="${this.escapeHtml(todo.submittedBy || '')}">
-            </div>
-
-            <h4>Workflow & Completion</h4>
-            <div class="form-group">
-              <label>Status</label>
-              <select id="todo-status">${statusOptionsHtml}</select>
-            </div>
-            <div class="form-group" id="rejection-group" style="${String(todo.status||'Draft')==='Rejected' ? '' : 'display:none'}">
-              <label>Reason for Rejection</label>
-              <textarea id="todo-rejection-reason" rows="2" placeholder="If status is Rejected">${this.escapeHtml(todo.rejectionReason || '')}</textarea>
-            </div>
-            <div class="form-group" id="completion-group" style="${String(todo.status||'Draft')==='Complete' ? '' : 'display:none'}">
-              <label>Completion Date</label>
-              <input type="date" id="todo-completion-date" value="${todo.completionDate || ''}" ${String(todo.status||'Draft')==='Complete' ? '' : 'disabled'}>
-            </div>
-
-            <div class="dialog-actions">
-              <button type="button" class="btn btn-secondary" id="cancel-todo">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save Changes</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialog);
-
-    const form = dialog.querySelector('#edit-todo-form');
-    const statusEl = dialog.querySelector('#todo-status');
-    const rejectionGroup = dialog.querySelector('#rejection-group');
-    const completionGroup = dialog.querySelector('#completion-group');
-    const completionInput = dialog.querySelector('#todo-completion-date');
-    const syncWorkflow = () => {
-      const v = statusEl.value;
-      if (v === 'Rejected') {
-        rejectionGroup.style.display = '';
-      } else {
-        rejectionGroup.style.display = 'none';
-      }
-      if (v === 'Complete') {
-        completionGroup.style.display = '';
-        completionInput.disabled = false;
-      } else {
-        completionGroup.style.display = 'none';
-        completionInput.disabled = true;
-      }
-    };
-    statusEl.addEventListener('change', syncWorkflow);
-    syncWorkflow();
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const title = dialog.querySelector('#todo-title').value;
-      const description = dialog.querySelector('#todo-description').value;
-      const source = dialog.querySelector('#todo-source').value;
-      const feedbackSummary = dialog.querySelector('#todo-feedback-summary').value;
-      const submittedBy = dialog.querySelector('#todo-submitted-by').value || '';
-      const priority = dialog.querySelector('#todo-priority').value;
-      const dueDate = dialog.querySelector('#todo-due-date').value || null;
-      const effortEstimate = dialog.querySelector('#todo-effort-estimate').value || null;
-      const completionDate = dialog.querySelector('#todo-completion-date').value || null;
-      const rejectionReason = dialog.querySelector('#todo-rejection-reason').value || '';
-      const status = dialog.querySelector('#todo-status').value;
-      const completed = status === 'Complete' ? true : false;
-      const updated = { 
-        ...todo, 
-        title, 
-        description, 
-        source, 
-        feedbackSummary, 
-        submittedBy, 
-        priority, 
-        dueDate, 
-        effortEstimate, 
-        completionDate: status === 'Complete' ? completionDate : null, 
-        rejectionReason: status === 'Rejected' ? rejectionReason : '', 
-        status, 
-        completed 
-      };
-      this.app.todos = this.app.todos.map(t => t.id === todo.id ? updated : t);
-      if (this.onNotesSave) this.onNotesSave(this.app);
-      (async () => {
-        try {
-          const apiModule = await import('../data/ApiService.js');
-          const api = apiModule.default;
-          const appId = this.app.id;
-          const todos = Array.isArray(this.app.todos) ? this.app.todos.slice() : [];
-          await api.triggerSaveTasks(appId, todos);
-        } catch (_) {}
-      })();
-      this.activeTab = 'todo';
-      this.render();
-      document.body.removeChild(dialog);
-    });
-
-    dialog.querySelector('#cancel-todo').addEventListener('click', () => {
-      document.body.removeChild(dialog);
-    });
-
-    
-  }
-
-  /**
-   * Show add todo dialog
-   */
-  showAddTodoDialog() {
-    const existingDialog = document.querySelector('.todo-dialog');
-    if (existingDialog) existingDialog.remove();
-    console.log('Opening add todo dialog...');
-    const dialog = document.createElement('div');
-    dialog.className = 'todo-dialog';
-    const sourceOptionsHtml = SOURCE_OPTIONS.map(s => `<option value="${this.escapeHtml(s)}">${this.escapeHtml(s)}</option>`).join('');
-    dialog.innerHTML = `
-      <div class="dialog-overlay">
-        <div class="dialog-content">
-          <h3>Add New Task</h3>
-          <form id="add-todo-form">
-            <div class="form-group">
-              <label>Title *</label>
-              <input type="text" id="todo-title" required>
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="todo-description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Source</label>
-              <select id="todo-source">${sourceOptionsHtml}</select>
-            </div>
-            <div class="form-group">
-              <label>User Feedback Summary</label>
-              <textarea id="todo-feedback-summary" rows="3" placeholder="Summary of feedback"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Submitted By</label>
-              <input type="text" id="todo-submitted-by">
-            </div>
-            <div class="dialog-actions">
-              <button type="button" class="btn btn-secondary" id="cancel-todo">Cancel</button>
-              <button type="submit" class="btn btn-primary">Add Task</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(dialog);
-    console.log('Dialog added to DOM');
-    
-    // Handle form submission
-    dialog.querySelector('#add-todo-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      console.log('Form submitted');
-      const title = dialog.querySelector('#todo-title').value;
-      const description = dialog.querySelector('#todo-description').value;
-      const priority = 'medium';
-      const dueDate = null;
-      const effortEstimate = null;
-      const source = dialog.querySelector('#todo-source').value;
-      const completionDate = null;
-      const feedbackSummary = dialog.querySelector('#todo-feedback-summary').value;
-      const submittedBy = dialog.querySelector('#todo-submitted-by').value || '';
-      const rejectionReason = '';
-      const status = 'Draft';
-      
-      console.log('Adding todo:', { title, description, source, feedbackSummary, status });
-      this.addTodo(title, description, priority, dueDate, { source, feedbackSummary, submittedBy, status });
-      document.body.removeChild(dialog);
-    });
-    
-    // Handle cancel
-    dialog.querySelector('#cancel-todo').addEventListener('click', () => {
-      document.body.removeChild(dialog);
-    });
-    
-    
   }
 
   /**
    * Generate simulated tasks
    */
   generateSimulatedTasks() {
-    const taskCount = Math.min(this.app.pendingTodos || 0, 5);
+    const taskCount = Math.min(getPendingTodosCount(this.app), 5);
     const tasks = [];
     
     const taskTemplates = [
@@ -737,6 +597,13 @@ export class TabbedDetail {
     if (addTodoBtn) {
       addTodoBtn.addEventListener('click', () => {
         this.showAddTodoDialog();
+      });
+    }
+
+    const suggestImprovementBtn = this.element.querySelector('#suggest-improvement-btn');
+    if (suggestImprovementBtn) {
+      suggestImprovementBtn.addEventListener('click', () => {
+        this.showPublicImprovementSuggestion();
       });
     }
     
@@ -813,9 +680,14 @@ export class TabbedDetail {
   }
 
   /**
-   * Start review checklist
+   * Start review checklist (admin only)
    */
   startReviewChecklist() {
+    // Security check: Only admins can start review checklists
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     (async () => {
       const mod = await import('./ReviewChecklist.js');
       const reviewsResult = await (await import('../data/ApiService.js')).default.fetchAppReviews(this.app.id);
@@ -881,11 +753,16 @@ export class TabbedDetail {
   }
 
   /**
-   * Mark app as reviewed
+   * Mark app as reviewed (admin only)
    */
   markAsReviewed() {
+    // Security check: Only admins can mark as reviewed
+    if (!appState.isAdmin()) {
+      return;
+    }
+
     console.log('Marking app as reviewed:', this.app.id);
-    
+
     if (confirm(`Mark ${this.app.name} as reviewed?\n\nThis will update the last review date to today and set the next review for 60 days from the last commit.`)) {
       // Call the parent app's markAsReviewed method
       if (this.onReviewComplete) {

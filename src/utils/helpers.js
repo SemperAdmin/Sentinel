@@ -98,9 +98,10 @@ export function calculateHealth(app) {
     healthScore += 1; // Penalty for no review date
   }
 
-  // Check pending todos
-  if (app.pendingTodos > 5) healthScore += 2;
-  else if (app.pendingTodos > 2) healthScore += 1;
+  // Check pending todos - use actual count from todos array
+  const pendingCount = getPendingTodosCount(app);
+  if (pendingCount > 5) healthScore += 2;
+  else if (pendingCount > 2) healthScore += 1;
 
   // Determine health level
   if (healthScore >= 6) return 'critical';
@@ -150,7 +151,7 @@ export function generateId(prefix = 'item') {
  */
 export function slugify(text) {
   if (!text) return '';
-  
+
   return text
     .toString()
     .toLowerCase()
@@ -160,6 +161,70 @@ export function slugify(text) {
     .replace(/\-\-+/g, '-')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
+}
+
+/**
+ * Normalize app ID to lowercase kebab-case
+ * This is the CANONICAL function for normalizing app IDs throughout the application.
+ * Always use this when:
+ * - Creating new app IDs from repo names
+ * - Looking up apps by ID
+ * - Fetching tasks/reviews for an app
+ * - Saving tasks/reviews for an app
+ *
+ * @param {string} id - Raw app ID or repo name
+ * @returns {string} Normalized lowercase kebab-case ID
+ */
+export function normalizeAppId(id) {
+  if (!id) return '';
+
+  return id
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')  // Replace any non-alphanumeric with dash
+    .replace(/^-+/, '')           // Remove leading dashes
+    .replace(/-+$/, '')           // Remove trailing dashes
+    .replace(/-+/g, '-');         // Collapse multiple dashes
+}
+
+/**
+ * Get the count of pending (incomplete) todos for an app
+ * This replaces the static pendingTodos field which was never updated.
+ * Use this instead of app.pendingTodos for accurate counts.
+ *
+ * @param {Object} app - App object with optional todos array
+ * @returns {number} Count of incomplete todos
+ */
+export function getPendingTodosCount(app) {
+  if (!app || !Array.isArray(app.todos)) {
+    return 0;
+  }
+  return app.todos.filter(todo => !todo.completed).length;
+}
+
+/**
+ * Get the count of pending (was draft) todos for an app
+ * @param {Object} app - App object with optional todos array
+ * @returns {number} Count of pending todos
+ */
+export function getPendingStatusTodosCount(app) {
+  if (!app || !Array.isArray(app.todos)) {
+    return 0;
+  }
+  return app.todos.filter(todo => !todo.completed && ['Draft', 'Pending'].includes(String(todo.status||''))).length;
+}
+
+/**
+ * Get the count of active (non-pending) todos for an app
+ * @param {Object} app - App object with optional todos array
+ * @returns {number} Count of active todos
+ */
+export function getActiveTodosCount(app) {
+  if (!app || !Array.isArray(app.todos)) {
+    return 0;
+  }
+  return app.todos.filter(todo => !todo.completed && !['Draft', 'Pending'].includes(String(todo.status||''))).length;
 }
 
 /**
@@ -256,6 +321,16 @@ export function parseGitHubUrl(url) {
     console.error('Error parsing GitHub URL:', error);
     return null;
   }
+}
+
+/**
+ * Get GitHub Pages URL from a repository URL
+ * @param {string} repoUrl - GitHub repository URL
+ * @returns {string|null} GitHub Pages URL or null
+ */
+export function getGitHubPagesUrl(repoUrl) {
+  const parsed = parseGitHubUrl(repoUrl);
+  return parsed ? `https://${parsed.owner.toLowerCase()}.github.io/${parsed.repo}/` : null;
 }
 
 /**
@@ -380,6 +455,53 @@ export function getPlatformIcon(platform) {
     'React Native': '⚛️',
     'Flutter': '🦋'
   };
-  
+
   return icons[platform] || '📱';
+}
+
+/**
+ * Parse URL hash route for deep linking
+ * Supports formats:
+ *   #dashboard
+ *   #detail/app-id
+ *   #detail/app-id/tab
+ * @param {string} hash - The URL hash (e.g., '#detail/my-app/overview')
+ * @returns {{ view: string, appId: string|null, tab: string|null }}
+ */
+export function parseHashRoute(hash) {
+  // Remove leading # if present
+  const cleanHash = hash.startsWith('#') ? hash.slice(1) : hash;
+
+  // Split by /
+  const parts = cleanHash.split('/').filter(p => p.length > 0);
+
+  if (parts.length === 0) {
+    return { view: 'dashboard', appId: null, tab: null };
+  }
+
+  const view = parts[0];
+  const appId = parts[1] || null;
+  const tab = parts[2] || null;
+
+  return { view, appId, tab };
+}
+
+/**
+ * Build URL hash for deep linking
+ * @param {string} view - The view name (e.g., 'detail', 'dashboard')
+ * @param {string|null} appId - Optional app ID for detail view
+ * @param {string|null} tab - Optional tab name for detail view
+ * @returns {string} The hash string (e.g., '#detail/my-app/overview')
+ */
+export function buildHashRoute(view, appId = null, tab = null) {
+  let hash = `#${view}`;
+
+  if (appId) {
+    hash += `/${appId}`;
+    if (tab) {
+      hash += `/${tab}`;
+    }
+  }
+
+  return hash;
 }

@@ -1,0 +1,8 @@
+id: idea-1764048844107-tsqcars7s
+conceptName: Directives Control Point Manager
+problemSolved: Used to build a database that will automate the review, management, and workflow of directives by unit.
+targetAudience: Administrators
+techStack: Web
+riskRating: Medium
+dateCreated: 2025-11-25T05:34:04.107Z
+initialFeatures: Must be able to hold all the basic info of a directive and digitalize the NAVMC 10974.

@@ -2,7 +2,7 @@
  * AppCard Component - Displays individual app information in a card format
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, getPendingTodosCount, getPendingStatusTodosCount, getActiveTodosCount, parseGitHubUrl } from '../utils/helpers.js';
 
 export class AppCard {
   constructor(app, onClick) {
@@ -12,60 +12,113 @@ export class AppCard {
   }
 
   /**
+   * Get the live app URL from the repo URL
+   * Converts GitHub repo URL to GitHub Pages URL
+   */
+  getAppUrl() {
+    const parsed = parseGitHubUrl(this.app.repoUrl);
+    if (parsed) {
+      return `https://${parsed.owner.toLowerCase()}.github.io/${parsed.repo}/`;
+    }
+    return null;
+  }
+
+  /**
    * Create the card element
    */
   render() {
     const health = calculateHealth(this.app);
     const healthColor = getHealthColor(health);
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
-    const todos = Array.isArray(this.app.todos) ? this.app.todos : [];
-    const activeCount = todos.filter(t => {
-      const s = String(t.status || '');
-      return !t.completed && s !== 'Draft' && s !== 'Rejected';
-    }).length;
-    
+    const pendingStatusTodos = getPendingStatusTodosCount(this.app);
+    const activeTodos = getActiveTodosCount(this.app);
+    const appUrl = this.getAppUrl();
+
     const card = document.createElement('div');
     card.className = 'app-card';
     card.onclick = () => this.onClick(this.app);
-    
+
+    const description = this.app.description || this.app.notes || '';
+    const truncatedDesc = description.length > 100
+      ? description.substring(0, 100) + '...'
+      : description;
+
+    // Format pending todos
+    const pendingDisplay = pendingStatusTodos > 0
+      ? `<span style="font-weight: 600;">${pendingStatusTodos}</span>`
+      : '<span style="color: #6c757d;">0</span>';
+
+    // Format active todos with color coding
+    const activeDisplay = activeTodos > 0
+      ? `<span style="color: ${activeTodos > 5 ? '#dc3545' : activeTodos > 2 ? '#ffc107' : '#28a745'}; font-weight: 600;">${activeTodos}</span>`
+      : '<span style="color: #6c757d;">0</span>';
+
+    // Create the open app link HTML (only if appUrl exists)
+    const openAppLink = appUrl ? `
+      <a href="${this.escapeHtml(appUrl)}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="app-card-open-link"
+         title="Open ${this.escapeHtml(this.app.id)}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
+    ` : '';
+
     card.innerHTML = `
       <div class="app-card-header">
         <h3 class="app-card-title">
           <span class="health-indicator" style="background-color: ${healthColor}"></span>
           ${this.escapeHtml(this.app.id)}
         </h3>
-        <span class="app-card-platform">${this.escapeHtml(this.app.platform)}</span>
+        <div class="app-card-header-actions">
+          ${openAppLink}
+          <span class="app-card-platform">${this.escapeHtml(this.app.platform)}</span>
+        </div>
       </div>
-      
+
+      ${truncatedDesc ? `<p class="app-card-description">${this.escapeHtml(truncatedDesc)}</p>` : ''}
+
       <div class="app-card-metrics">
         <div class="metric-item">
           <span class="metric-label">Last Reviewed:</span>
           <span class="metric-value">${formatDate(lastReviewedDate, { relative: true })}</span>
         </div>
-        
-        <div class="metric-item">
-          <span class="metric-label">Visitors (14d):</span>
-          <span class="metric-value">${this.app.recentViews || 0} views</span>
-        </div>
-        
+
         <div class="metric-item">
           <span class="metric-label">Next Review:</span>
           <span class="metric-value">
             ${this.formatReviewDate(this.app.nextReviewDate)}
           </span>
         </div>
-        
+
         <div class="metric-item">
-          <span class="metric-label">Active To-Dos:</span>
-          <span class="metric-value">${activeCount}</span>
+          <span class="metric-label">Pending Tasks:</span>
+          <span class="metric-value">${pendingDisplay}</span>
+        </div>
+
+        <div class="metric-item">
+          <span class="metric-label">Active Tasks:</span>
+          <span class="metric-value">${activeDisplay}</span>
         </div>
       </div>
-      
+
       <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-        Manage App
+        View App
       </button>
     `;
-    
+
+    // Attach event listener to prevent card click when clicking open link
+    const openLink = card.querySelector('.app-card-open-link');
+    if (openLink) {
+      openLink.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
+    }
+
     this.element = card;
     return card;
   }
