@@ -41,12 +41,17 @@
     "description": "Create tables for tasks and ideas ",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:11:42.625Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "",
+    "rejectionReason": ""
   },
   {
     "id": "1764277992725",
@@ -54,11 +59,16 @@
     "description": "Migrate all data from current json files for tasks and ideas to sql tables",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:13:12.725Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "",
+    "rejectionReason": ""
   }
 ]
