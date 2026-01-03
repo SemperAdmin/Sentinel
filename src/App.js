@@ -291,18 +291,20 @@ class App {
     window.addEventListener('popstate', (e) => {
       const { view, appId, tab } = parseHashRoute(window.location.hash);
 
-      if (view === 'detail' && appId) {
-        const app = appState.getAppById(appId);
-        if (app) {
-          appState.setCurrentApp(app);
-          appState.setActiveTab(tab || 'overview');
-          this.showView('detail', false);
-        } else {
-          // App not found, go to dashboard
-          this.showView('dashboard', false);
+      if (view === 'detail') {
+        if (appId) {
+          const app = appState.getAppById(appId);
+          if (app) {
+            appState.setCurrentApp(app);
+            appState.setActiveTab(tab || 'overview');
+            this.showView('detail', false);
+            return;
+          }
         }
-      } else if (view) {
-        this.showView(view, false);
+        // No app ID or app not found - go to dashboard
+        this.showView('dashboard', false);
+      } else {
+        this.showView(view || 'dashboard', false);
       }
     });
   }
@@ -727,17 +729,24 @@ class App {
   restoreViewFromHash() {
     const { view, appId, tab } = parseHashRoute(window.location.hash);
 
-    if (view === 'detail' && appId) {
-      const app = appState.getAppById(appId);
-      if (app) {
-        console.log(`Deep link: Restoring detail view for app "${appId}", tab "${tab || 'overview'}"`);
-        appState.setCurrentApp(app);
-        appState.setActiveTab(tab || 'overview');
-        this.showView('detail');
-        return;
+    if (view === 'detail') {
+      if (appId) {
+        const app = appState.getAppById(appId);
+        if (app) {
+          console.log(`Deep link: Restoring detail view for app "${appId}", tab "${tab || 'overview'}"`);
+          appState.setCurrentApp(app);
+          appState.setActiveTab(tab || 'overview');
+          this.showView('detail');
+          return;
+        } else {
+          console.warn(`Deep link: App "${appId}" not found, falling back to dashboard`);
+        }
       } else {
-        console.warn(`Deep link: App "${appId}" not found, falling back to dashboard`);
+        // Old URL format #detail without app ID - fall back to dashboard
+        console.warn('Deep link: #detail without app ID, falling back to dashboard');
       }
+      this.showView('dashboard');
+      return;
     }
 
     // Default to dashboard or use the view from hash
