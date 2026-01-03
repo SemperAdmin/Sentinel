@@ -69,6 +69,30 @@ export function showAddTodoDialog(onSubmit) {
   document.body.appendChild(dialog);
   console.log('Dialog added to DOM');
 
+  const closeDialog = () => {
+    document.removeEventListener('keydown', handleEsc);
+    if (dialog.parentNode) {
+      document.body.removeChild(dialog);
+    }
+  };
+
+  const handleEsc = (e) => {
+    if (e.key === 'Escape') {
+      closeDialog();
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+
+  // Click outside to close
+  const overlay = dialog.querySelector('.dialog-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeDialog();
+      }
+    });
+  }
+
   // Handle form submission
   dialog.querySelector('#add-todo-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -83,19 +107,19 @@ export function showAddTodoDialog(onSubmit) {
       feedbackSummary: dialog.querySelector('#todo-feedback-summary').value,
       submitterName: dialog.querySelector('#todo-submitter-name').value || '',
       submitterEmail: dialog.querySelector('#todo-submitter-email').value || '',
-      status: 'Draft'
+      status: 'Pending'
     };
 
     console.log('Adding todo:', todoData);
     if (onSubmit) {
       onSubmit(todoData);
     }
-    document.body.removeChild(dialog);
+    closeDialog();
   });
 
   // Handle cancel
   dialog.querySelector('#cancel-todo').addEventListener('click', () => {
-    document.body.removeChild(dialog);
+    closeDialog();
   });
 }
 
@@ -129,8 +153,8 @@ export function showEditTodoDialog(todo, onSubmit) {
     `<option value="${e}" ${String(todo.effortEstimate || '') === e ? 'selected' : ''}>${e}</option>`
   ).join('');
 
-  const statusOptionsHtml = ['Draft', 'Submitted', 'Review', 'Approved', 'In Development', 'Complete', 'Rejected']
-    .map(s => `<option ${String(todo.status || 'Draft') === s ? 'selected' : ''}>${s}</option>`).join('');
+  const statusOptionsHtml = ['Pending', 'Submitted', 'Review', 'Approved', 'In Development', 'Complete', 'Rejected']
+    .map(s => `<option ${String(todo.status || 'Pending') === s ? 'selected' : ''}>${s}</option>`).join('');
 
   dialog.innerHTML = `
     <div class="dialog-overlay">
@@ -184,13 +208,13 @@ export function showEditTodoDialog(todo, onSubmit) {
             <label>Status</label>
             <select id="todo-status">${statusOptionsHtml}</select>
           </div>
-          <div class="form-group" id="rejection-group" style="${String(todo.status || 'Draft') === 'Rejected' ? '' : 'display:none'}">
+          <div class="form-group" id="rejection-group" style="${String(todo.status || 'Pending') === 'Rejected' ? '' : 'display:none'}">
             <label>Reason for Rejection</label>
             <textarea id="todo-rejection-reason" rows="2" placeholder="If status is Rejected">${escapeHtml(todo.rejectionReason || '')}</textarea>
           </div>
-          <div class="form-group" id="completion-group" style="${String(todo.status || 'Draft') === 'Complete' ? '' : 'display:none'}">
+          <div class="form-group" id="completion-group" style="${String(todo.status || 'Pending') === 'Complete' ? '' : 'display:none'}">
             <label>Completion Date</label>
-            <input type="date" id="todo-completion-date" value="${todo.completionDate || ''}" ${String(todo.status || 'Draft') === 'Complete' ? '' : 'disabled'}>
+            <input type="date" id="todo-completion-date" value="${todo.completionDate || ''}" ${String(todo.status || 'Pending') === 'Complete' ? '' : 'disabled'}>
           </div>
 
           <div class="dialog-actions">
@@ -204,6 +228,29 @@ export function showEditTodoDialog(todo, onSubmit) {
 
   document.body.appendChild(dialog);
 
+  const closeDialog = () => {
+    document.removeEventListener('keydown', handleEsc);
+    if (dialog.parentNode) {
+      document.body.removeChild(dialog);
+    }
+  };
+
+  const handleEsc = (e) => {
+    if (e.key === 'Escape') {
+      closeDialog();
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+
+  // Click outside to close
+  const overlay = dialog.querySelector('.dialog-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeDialog();
+      }
+    });
+  }
   const form = dialog.querySelector('#edit-todo-form');
   const statusEl = dialog.querySelector('#todo-status');
   const rejectionGroup = dialog.querySelector('#rejection-group');
@@ -249,11 +296,11 @@ export function showEditTodoDialog(todo, onSubmit) {
     if (onSubmit) {
       onSubmit(updatedTodo);
     }
-    document.body.removeChild(dialog);
+    closeDialog();
   });
 
   dialog.querySelector('#cancel-todo').addEventListener('click', () => {
-    document.body.removeChild(dialog);
+    closeDialog();
   });
 }
 

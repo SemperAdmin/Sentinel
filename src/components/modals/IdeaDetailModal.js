@@ -41,7 +41,8 @@ function renderComments(comments = [], isAdmin = false) {
  * @param {Object} idea - Idea object to display
  * @param {Object} callbacks - Optional callbacks for actions
  * @param {Function} callbacks.onEdit - Called when edit button is clicked (admin only)
- * @param {Function} callbacks.onMarkCreated - Called when mark as created button is clicked (admin only)
+ * @param {Function} callbacks.onMarkCreated - Called when mark as created/implemented button is clicked (admin only)
+ * @param {Function} callbacks.onMarkInDev - Called when mark as in development button is clicked (admin only)
  * @param {Function} callbacks.onAddComment - Called when a comment is added (all users)
  */
 export function showIdeaDetailModal(idea, callbacks = {}) {
@@ -52,6 +53,10 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
   const isAdmin = appState.isAdmin();
   const isPublicSubmission = idea.status === 'public-submission' || idea.submittedBy === 'public';
   const comments = idea.comments || [];
+  const status = idea.status || 'pending';
+  const isImplemented = status === 'implemented' || status === 'created';
+  const isInDevelopment = status === 'in_development';
+  const isRejected = status === 'rejected';
 
   const riskColor = {
     'Low': '#28a745',
@@ -68,7 +73,10 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
           <div>
             <h3 style="margin: 0; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
               ${escapeHtml(idea.conceptName)}
-              ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
+              ${isPublicSubmission && !isImplemented && !isInDevelopment && !isRejected ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
+              ${isInDevelopment ? '<span style="background: #17a2b8; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">IN DEVELOPMENT</span>' : ''}
+              ${isImplemented ? '<span style="background: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">IMPLEMENTED</span>' : ''}
+              ${isRejected ? '<span style="background: #dc3545; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">REJECTED</span>' : ''}
             </h3>
             <p style="color: #999; margin: 0.5rem 0 0 0; font-size: 0.875rem;">
               Created ${formatDate(idea.dateCreated)}
@@ -157,10 +165,12 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
 
         <div class="dialog-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #444;">
           ${isAdmin ? `
-            ${idea.status === 'created'
-              ? '<span style="color: #28a745; align-self: center; margin-right: auto;">✓ This idea has been created</span>'
-              : '<button class="btn btn-success" id="mark-created-btn">✓ Mark as Created</button>'
-            }
+            ${!isImplemented && !isInDevelopment && !isRejected ? '<button class="btn btn-info" id="mark-dev-btn" style="background: #17a2b8; border-color: #17a2b8; color: white;">⚡ Mark In Development</button>' : ''}
+            ${!isImplemented && !isRejected ? '<button class="btn btn-success" id="mark-created-btn">✓ Mark as Implemented</button>' : ''}
+            ${(!isImplemented || isInDevelopment) && !isRejected ? '<button class="btn btn-danger" id="reject-btn" style="background: #dc3545; border-color: #dc3545; color: white;">✕ Reject</button>' : ''}
+            
+            ${isImplemented ? '<span style="color: #28a745; align-self: center; margin-right: auto;">✓ This idea has been implemented</span>' : ''}
+            ${isRejected ? '<span style="color: #dc3545; align-self: center; margin-right: auto;">✕ This idea has been rejected</span>' : ''}
             <button class="btn btn-secondary" id="edit-idea-btn">Edit</button>
           ` : ''}
           <button class="btn btn-secondary" id="close-idea-btn">Close</button>
@@ -173,6 +183,7 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
 
   // Handle close
   const closeModal = () => {
+    document.removeEventListener('keydown', escapeHandler);
     if (dialog.parentNode) {
       document.body.removeChild(dialog);
     }
@@ -268,6 +279,22 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
         callbacks.onMarkCreated(idea.id);
       }
     });
+
+    dialog.querySelector('#mark-dev-btn')?.addEventListener('click', () => {
+        closeModal();
+        if (callbacks.onMarkInDev) {
+          callbacks.onMarkInDev(idea.id);
+        }
+    });
+
+    dialog.querySelector('#reject-btn')?.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reject this idea?')) {
+            closeModal();
+            if (callbacks.onReject) {
+                callbacks.onReject(idea.id);
+            }
+        }
+    });
   }
 
   // Handle overlay click
@@ -280,7 +307,6 @@ export function showIdeaDetailModal(idea, callbacks = {}) {
   // Handle escape key
   const escapeHandler = (e) => {
     if (e.key === 'Escape') {
-      document.removeEventListener('keydown', escapeHandler);
       closeModal();
     }
   };

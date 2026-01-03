@@ -100,14 +100,17 @@ export class TabbedDetail {
       return null;
     }
     
+    // Update tabs HTML
+    const tabsContainer = document.querySelector('.tabs');
+    if (tabsContainer) {
+      tabsContainer.innerHTML = `
+        <button class="tab-btn ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
+        <button class="tab-btn ${this.activeTab === 'todo' ? 'active' : ''}" data-tab="todo">Tasks ${getPendingTodosCount(this.app)}</button>
+      `;
+    }
+    
     // Update the tab content
     tabContent.innerHTML = this.renderTabContent();
-    
-    // Update tab button states
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(button => {
-      button.classList.toggle('active', button.dataset.tab === this.activeTab);
-    });
     
     // Attach event listeners to existing tab buttons
     this.element = tabContent;
@@ -223,8 +226,8 @@ export class TabbedDetail {
   renderTodoTab() {
     const todos = this.app.todos || [];
     const completedTodos = todos.filter(todo => todo.completed);
-    const pendingTodos = todos.filter(todo => !todo.completed && String(todo.status||'') === 'Draft');
-    const activeTodos = todos.filter(todo => !todo.completed && String(todo.status||'') !== 'Draft');
+    const pendingTodos = todos.filter(todo => !todo.completed && ['Draft', 'Pending'].includes(String(todo.status||'')));
+    const activeTodos = todos.filter(todo => !todo.completed && !['Draft', 'Pending'].includes(String(todo.status||'')));
     
     return `
       <div id="todo-tab" class="tab-pane active">

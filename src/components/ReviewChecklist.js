@@ -167,6 +167,17 @@ export class ReviewChecklist {
   async save(complete) {
     try {
       if (complete) this.review.completedAt = new Date().toISOString()
+      // If using Supabase, we currently only support updating the review dates
+      // Detailed review checklist storage in Supabase is coming soon
+      if (dataStore.useSupabase) {
+        if (complete) {
+            toastManager.showSuccess('Review completed. Dates updated in Supabase.');
+            // The actual date update happens via the onComplete callback which calls markAppAsReviewed
+        } else {
+            toastManager.showInfo('Progress saving not yet supported in Supabase mode.');
+        }
+        return;
+      }
       const allResult = await apiService.fetchAppReviews(this.app.id)
       const all = unwrapOr(allResult, [])
       const idx = all.findIndex(r => r.id === this.review.id)

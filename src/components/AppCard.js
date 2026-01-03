@@ -2,7 +2,7 @@
  * AppCard Component - Displays individual app information in a card format
  */
 
-import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, getPendingTodosCount, parseGitHubUrl } from '../utils/helpers.js';
+import { formatDate, calculateHealth, getHealthColor, getLatestReviewDate, getPendingTodosCount, getPendingStatusTodosCount, getActiveTodosCount, parseGitHubUrl } from '../utils/helpers.js';
 
 export class AppCard {
   constructor(app, onClick) {
@@ -30,7 +30,8 @@ export class AppCard {
     const health = calculateHealth(this.app);
     const healthColor = getHealthColor(health);
     const lastReviewedDate = getLatestReviewDate(this.app.lastCommitDate, this.app.lastReviewDate);
-    const pendingTodos = getPendingTodosCount(this.app);
+    const pendingStatusTodos = getPendingStatusTodosCount(this.app);
+    const activeTodos = getActiveTodosCount(this.app);
     const appUrl = this.getAppUrl();
 
     const card = document.createElement('div');
@@ -42,9 +43,14 @@ export class AppCard {
       ? description.substring(0, 100) + '...'
       : description;
 
-    // Format pending todos with color coding
-    const todoDisplay = pendingTodos > 0
-      ? `<span style="color: ${pendingTodos > 5 ? '#dc3545' : pendingTodos > 2 ? '#ffc107' : '#28a745'}; font-weight: 600;">${pendingTodos}</span>`
+    // Format pending todos
+    const pendingDisplay = pendingStatusTodos > 0
+      ? `<span style="font-weight: 600;">${pendingStatusTodos}</span>`
+      : '<span style="color: #6c757d;">0</span>';
+
+    // Format active todos with color coding
+    const activeDisplay = activeTodos > 0
+      ? `<span style="color: ${activeTodos > 5 ? '#dc3545' : activeTodos > 2 ? '#ffc107' : '#28a745'}; font-weight: 600;">${activeTodos}</span>`
       : '<span style="color: #6c757d;">0</span>';
 
     // Create the open app link HTML (only if appUrl exists)
@@ -91,7 +97,12 @@ export class AppCard {
 
         <div class="metric-item">
           <span class="metric-label">Pending Tasks:</span>
-          <span class="metric-value">${todoDisplay}</span>
+          <span class="metric-value">${pendingDisplay}</span>
+        </div>
+
+        <div class="metric-item">
+          <span class="metric-label">Active Tasks:</span>
+          <span class="metric-value">${activeDisplay}</span>
         </div>
       </div>
 

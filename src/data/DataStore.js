@@ -2,9 +2,11 @@
  * DataStore - Local persistence layer for Sentinel
  * Handles IndexedDB operations for app portfolio and ideas data
  * Uses a lightweight native IndexedDB wrapper (no external idb dependency)
+ * Can optionally switch to Supabase backend if configured
  */
 
 import { normalizeAppId } from '../utils/helpers.js';
+import { supabaseService } from './SupabaseService.js';
 
 function openNativeDB(name, version, options = {}) {
   return new Promise((resolve, reject) => {
@@ -84,6 +86,7 @@ class DataStore {
       ideas: new Map()
     };
     this.usingFallback = false;
+    this.useSupabase = false;
   }
 
   /**
@@ -91,6 +94,14 @@ class DataStore {
    */
   async init() {
     if (this.initialized) return;
+
+    // Check if Supabase is enabled
+    if (supabaseService.enabled) {
+      this.useSupabase = true;
+      this.initialized = true;
+      console.log('DataStore using Supabase backend');
+      return;
+    }
 
     try {
       if (typeof indexedDB === 'undefined' || !indexedDB) {
@@ -137,6 +148,10 @@ class DataStore {
   async getPortfolio() {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      return await supabaseService.getPortfolio();
+    }
+
     if (this.usingFallback) {
       return Array.from(this.fallbackStorage.portfolio.values());
     }
@@ -155,6 +170,14 @@ class DataStore {
   async getApp(id) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      // getPortfolio already fetches full objects, but if we need single fetch:
+      // For now, rely on getPortfolio being the main entry or implement getApp in SupabaseService
+      // Or filter from getPortfolio if not implemented
+      const portfolio = await supabaseService.getPortfolio();
+      return portfolio.find(app => app.id === id);
+    }
+
     if (this.usingFallback) {
       return this.fallbackStorage.portfolio.get(id);
     }
@@ -173,6 +196,10 @@ class DataStore {
   async saveApp(app) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      return await supabaseService.saveApp(app);
+    }
+
     if (this.usingFallback) {
       this.fallbackStorage.portfolio.set(app.id, app);
       return app;
@@ -193,6 +220,11 @@ class DataStore {
   async removeApp(appId) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      await supabaseService.deleteApp(appId);
+      return true;
+    }
+
     if (this.usingFallback) {
       this.fallbackStorage.portfolio.delete(appId);
       return true;
@@ -213,6 +245,11 @@ class DataStore {
   async deleteApp(id) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      await supabaseService.deleteApp(id);
+      return;
+    }
+
     if (this.usingFallback) {
       this.fallbackStorage.portfolio.delete(id);
       return;
@@ -232,6 +269,10 @@ class DataStore {
   async getIdeas() {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      return await supabaseService.getIdeas();
+    }
+
     if (this.usingFallback) {
       return Array.from(this.fallbackStorage.ideas.values());
     }
@@ -250,6 +291,11 @@ class DataStore {
   async getIdea(id) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      const ideas = await supabaseService.getIdeas();
+      return ideas.find(i => i.id === id);
+    }
+
     if (this.usingFallback) {
       return this.fallbackStorage.ideas.get(id);
     }
@@ -268,6 +314,10 @@ class DataStore {
   async saveIdea(idea) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      return await supabaseService.saveIdea(idea);
+    }
+
     if (this.usingFallback) {
       this.fallbackStorage.ideas.set(idea.id, idea);
       return idea;
@@ -283,11 +333,39 @@ class DataStore {
   }
 
   /**
+   * Add feedback to an idea
+   */
+  async addIdeaFeedback(ideaId, feedback) {
+    if (!this.initialized) await this.init();
+
+    if (this.useSupabase) {
+        return await supabaseService.addIdeaFeedback(ideaId, feedback);
+    }
+
+    // For local storage, we just update the idea object with comments array
+    const idea = await this.getIdea(ideaId);
+    if (!idea) throw new Error('Idea not found');
+
+    const updatedIdea = {
+        ...idea,
+        comments: [...(idea.comments || []), feedback]
+    };
+
+    await this.saveIdea(updatedIdea);
+    return feedback;
+  }
+
+  /**
    * Delete an idea
    */
   async deleteIdea(id) {
     if (!this.initialized) await this.init();
     
+    if (this.useSupabase) {
+      await supabaseService.deleteIdea(id);
+      return;
+    }
+
     if (this.usingFallback) {
       this.fallbackStorage.ideas.delete(id);
       return;
@@ -328,7 +406,17 @@ class DataStore {
 
       // Save app and delete idea
       await this.saveApp(newApp);
-      await this.deleteIdea(ideaId);
+      
+      // If using Supabase, mark as implemented instead of deleting
+      if (this.useSupabase) {
+          const updatedIdea = {
+              ...idea,
+              status: 'implemented'
+          };
+          await this.saveIdea(updatedIdea);
+      } else {
+          await this.deleteIdea(ideaId);
+      }
 
       return newApp;
     } catch (error) {

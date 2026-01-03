@@ -55,6 +55,12 @@ export function showImprovementModal(app, onSubmit) {
 
   document.body.appendChild(dialog);
 
+  const closeDialog = () => {
+    document.removeEventListener('keydown', escapeHandler);
+    if (dialog.parentNode) {
+      document.body.removeChild(dialog);
+    }
+  };
   // Handle form submission
   dialog.querySelector('#public-improvement-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -85,7 +91,7 @@ export function showImprovementModal(app, onSubmit) {
         await onSubmit(todo);
       }
       toastManager.show('Thank you! Your suggestion has been submitted.', 'success');
-      document.body.removeChild(dialog);
+      closeDialog();
     } catch (error) {
       console.error('Failed to submit improvement:', error);
       toastManager.show('Failed to submit suggestion. Please try again.', 'error');
@@ -94,19 +100,26 @@ export function showImprovementModal(app, onSubmit) {
 
   // Handle cancel
   dialog.querySelector('#cancel-improvement').addEventListener('click', () => {
-    document.body.removeChild(dialog);
+    closeDialog();
   });
 
   // Handle escape key
   const escapeHandler = (e) => {
     if (e.key === 'Escape') {
-      document.removeEventListener('keydown', escapeHandler);
-      if (dialog.parentNode) {
-        document.body.removeChild(dialog);
-      }
+      closeDialog();
     }
   };
   document.addEventListener('keydown', escapeHandler);
+
+  // Click outside to close
+  const overlay = dialog.querySelector('.dialog-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeDialog();
+      }
+    });
+  }
 }
 
 export default showImprovementModal;

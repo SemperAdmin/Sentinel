@@ -20,18 +20,22 @@ export function renderIdeaItem(idea) {
 
   const isAdmin = appState.getState().userRole === 'admin';
   const isPublicSubmission = idea.status === 'public-submission' || idea.submittedBy === 'public';
-  const isCreated = idea.status === 'created';
+  const isImplemented = idea.status === 'implemented' || idea.status === 'created';
+  const isInDevelopment = idea.status === 'in_development';
+  const isRejected = idea.status === 'rejected';
 
   const commentsCount = idea.comments?.length || 0;
 
   return `
-    <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''} ${isCreated ? 'created' : ''}" data-idea-id="${idea.id}" style="cursor: pointer;">
+    <div class="idea-item ${isPublicSubmission ? 'public-submission' : ''} ${isImplemented ? 'created' : ''} ${isInDevelopment ? 'in-progress' : ''} ${isRejected ? 'rejected' : ''}" data-idea-id="${idea.id}" style="cursor: pointer;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <h4>${escapeHtml(idea.conceptName)}</h4>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
           ${commentsCount > 0 ? `<span style="background: #444; color: #aaa; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">💬 ${commentsCount}</span>` : ''}
-          ${isCreated ? '<span style="background: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">✓ CREATED</span>' : ''}
-          ${isPublicSubmission && !isCreated ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
+          ${isImplemented ? '<span style="background: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">✓ IMPLEMENTED</span>' : ''}
+          ${isInDevelopment ? '<span style="background: #17a2b8; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">⚡ IN DEVELOPMENT</span>' : ''}
+          ${isRejected ? '<span style="background: #dc3545; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">✕ REJECTED</span>' : ''}
+          ${isPublicSubmission && !isImplemented && !isInDevelopment && !isRejected ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUBLIC SUBMISSION</span>' : ''}
         </div>
       </div>
       <p>${escapeHtml(idea.problemSolved ? idea.problemSolved.substring(0, 100) : '')}${idea.problemSolved && idea.problemSolved.length > 100 ? '...' : ''}</p>
@@ -42,21 +46,11 @@ export function renderIdeaItem(idea) {
         <span>📅 ${formatDate(idea.dateCreated)}</span>
         ${idea.contactEmail ? `<span>📧 ${escapeHtml(idea.contactEmail)}</span>` : ''}
       </div>
-      ${isAdmin ? `
-        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-          ${!isCreated ? `
-            <button class="btn btn-success" data-action="mark-created">
-              ✓ Mark as Created
-            </button>
-          ` : ''}
-          <button class="btn btn-secondary" data-action="edit">
-            Edit
-          </button>
-          <span style="margin-left: auto; color: ${isCreated ? '#28a745' : '#888'}; font-size: 0.75rem; align-self: center;">
-            ${isCreated ? 'App has been created' : 'Click card to view details'}
-          </span>
-        </div>
-      ` : ''}
+      <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+        <span style="margin-left: auto; color: ${isImplemented ? '#28a745' : '#888'}; font-size: 0.75rem; align-self: center;">
+          ${isImplemented ? 'App has been implemented' : 'Click card to view details'}
+        </span>
+      </div>
     </div>
   `;
 }
@@ -105,6 +99,8 @@ export function renderIdeasList(ideas, container, callbacks = {}) {
           callbacks.onEdit(idea);
         } else if (action === 'mark-created' && callbacks.onMarkCreated) {
           callbacks.onMarkCreated(idea.id);
+        } else if (action === 'mark-dev' && callbacks.onMarkInDev) {
+          callbacks.onMarkInDev(idea.id);
         }
       } else if (callbacks.onView) {
         // Clicking on the item opens view modal for all users

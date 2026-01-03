@@ -94,7 +94,7 @@ export interface Todo {
 }
 
 export type TodoStatus =
-  | 'Draft'
+  | 'Pending'
   | 'Submitted'
   | 'Review'
   | 'Approved'

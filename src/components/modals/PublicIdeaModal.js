@@ -55,12 +55,24 @@ export function showPublicIdeaModal(onSubmit) {
             </div>
 
             <div class="form-group">
-              <label for="public-contact-email">Your Email (optional)</label>
+              <label for="public-submitter-name">Your Name *</label>
+              <input
+                type="text"
+                id="public-submitter-name"
+                class="form-control"
+                placeholder="John Doe"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="public-contact-email">Your Email *</label>
               <input
                 type="email"
                 id="public-contact-email"
                 class="form-control"
                 placeholder="contact@example.com"
+                required
               />
             </div>
 
@@ -106,7 +118,7 @@ export function showPublicIdeaModal(onSubmit) {
       riskRating: 'Medium',
       dateCreated: new Date().toISOString(),
       status: 'public-submission',
-      submittedBy: 'public'
+      submittedBy: document.getElementById('public-submitter-name').value
     };
 
     try {

@@ -22,7 +22,6 @@ import { getPendingTodosCount } from '../utils/helpers.js'
  * @property {boolean} isPrivate - Whether repo is private
  * @property {boolean} archived - Whether repo is archived
  * @property {Array<Todo>} todos - Array of todos
- * @property {Array<Improvement>} improvements - Array of improvements
  * @property {string} developerNotes - Developer notes
  * @property {number} improvementBudget - Budget percentage for improvements
  * @property {string} currentSprint - Current sprint identifier
@@ -38,16 +37,8 @@ import { getPendingTodosCount } from '../utils/helpers.js'
  * @property {boolean} completed - Completion status
  * @property {string} createdAt - ISO date of creation
  * @property {string} status - Status (Draft, Active, Completed, Rejected)
- */
-
-/**
- * @typedef {Object} Improvement
- * @property {string} id - Unique identifier
- * @property {string} title - Improvement title
- * @property {string} description - Improvement description
- * @property {number} effort - Effort estimate (1-5)
- * @property {number} impact - Impact estimate (1-5)
- * @property {string} status - Status (Pending, In Progress, Completed)
+ * @property {number} [effort] - Effort estimate (1-5)
+ * @property {number} [impact] - Impact estimate (1-5)
  */
 
 /**

@@ -35,6 +35,8 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.3"
+    "@supabase/supabase-js": "^2.89.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.3"
   }
 }

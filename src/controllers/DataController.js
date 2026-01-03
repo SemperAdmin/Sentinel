@@ -32,7 +32,32 @@ export class DataController {
    * @returns {Promise<App[]>}
    */
   async loadPortfolioData() {
+    let supabaseError = false;
+
     try {
+      // Check if using Supabase backend
+      if (dataStore.useSupabase) {
+        console.log('Loading portfolio data from Supabase...');
+        try {
+          const supabaseData = await dataStore.getPortfolio();
+          if (supabaseData && supabaseData.length > 0) {
+            console.log(`Loaded ${supabaseData.length} apps from Supabase`);
+            return this.filterPortfolio(supabaseData);
+          }
+          console.log('Supabase returned no data.');
+        } catch (err) {
+           console.error('Supabase load failed:', err);
+           supabaseError = true;
+        }
+      }
+
+      // If Supabase is enabled and returned empty (success), return empty to avoid API spam.
+      // But if Supabase FAILED (error), we fall back to other sources.
+      if (dataStore.useSupabase && !supabaseError) {
+          console.warn('Supabase is enabled but returned no data. Returning empty portfolio.');
+          return [];
+      }
+
       // Triple-fallback: repo JSON → local storage → fresh GitHub fetch
       const portfolio = await RecoveryStrategies.withFallback(
         // Primary: fetch from repo
@@ -151,7 +176,6 @@ export class DataController {
       isPrivate: repo.private,
       archived: repo.archived,
       todos: [],
-      improvements: [],
       developerNotes: '',
       improvementBudget: IMPROVEMENT_BUDGET_PERCENT,
       currentSprint: 'Q1 2025'
@@ -215,17 +239,30 @@ export class DataController {
 
     // Process function for each app
     const processApp = async (app) => {
-      const [repoData, tasksResult] = await Promise.all([
-        apiService.getComprehensiveRepoData(app.repoUrl),
-        apiService.fetchRepoTasks(app.id)
-      ]);
+      // If using Supabase, we don't need to fetch tasks from GitHub
+      // We only fetch repo metadata
+      const fetchTasks = !dataStore.useSupabase;
+
+      const promises = [
+        apiService.getComprehensiveRepoData(app.repoUrl)
+      ];
+
+      if (fetchTasks) {
+        promises.push(apiService.fetchRepoTasks(app.id));
+      }
+
+      const [repoData, tasksResult] = await Promise.all(promises);
 
       // If fetch failed, throw error for proper failure tracking
       if (!repoData) {
         throw new Error(`Failed to fetch GitHub data for ${app.id}`);
       }
 
-      const todos = tasksResult.success ? tasksResult.data : app.todos || [];
+      // Logic to determine todos
+      let todos = app.todos || [];
+      if (fetchTasks && tasksResult && tasksResult.success) {
+        todos = tasksResult.data;
+      }
 
       // Update app with GitHub data
       const updatedApp = {
@@ -235,7 +272,7 @@ export class DataController {
         description: repoData.description || app.description,
         nextReviewDate: this.calculateNextReviewDate(repoData.lastCommitDate, app.lastReviewDate),
         recentViews: repoData.recentViews,
-        todos
+        todos: todos
       };
 
       // Save to data store
@@ -285,6 +322,11 @@ export class DataController {
    */
   async loadIdeas() {
     try {
+      if (dataStore.useSupabase) {
+        console.log('Loading ideas from Supabase...');
+        return await dataStore.getIdeas();
+      }
+
       const localIdeas = await dataStore.getIdeas();
 
       // Try to fetch remote ideas

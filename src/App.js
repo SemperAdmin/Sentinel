@@ -75,6 +75,63 @@ class App {
     }
   }
 
+  async markIdeaAsInDev(ideaId) {
+    try {
+      const idea = appState.getIdeaById(ideaId);
+      if (!idea) return;
+
+      const updatedIdea = {
+        ...idea,
+        status: 'in_development'
+      };
+
+      await dataStore.saveIdea(updatedIdea);
+      appState.updateIdea(updatedIdea);
+      
+      toastManager.showSuccess('Idea marked as in development');
+    } catch (error) {
+      console.error('Failed to update idea status:', error);
+      if (error.code === '42501') {
+        toastManager.showError('Permission denied. Run fix_ideas_rls.sql and ensure you are admin (see grant_admin.sql)');
+      } else {
+        toastManager.showError('Failed to update status');
+      }
+    }
+  }
+
+  /**
+   * Reject an idea (admin only)
+   */
+  async rejectIdea(ideaId) {
+    // Security check: Only admins can reject ideas
+    if (!appState.isAdmin()) {
+      toastManager.show('Admin access required', 'error');
+      return;
+    }
+
+    try {
+      const idea = appState.getIdeaById(ideaId);
+      if (!idea) return;
+
+      const updatedIdea = {
+        ...idea,
+        status: 'rejected'
+      };
+
+      await dataStore.saveIdea(updatedIdea);
+      appState.updateIdea(updatedIdea);
+      
+      toastManager.showSuccess('Idea rejected');
+    } catch (error) {
+      console.error('Failed to reject idea:', error);
+      if (error.code === '42501') {
+        toastManager.showError('Permission denied. Run fix_ideas_rls.sql and ensure you are admin (see grant_admin.sql)');
+      } else {
+        toastManager.showError('Failed to reject idea');
+      }
+    }
+  }
+
   /**
    * Initialize the application
    */
@@ -125,27 +182,32 @@ class App {
         appState.setAuthentication('public');
       }
 
-      try {
-        const rl = await apiService.getRateLimitStatus();
-        if (rl && rl.resources && rl.resources.core) {
-          const r = rl.resources.core;
-          const resetAt = r.reset ? new Date(r.reset * 1000).toISOString() : null;
-          console.log(`GitHub rate (core): ${r.remaining}/${r.limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
-        }
-      } catch (_) {}
-      try {
-        const res = await fetch(`${apiService.baseUrl}/health`, { method: 'GET' });
-        if (res.ok) {
-          const healthInfo = await res.json();
-          const rateLimit = healthInfo?.rateLimit;
-          if (rateLimit) {
-            console.log(`API token active=${healthInfo.hasToken}; core used=${rateLimit.used}; remaining=${rateLimit.remaining}/${rateLimit.limit}`);
-          } else {
-            console.log(`API token active=${healthInfo.hasToken}`);
+      // Check API health status only if not using Supabase or if explicitly needed
+      // When using Supabase, we don't need the local proxy server for core functionality
+      if (!dataStore.useSupabase) {
+        try {
+          const rl = await apiService.getRateLimitStatus();
+          if (rl && rl.resources && rl.resources.core) {
+            const r = rl.resources.core;
+            const resetAt = r.reset ? new Date(r.reset * 1000).toISOString() : null;
+            console.log(`GitHub rate (core): ${r.remaining}/${r.limit} remaining${resetAt ? `, resets at ${resetAt}` : ''}`);
           }
+        } catch (_) {}
+
+        try {
+          const res = await fetch(`${apiService.baseUrl}/health`, { method: 'GET' });
+          if (res.ok) {
+            const healthInfo = await res.json();
+            const rateLimit = healthInfo?.rateLimit;
+            if (rateLimit) {
+              console.log(`API token active=${healthInfo.hasToken}; core used=${rateLimit.used}; remaining=${rateLimit.remaining}/${rateLimit.limit}`);
+            } else {
+              console.log(`API token active=${healthInfo.hasToken}`);
+            }
+          }
+        } catch (error) {
+          // Silent fail for health check when not critical
         }
-      } catch (error) {
-        console.warn('Could not fetch API health status:', error);
       }
 
       await this.loadInitialData();
@@ -526,6 +588,14 @@ class App {
           </div>
 
           <div class="ideas-section" style="margin-top: 2rem;">
+            <h3 class="section-title" style="color: #17a2b8; border-bottom: 2px solid #17a2b8; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+              ⚡ In Development
+              <span id="in-development-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
+            </h3>
+            <div id="ideas-list-in-development" class="ideas-list"></div>
+          </div>
+
+          <div class="ideas-section" style="margin-top: 2rem;">
             <h3 class="section-title" style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 0.5rem; margin-bottom: 1rem;">
               ✓ Implemented
               <span id="completed-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
@@ -533,6 +603,13 @@ class App {
             <div id="ideas-list-completed" class="ideas-list"></div>
           </div>
 
+          <div class="ideas-section" style="margin-top: 2rem;">
+            <h3 class="section-title" style="color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+              ✕ Rejected
+              <span id="rejected-count" style="font-size: 0.875rem; font-weight: normal; color: #888;"></span>
+            </h3>
+            <div id="ideas-list-rejected" class="ideas-list"></div>
+          </div>
           <div id="idea-form-container" class="idea-form-container hidden">
             <h3>DOCUMENT NEW CONCEPT</h3>
             <form id="idea-form" class="idea-form">
@@ -613,6 +690,12 @@ class App {
       const ideas = await this.dataController.loadIdeas();
       appState.setIdeas(ideas);
 
+      // If using Supabase, we don't need to check for overview JSON or hit GitHub API
+      if (dataStore.useSupabase) {
+        console.log('Using Supabase backend, skipping GitHub API checks.');
+        return;
+      }
+
       // If overview JSON is present, skip live GitHub calls
       const overviewCheck = await apiService.fetchPortfolioOverview();
       const hasOverview = unwrapOr(overviewCheck, []).length > 0;
@@ -692,8 +775,15 @@ class App {
     if (!apps || apps.length === 0) return;
 
     // Delegate to DataController with state update callback
-    const result = await this.dataController.fetchGitHubDataForApps(apps, (updatedApp) => {
+    const result = await this.dataController.fetchGitHubDataForApps(apps, async (updatedApp) => {
       appState.updateApp(updatedApp);
+      
+      // Persist the updated data (GitHub stats, etc.) to the backend
+      try {
+        await dataStore.saveApp(updatedApp);
+      } catch (err) {
+        console.warn(`Failed to save synced data for ${updatedApp.id}:`, err);
+      }
     });
 
     return result;
@@ -847,6 +937,9 @@ class App {
   }
 
   async hydrateTasksForApps(apps) {
+    // If using Supabase, tasks are already loaded with the portfolio
+    if (dataStore.useSupabase) return;
+
     try {
       const updates = [];
       for (const app of apps) {
@@ -886,6 +979,8 @@ class App {
    * Fetches metadata.json for each app and merges with local data (parallelized)
    */
   async hydrateMetadataForApps(apps) {
+    // If using Supabase, metadata is already loaded
+    if (dataStore.useSupabase) return;
     try {
       // Fetch all metadata in parallel for better performance
       const results = await Promise.all(apps.map(async (app) => {
@@ -999,6 +1094,7 @@ class App {
   }
 
   async hydrateTasksFromRepo(app) {
+    if (dataStore.useSupabase) return;
     try {
       if (!app) return;
       const remoteResult = await apiService.fetchRepoTasks(app.id, true); // bypass cache
@@ -1032,29 +1128,43 @@ class App {
    */
   updateIdeasView(state) {
     const pendingList = document.getElementById('ideas-list-pending');
+    const inDevelopmentList = document.getElementById('ideas-list-in-development');
     const completedList = document.getElementById('ideas-list-completed');
+    const rejectedList = document.getElementById('ideas-list-rejected');
+
     const pendingCount = document.getElementById('pending-count');
+    const inDevelopmentCount = document.getElementById('in-development-count');
     const completedCount = document.getElementById('completed-count');
+    const rejectedCount = document.getElementById('rejected-count');
 
     if (!pendingList || !completedList) return;
 
-    // Split ideas into pending and completed
+    // Split ideas into categories
     const allIdeas = state.ideas || [];
-    const pending = allIdeas.filter(idea => idea.status !== 'created');
-    const completed = allIdeas.filter(idea => idea.status === 'created');
+    
+    // Pending: No status or explicitly 'pending' or 'public-submission'
+    const pending = allIdeas.filter(idea => !idea.status || idea.status === 'pending' || idea.status === 'public-submission');
+    
+    // In Development
+    const inDevelopment = allIdeas.filter(idea => idea.status === 'in_development');
+    
+    // Completed: 'created' or 'implemented'
+    const completed = allIdeas.filter(idea => idea.status === 'created' || idea.status === 'implemented');
+    
+    // Rejected
+    const rejected = allIdeas.filter(idea => idea.status === 'rejected');
 
     // Update counts
-    if (pendingCount) {
-      pendingCount.textContent = `(${pending.length})`;
-    }
-    if (completedCount) {
-      completedCount.textContent = `(${completed.length})`;
-    }
+    if (pendingCount) pendingCount.textContent = `(${pending.length})`;
+    if (inDevelopmentCount) inDevelopmentCount.textContent = `(${inDevelopment.length})`;
+    if (completedCount) completedCount.textContent = `(${completed.length})`;
+    if (rejectedCount) rejectedCount.textContent = `(${rejected.length})`;
 
     const callbacks = {
       onView: (idea) => this.showIdeaDetail(idea),
       onEdit: (idea) => this.editIdea(idea.id),
-      onMarkCreated: (ideaId) => this.markIdeaCreated(ideaId)
+      onMarkCreated: (ideaId) => this.markIdeaCreated(ideaId),
+      onMarkInDev: (ideaId) => this.markIdeaAsInDev(ideaId)
     };
 
     // Render pending ideas
@@ -1069,6 +1179,20 @@ class App {
       renderIdeasList(pending, pendingList, callbacks);
     }
 
+    // Render in-development ideas
+    if (inDevelopmentList) {
+      if (inDevelopment.length === 0) {
+        inDevelopmentList.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: #6c757d;">
+            <p>No ideas in development.</p>
+          </div>
+        `;
+        delete inDevelopmentList.dataset.listenerAttached;
+      } else {
+        renderIdeasList(inDevelopment, inDevelopmentList, callbacks);
+      }
+    }
+
     // Render completed ideas
     if (completed.length === 0) {
       completedList.innerHTML = `
@@ -1080,9 +1204,24 @@ class App {
     } else {
       renderIdeasList(completed, completedList, callbacks);
     }
+    // Render rejected ideas
+    if (rejectedList) {
+      if (rejected.length === 0) {
+        rejectedList.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: #6c757d;">
+            <p>No rejected ideas.</p>
+          </div>
+        `;
+        delete rejectedList.dataset.listenerAttached;
+      } else {
+        renderIdeasList(rejected, rejectedList, callbacks);
+      }
+    }
 
     // Handle idea form
     const formContainer = document.getElementById('idea-form-container');
+    if (formContainer) formContainer.classList.add('hidden');
+
     if (state.showIdeaForm) {
       if (!this.ideaForm) {
         this.ideaForm = new IdeaForm(
@@ -1090,12 +1229,9 @@ class App {
           () => this.hideIdeaForm(),
           state.editingIdea
         );
-        formContainer.innerHTML = '';
-        formContainer.appendChild(this.ideaForm.render());
+        document.body.appendChild(this.ideaForm.render());
       }
-      formContainer.classList.remove('hidden');
     } else {
-      formContainer.classList.add('hidden');
       if (this.ideaForm) {
         this.ideaForm.destroy();
         this.ideaForm = null;
@@ -1210,6 +1346,8 @@ class App {
     showIdeaDetailModal(idea, {
       onEdit: (idea) => this.editIdea(idea.id),
       onMarkCreated: (ideaId) => this.markIdeaCreated(ideaId),
+      onMarkInDev: (ideaId) => this.markIdeaAsInDev(ideaId),
+      onReject: (ideaId) => this.rejectIdea(ideaId),
       onAddComment: (ideaId, comment) => this.addCommentToIdea(ideaId, comment)
     });
   }
@@ -1225,22 +1363,29 @@ class App {
         return;
       }
 
-      // Initialize comments array if needed
+      // Save to data store (handles both Supabase and Local)
+      // If Supabase is used, this saves to idea_feedback table
+      // If local, it updates the idea object
+      const savedComment = await dataStore.addIdeaFeedback(ideaId, comment);
+      
+      // Update local state with the returned comment (which might have DB ID)
+      const commentToAdd = savedComment || comment;
+
       const updatedIdea = {
         ...idea,
-        comments: [...(idea.comments || []), comment]
+        comments: [...(idea.comments || []), commentToAdd]
       };
-
-      // Save to local storage
-      await dataStore.saveIdea(updatedIdea);
+      
       appState.updateIdea(updatedIdea);
 
-      // Try to save to YAML (backend)
-      try {
-        const api = (await import('./data/ApiService.js')).default;
-        await api.saveIdeaYaml(updatedIdea);
-      } catch (err) {
-        console.warn('Failed to sync comment to backend:', err);
+      // Try to save to YAML (backend) - legacy, keep if not using Supabase
+      if (!dataStore.useSupabase) {
+          try {
+            const api = (await import('./data/ApiService.js')).default;
+            await api.saveIdeaYaml(updatedIdea);
+          } catch (err) {
+            console.warn('Failed to sync comment to backend:', err);
+          }
       }
 
       console.log(`Comment added to idea ${ideaId}`);
@@ -1265,12 +1410,17 @@ class App {
       try {
         const api = (await import('./data/ApiService.js')).default;
         await api.saveIdeaYaml(idea);
-} catch (err) { console.warn('Failed to save idea to YAML:', err); }
+      } catch (err) { console.warn('Failed to save idea to YAML:', err); }
       
       this.hideIdeaForm();
+      toastManager.showSuccess('Idea saved successfully');
     } catch (error) {
       console.error('Failed to save idea:', error);
-      appState.setError('Failed to save idea');
+      if (error.code === '42501') {
+        toastManager.showError('Permission denied. Run fix_ideas_rls.sql to fix admin permissions.');
+      } else {
+        appState.setError('Failed to save idea');
+      }
     }
   }
 
@@ -1291,10 +1441,10 @@ class App {
         return;
       }
 
-      // Update the idea status to 'created' (implemented)
+      // Update the idea status to 'implemented' (created)
       const updatedIdea = {
         ...idea,
-        status: 'created',
+        status: 'implemented',
         implementedDate: new Date().toISOString()
       };
 

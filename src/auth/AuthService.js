@@ -3,6 +3,8 @@
  * Handles admin authentication and session management
  */
 
+import dataStore from '../data/DataStore.js';
+import { supabaseService } from '../data/SupabaseService.js';
 const AUTH_STORAGE_KEY = 'sentinel-auth-session';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -51,9 +53,73 @@ export class AuthService {
   /**
    * Clear session from localStorage
    */
-  clearSession() {
+  async clearSession() {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     this.session = null;
+    if (dataStore.useSupabase) {
+        await supabaseService.signOut();
+    }
+  }
+
+  /**
+   * Authenticate user with Supabase
+   * @param {string} email
+   * @param {string} password
+   */
+  async loginWithSupabase(email, password) {
+    try {
+        const { data, error } = await supabaseService.signIn(email, password);
+        
+        if (error) {
+            return {
+                success: false,
+                error: error.message || 'Authentication failed'
+            };
+        }
+
+        const user = data.user;
+        if (!user) {
+            return {
+                success: false,
+                error: 'No user returned'
+            };
+        }
+
+        // Check profile role
+        const profile = await supabaseService.getUserProfile(user.id);
+        
+        if (!profile || profile.role !== 'admin') {
+            await supabaseService.signOut();
+            return {
+                success: false,
+                error: 'Unauthorized: Admin access required'
+            };
+        }
+
+        // Create local session to maintain compatibility with existing app
+        const session = {
+            role: 'admin',
+            authenticatedAt: Date.now(),
+            expiresAt: Date.now() + SESSION_DURATION,
+            source: 'supabase',
+            userId: user.id,
+            email: user.email
+        };
+
+        this.saveSession(session);
+
+        return {
+            success: true,
+            role: 'admin'
+        };
+
+    } catch (err) {
+        console.error('Supabase login error:', err);
+        return {
+            success: false,
+            error: 'Login error occurred'
+        };
+    }
   }
 
   /**
@@ -62,6 +128,37 @@ export class AuthService {
    * @returns {Promise<{success: boolean, role: string, error?: string}>}
    */
   async login(password) {
+    if (dataStore.useSupabase) {
+      // Fetch admin password from app_config table
+      const { data, error } = await supabaseService.client
+        .from('app_config')
+        .select('value')
+        .eq('key', 'admin_password')
+        .single();
+
+      if (error) {
+        console.error('Error fetching admin password:', error);
+        // Fallback to default if table doesn't exist or error (or handle securely)
+        // For now, if we can't verify against DB, we fail safely unless it's a known error
+        return {
+          success: false,
+          error: 'Authentication verification failed'
+        };
+      }
+
+      if (data && data.value === password) {
+        const session = {
+          role: 'admin',
+          authenticatedAt: Date.now(),
+          expiresAt: Date.now() + SESSION_DURATION,
+          source: 'supabase_config'
+        };
+        this.saveSession(session);
+        return { success: true, role: 'admin' };
+      } else {
+        return { success: false, error: 'Invalid password' };
+      }
+    }
     // ⚠️ SECURITY NOTE: This uses bcrypt-hashed password stored in auth-config.json
     // The hash is secure and cannot be reversed, but this is still client-side auth.
     // For production apps with sensitive data, use proper backend authentication.

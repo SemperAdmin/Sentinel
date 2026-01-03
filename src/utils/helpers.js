@@ -204,6 +204,30 @@ export function getPendingTodosCount(app) {
 }
 
 /**
+ * Get the count of pending (was draft) todos for an app
+ * @param {Object} app - App object with optional todos array
+ * @returns {number} Count of pending todos
+ */
+export function getPendingStatusTodosCount(app) {
+  if (!app || !Array.isArray(app.todos)) {
+    return 0;
+  }
+  return app.todos.filter(todo => !todo.completed && ['Draft', 'Pending'].includes(String(todo.status||''))).length;
+}
+
+/**
+ * Get the count of active (non-pending) todos for an app
+ * @param {Object} app - App object with optional todos array
+ * @returns {number} Count of active todos
+ */
+export function getActiveTodosCount(app) {
+  if (!app || !Array.isArray(app.todos)) {
+    return 0;
+  }
+  return app.todos.filter(todo => !todo.completed && !['Draft', 'Pending'].includes(String(todo.status||''))).length;
+}
+
+/**
  * Calculate next quarterly review date
  */
 export function calculateNextReviewDate(lastReviewDate = null) {
