@@ -5,12 +5,17 @@
     "description": "Create tables for tasks and ideas ",
     "priority": "medium",
     "dueDate": null,
-    "completed": false,
+    "completed": true,
     "createdAt": "2025-11-27T21:11:42.625Z",
     "source": "Other",
     "feedbackSummary": "",
     "submittedBy": "",
-    "status": "Draft"
+    "status": "Complete",
+    "submitterName": "",
+    "submitterEmail": "",
+    "effortEstimate": "Small",
+    "completionDate": "",
+    "rejectionReason": ""
   },
   {
     "id": "1764277992725",
