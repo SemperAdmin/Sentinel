@@ -431,6 +431,53 @@ export function getPlatformIcon(platform) {
     'React Native': '⚛️',
     'Flutter': '🦋'
   };
-  
+
   return icons[platform] || '📱';
+}
+
+/**
+ * Parse URL hash route for deep linking
+ * Supports formats:
+ *   #dashboard
+ *   #detail/app-id
+ *   #detail/app-id/tab
+ * @param {string} hash - The URL hash (e.g., '#detail/my-app/overview')
+ * @returns {{ view: string, appId: string|null, tab: string|null }}
+ */
+export function parseHashRoute(hash) {
+  // Remove leading # if present
+  const cleanHash = hash.startsWith('#') ? hash.slice(1) : hash;
+
+  // Split by /
+  const parts = cleanHash.split('/').filter(p => p.length > 0);
+
+  if (parts.length === 0) {
+    return { view: 'dashboard', appId: null, tab: null };
+  }
+
+  const view = parts[0];
+  const appId = parts[1] || null;
+  const tab = parts[2] || null;
+
+  return { view, appId, tab };
+}
+
+/**
+ * Build URL hash for deep linking
+ * @param {string} view - The view name (e.g., 'detail', 'dashboard')
+ * @param {string|null} appId - Optional app ID for detail view
+ * @param {string|null} tab - Optional tab name for detail view
+ * @returns {string} The hash string (e.g., '#detail/my-app/overview')
+ */
+export function buildHashRoute(view, appId = null, tab = null) {
+  let hash = `#${view}`;
+
+  if (appId) {
+    hash += `/${appId}`;
+    if (tab) {
+      hash += `/${tab}`;
+    }
+  }
+
+  return hash;
 }

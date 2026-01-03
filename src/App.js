@@ -13,7 +13,7 @@ import dataStore from './data/DataStore.js';
 import apiService from './data/ApiService.js';
 import appState from './state/AppState.js';
 import { AppGrid } from './components/AppCard.js';
-import { getLatestReviewDate } from './utils/helpers.js';
+import { getLatestReviewDate, parseHashRoute, buildHashRoute } from './utils/helpers.js';
 import { TabbedDetail } from './components/TabbedDetail.js';
 import { IdeaForm } from './components/IdeaForm.js';
 import { formatDate, calculateHealth } from './utils/helpers.js';
@@ -150,8 +150,8 @@ class App {
 
       await this.loadInitialData();
 
-      // Set initial view
-      this.showView('dashboard');
+      // Set initial view based on URL hash (supports deep linking)
+      this.restoreViewFromHash();
 
       this.hideLoading();
       this.initialized = true;
@@ -289,8 +289,20 @@ class App {
 
     // Handle browser back/forward buttons
     window.addEventListener('popstate', (e) => {
-      if (e.state && e.state.view) {
-        this.showView(e.state.view, false); // Don't push state again
+      const { view, appId, tab } = parseHashRoute(window.location.hash);
+
+      if (view === 'detail' && appId) {
+        const app = appState.getAppById(appId);
+        if (app) {
+          appState.setCurrentApp(app);
+          appState.setActiveTab(tab || 'overview');
+          this.showView('detail', false);
+        } else {
+          // App not found, go to dashboard
+          this.showView('dashboard', false);
+        }
+      } else if (view) {
+        this.showView(view, false);
       }
     });
   }
@@ -686,14 +698,61 @@ class App {
   }
 
   /**
-   * Show specific view
+   * Show specific view with optional deep linking support
+   * @param {string} view - View name ('dashboard', 'detail', 'ideas')
+   * @param {boolean} pushState - Whether to push to browser history
    */
   showView(view, pushState = true) {
     console.log(`showView called with view: ${view}`);
     appState.setView(view);
-    
+
     if (pushState) {
-      history.pushState({ view }, '', `#${view}`);
+      // Build hash with app ID and tab for detail view
+      const state = appState.getState();
+      let hash;
+
+      if (view === 'detail' && state.currentApp) {
+        hash = buildHashRoute(view, state.currentApp.id, state.activeTab);
+      } else {
+        hash = buildHashRoute(view);
+      }
+
+      history.pushState({ view }, '', hash);
+    }
+  }
+
+  /**
+   * Restore view from URL hash (for deep linking and page refresh)
+   */
+  restoreViewFromHash() {
+    const { view, appId, tab } = parseHashRoute(window.location.hash);
+
+    if (view === 'detail' && appId) {
+      const app = appState.getAppById(appId);
+      if (app) {
+        console.log(`Deep link: Restoring detail view for app "${appId}", tab "${tab || 'overview'}"`);
+        appState.setCurrentApp(app);
+        appState.setActiveTab(tab || 'overview');
+        this.showView('detail');
+        return;
+      } else {
+        console.warn(`Deep link: App "${appId}" not found, falling back to dashboard`);
+      }
+    }
+
+    // Default to dashboard or use the view from hash
+    this.showView(view || 'dashboard');
+  }
+
+  /**
+   * Update URL hash when tab changes (called from TabbedDetail)
+   * @param {string} tab - The new active tab
+   */
+  updateUrlForTab(tab) {
+    const state = appState.getState();
+    if (state.currentView === 'detail' && state.currentApp) {
+      const hash = buildHashRoute('detail', state.currentApp.id, tab);
+      history.replaceState({ view: 'detail' }, '', hash);
     }
   }
 
@@ -909,7 +968,10 @@ class App {
             await api.triggerSaveTasks(appId, tasks);
           } catch (err) {}
         },
-        (tab) => appState.setActiveTab(tab),
+        (tab) => {
+          appState.setActiveTab(tab);
+          this.updateUrlForTab(tab);
+        },
         (appId) => this.markAppAsReviewed(appId)
       );
       console.log('Rendering TabbedDetail component...');
