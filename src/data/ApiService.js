@@ -800,6 +800,7 @@ class ApiService {
 
   /**
    * Convert object to YAML string (simple flat objects only)
+   * Preserves multi-line strings using YAML literal block scalar (|)
    * @param {Object} obj - Object to serialize
    * @returns {string} - YAML string
    */
@@ -807,15 +808,25 @@ class ApiService {
     const lines = [];
     for (const [key, value] of Object.entries(obj)) {
       if (value === null || value === undefined) continue;
-      // Escape strings that might cause YAML issues
-      let val = value;
-      if (typeof val === 'string') {
-        // Replace newlines with spaces for single-line YAML
-        val = val.replace(/\r?\n/g, ' ');
-      } else if (typeof val === 'object') {
-        val = JSON.stringify(val);
+
+      if (typeof value === 'string') {
+        // Check if string contains newlines
+        if (value.includes('\n') || value.includes('\r')) {
+          // Use literal block scalar (|) to preserve multi-line content
+          const indentedLines = value
+            .replace(/\r\n/g, '\n')
+            .split('\n')
+            .map(line => `  ${line}`)
+            .join('\n');
+          lines.push(`${key}: |\n${indentedLines}`);
+        } else {
+          lines.push(`${key}: ${value}`);
+        }
+      } else if (typeof value === 'object') {
+        lines.push(`${key}: ${JSON.stringify(value)}`);
+      } else {
+        lines.push(`${key}: ${value}`);
       }
-      lines.push(`${key}: ${val}`);
     }
     return lines.join('\n') + '\n';
   }
@@ -1013,7 +1024,7 @@ class ApiService {
 
   /**
    * Parse simple YAML string to object (inline implementation)
-   * Handles flat key-value YAML without external dependencies
+   * Handles flat key-value YAML and literal block scalars (|) without external dependencies
    * @param {string} text - YAML string to parse
    * @returns {Object} - Parsed object
    */
@@ -1021,16 +1032,51 @@ class ApiService {
     try {
       const obj = {};
       const lines = String(text || '').split(/\r?\n/);
+      let currentKey = null;
+      let multiLineValue = [];
+      let inMultiLine = false;
 
-      for (const raw of lines) {
-        const line = raw.trim();
-        if (!line || line.startsWith('#')) continue;
+      for (let i = 0; i < lines.length; i++) {
+        const raw = lines[i];
+        const trimmed = raw.trim();
 
-        const idx = line.indexOf(':');
+        // Skip empty lines and comments (unless in multi-line mode)
+        if (!inMultiLine && (!trimmed || trimmed.startsWith('#'))) continue;
+
+        // Check if this is an indented line (part of multi-line value)
+        if (inMultiLine) {
+          // Check if line is indented (part of multi-line block)
+          if (raw.startsWith('  ') || raw.startsWith('\t')) {
+            // Remove the 2-space indent and add to multi-line value
+            multiLineValue.push(raw.slice(2));
+            continue;
+          } else if (trimmed === '') {
+            // Empty line in multi-line block
+            multiLineValue.push('');
+            continue;
+          } else {
+            // Non-indented line means end of multi-line block
+            obj[currentKey] = multiLineValue.join('\n');
+            inMultiLine = false;
+            currentKey = null;
+            multiLineValue = [];
+            // Fall through to process this line as a new key
+          }
+        }
+
+        const idx = trimmed.indexOf(':');
         if (idx === -1) continue;
 
-        const key = line.slice(0, idx).trim();
-        let val = line.slice(idx + 1).trim();
+        const key = trimmed.slice(0, idx).trim();
+        let val = trimmed.slice(idx + 1).trim();
+
+        // Check for literal block scalar indicator
+        if (val === '|' || val === '|-' || val === '|+') {
+          inMultiLine = true;
+          currentKey = key;
+          multiLineValue = [];
+          continue;
+        }
 
         // Handle quoted strings
         if ((val.startsWith('"') && val.endsWith('"')) ||
@@ -1057,6 +1103,11 @@ class ApiService {
         }
 
         obj[key] = val;
+      }
+
+      // Handle case where file ends while still in multi-line mode
+      if (inMultiLine && currentKey) {
+        obj[currentKey] = multiLineValue.join('\n');
       }
 
       // Handle special case: comments field that's stored as JSON string
