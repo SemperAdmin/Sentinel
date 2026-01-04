@@ -33,14 +33,17 @@ class SupabaseService {
         .from('apps')
         .select('*')
         .order('name')
-      
+
       if (appsError) throw appsError
 
       if (!apps || apps.length === 0) return []
 
+      console.log(`Supabase: Loaded ${apps.length} apps`)
+
       // Fetch related data
       const appIds = apps.map(app => app.id)
-      
+      console.log('Supabase: App IDs for todos query:', appIds)
+
       const { data: todos, error: todosError } = await this.client
         .from('todos')
         .select('*')
@@ -51,17 +54,24 @@ class SupabaseService {
         throw new Error(`Failed to fetch todos: ${todosError.message || todosError}`)
       }
 
+      console.log(`Supabase: Loaded ${todos?.length || 0} total todos`)
+      if (todos && todos.length > 0) {
+        console.log('Supabase: Sample todo app_ids:', todos.slice(0, 5).map(t => t.app_id))
+      }
+
       // Map data back to apps
       return apps.map(app => {
-        // Map snake_case DB fields to camelCase JS objects if needed
-        // For now, we assume the frontend can handle the data or we map it here
-        // The current AppState expects camelCase.
-        
+        const appTodos = (todos || [])
+          .filter(t => t.app_id === app.id)
+          .map(t => this._mapTodoFromDB(t))
+
+        if (appTodos.length > 0) {
+          console.log(`Supabase: App "${app.id}" has ${appTodos.length} todos`)
+        }
+
         return {
           ...this._mapAppFromDB(app),
-          todos: (todos || [])
-            .filter(t => t.app_id === app.id)
-            .map(t => this._mapTodoFromDB(t))
+          todos: appTodos
         }
       })
 
