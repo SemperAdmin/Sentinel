@@ -46,7 +46,10 @@ class SupabaseService {
         .select('*')
         .in('app_id', appIds)
 
-      if (todosError) console.warn('Error fetching todos:', todosError)
+      if (todosError) {
+        console.error('Error fetching todos:', todosError)
+        throw new Error(`Failed to fetch todos: ${todosError.message || todosError}`)
+      }
 
       // Map data back to apps
       return apps.map(app => {
@@ -71,58 +74,94 @@ class SupabaseService {
   /**
    * Save an app and its nested collections
    * Handles full synchronization of todos and improvements (Add/Update/Delete)
+   * Implements compensation pattern for rollback on partial failures
    */
   async saveApp(app) {
     if (!this.enabled) return app
 
+    const appId = app.id
+    let originalTodos = null
+    let appWasNew = false
+
     try {
-      // 1. Upsert App
+      // 1. Fetch original todos for potential rollback
+      const { data: existingTodos, error: fetchError } = await this.client
+        .from('todos')
+        .select('*')
+        .eq('app_id', appId)
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 = no rows found, which is fine
+        console.warn('Could not fetch original todos for rollback:', fetchError)
+      }
+      originalTodos = existingTodos || []
+
+      // 2. Check if app exists (for rollback decision)
+      const { data: existingApp } = await this.client
+        .from('apps')
+        .select('id')
+        .eq('id', appId)
+        .limit(1)
+
+      appWasNew = !existingApp || existingApp.length === 0
+
+      // 3. Upsert App
       const dbApp = this._mapAppToDB(app)
-      const { data: savedApp, error: appError } = await this.client
+      const { data: savedAppData, error: appError } = await this.client
         .from('apps')
         .upsert(dbApp)
         .select()
-        .single()
+        .limit(1)
 
       if (appError) throw appError
 
-      const appId = savedApp.id
+      const savedApp = savedAppData?.[0]
+      if (!savedApp) {
+        throw new Error('App upsert returned no data')
+      }
 
-      // 2. Handle Todos
-      // We perform a "smart sync": 
-      // - Upsert all todos currently in the app object
-      // - Delete any todos in DB that are NOT in the app object
-      
+      // 4. Handle Todos with rollback on failure
       if (app.todos && Array.isArray(app.todos)) {
-        const currentTodoIds = app.todos.filter(t => t.id).map(t => t.id)
-        
-        // Delete removed todos
-        if (currentTodoIds.length > 0) {
-            await this.client
-            .from('todos')
-            .delete()
-            .eq('app_id', appId)
-            .not('id', 'in', `(${currentTodoIds.join(',')})`)
-        } else {
-            // If no todos in object, delete all for this app
-            await this.client
-            .from('todos')
-            .delete()
-            .eq('app_id', appId)
-        }
+        try {
+          const currentTodoIds = app.todos.filter(t => t.id).map(t => t.id)
 
-        // Upsert current todos
-        if (app.todos.length > 0) {
-          const dbTodos = app.todos.map(t => ({
-            ...this._mapTodoToDB(t),
-            app_id: appId
-          }))
-          
-          const { error: todoError } = await this.client
-            .from('todos')
-            .upsert(dbTodos)
-          
-          if (todoError) throw todoError
+          // Delete removed todos
+          if (currentTodoIds.length > 0) {
+            const { error: deleteError } = await this.client
+              .from('todos')
+              .delete()
+              .eq('app_id', appId)
+              .not('id', 'in', `(${currentTodoIds.join(',')})`)
+
+            if (deleteError) throw deleteError
+          } else {
+            // If no todos in object, delete all for this app
+            const { error: deleteAllError } = await this.client
+              .from('todos')
+              .delete()
+              .eq('app_id', appId)
+
+            if (deleteAllError) throw deleteAllError
+          }
+
+          // Upsert current todos
+          if (app.todos.length > 0) {
+            const dbTodos = app.todos.map(t => ({
+              ...this._mapTodoToDB(t),
+              app_id: appId
+            }))
+
+            const { error: todoError } = await this.client
+              .from('todos')
+              .upsert(dbTodos)
+
+            if (todoError) throw todoError
+          }
+        } catch (todoSyncError) {
+          // Rollback: restore original todos
+          console.error('Todo sync failed, attempting rollback:', todoSyncError)
+          await this._rollbackTodos(appId, originalTodos)
+          throw new Error(`Failed to sync todos (rollback attempted): ${todoSyncError.message}`)
         }
       }
 
@@ -135,6 +174,31 @@ class SupabaseService {
       }
       console.error('Supabase saveApp error:', error)
       throw error
+    }
+  }
+
+  /**
+   * Rollback todos to their original state
+   * @private
+   */
+  async _rollbackTodos(appId, originalTodos) {
+    try {
+      // Delete all current todos for this app
+      await this.client
+        .from('todos')
+        .delete()
+        .eq('app_id', appId)
+
+      // Restore original todos if any existed
+      if (originalTodos && originalTodos.length > 0) {
+        await this.client
+          .from('todos')
+          .insert(originalTodos)
+      }
+      console.log('Todo rollback successful')
+    } catch (rollbackError) {
+      console.error('Todo rollback failed:', rollbackError)
+      // Don't throw - we're already in error handling
     }
   }
 
@@ -171,7 +235,10 @@ class SupabaseService {
         .in('idea_id', ideaIds)
         .order('created_at', { ascending: true })
 
-    if (feedbackError) console.warn('Error fetching feedback:', feedbackError)
+    if (feedbackError) {
+      console.error('Error fetching feedback:', feedbackError)
+      throw new Error(`Failed to fetch feedback: ${feedbackError.message || feedbackError}`)
+    }
 
     return ideas.map(idea => {
         const mappedIdea = this._mapIdeaFromDB(idea)
@@ -209,10 +276,15 @@ class SupabaseService {
         .from('idea_feedback')
         .insert(dbFeedback)
         .select()
-        .single()
+        .limit(1)
 
     if (error) throw error
-    return this._mapFeedbackFromDB(data)
+
+    const insertedFeedback = data?.[0]
+    if (!insertedFeedback) {
+      throw new Error('Failed to insert feedback: no data returned')
+    }
+    return this._mapFeedbackFromDB(insertedFeedback)
   }
 
   async deleteIdea(id) {
@@ -253,18 +325,20 @@ class SupabaseService {
 
   async getUserProfile(userId) {
     if (!this.enabled) return null
-    
+
     const { data, error } = await this.client
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
-      
+      .limit(1)
+
     if (error) {
       console.warn('Error fetching profile:', error)
       return null
     }
-    return data
+
+    // Return first result or null if no profile found
+    return data?.[0] || null
   }
 
   // Mappers
