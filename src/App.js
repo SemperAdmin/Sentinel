@@ -937,8 +937,8 @@ class App {
   }
 
   async hydrateTasksForApps(apps) {
-    // Always hydrate tasks from GitHub repo - this is the source of truth for tasks
-    // even when Supabase is used for app metadata
+    // If using Supabase, tasks are already loaded with the portfolio
+    if (dataStore.useSupabase) return;
 
     try {
       const updates = [];
@@ -1094,7 +1094,7 @@ class App {
   }
 
   async hydrateTasksFromRepo(app) {
-    // Always hydrate tasks from GitHub repo - this is the source of truth for tasks
+    if (dataStore.useSupabase) return;
     try {
       if (!app) return;
       const remoteResult = await apiService.fetchRepoTasks(app.id, true); // bypass cache
