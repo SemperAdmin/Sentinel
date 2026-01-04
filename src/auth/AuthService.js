@@ -134,7 +134,7 @@ export class AuthService {
         .from('app_config')
         .select('value')
         .eq('key', 'admin_password')
-        .single();
+        .limit(1);
 
       if (error) {
         console.error('Error fetching admin password:', error);
@@ -146,7 +146,15 @@ export class AuthService {
         };
       }
 
-      if (data && data.value === password) {
+      const configRow = data?.[0];
+      if (!configRow) {
+        return {
+          success: false,
+          error: 'Admin password not configured in database'
+        };
+      }
+
+      if (configRow.value === password) {
         const session = {
           role: 'admin',
           authenticatedAt: Date.now(),
