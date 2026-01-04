@@ -10,8 +10,7 @@
   - `auth-config.json` stores a hashed admin password for simple client-side gatekeeping.
 - **Data Model**:
   - **App (Portfolio Item)**: Core entity containing metadata, GitHub stats, and nested collections.
-  - **Todo**: Tasks associated with an App.
-  - **Improvement**: Strategic improvements associated with an App.
+  - **Todo**: Tasks associated with an App. Includes optional effort/impact fields for prioritization.
   - **Idea**: Standalone product concepts.
 
 ### Required Backend Services
@@ -48,16 +47,8 @@
   - `priority` (Text)
   - `status` (Text)
   - `due_date` (Timestamp)
-  - `created_at` (Timestamp)
-
-- **Improvements**
-  - `id` (UUID, PK)
-  - `app_id` (UUID, FK to apps)
-  - `title` (Text)
-  - `description` (Text)
-  - `effort` (Integer)
-  - `impact` (Integer)
-  - `status` (Text)
+  - `effort` (Integer, optional) - Effort estimate (1-5) for prioritization
+  - `impact` (Integer, optional) - Impact estimate (1-5) for prioritization
   - `created_at` (Timestamp)
 
 - **Ideas**
@@ -98,7 +89,7 @@ create table apps (
   updated_at timestamptz default now()
 );
 
--- Todos
+-- Todos (includes optional effort/impact fields for prioritization)
 create table todos (
   id uuid default gen_random_uuid() primary key,
   app_id uuid references apps(id) on delete cascade,
@@ -107,18 +98,8 @@ create table todos (
   priority text check (priority in ('low', 'medium', 'high')),
   status text check (status in ('pending', 'in_progress', 'completed', 'archived')),
   due_date timestamptz,
-  created_at timestamptz default now()
-);
-
--- Improvements
-create table improvements (
-  id uuid default gen_random_uuid() primary key,
-  app_id uuid references apps(id) on delete cascade,
-  title text not null,
-  description text,
-  effort int check (effort between 1 and 5),
-  impact int check (impact between 1 and 5),
-  status text default 'pending',
+  effort int check (effort is null or effort between 1 and 5),
+  impact int check (impact is null or impact between 1 and 5),
   created_at timestamptz default now()
 );
 
@@ -137,7 +118,7 @@ create table ideas (
 
 ### Security Policies (RLS)
 - **Profiles**: Users can read all profiles (or just their own), admins can manage roles.
-- **Apps/Todos/Improvements/Ideas**: 
+- **Apps/Todos/Ideas**:
   - `SELECT`: Authenticated users can read.
   - `INSERT/UPDATE/DELETE`: Only users with `role = 'admin'` or `owner_id = auth.uid()` can modify.
 

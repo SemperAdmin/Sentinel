@@ -10,3 +10,7 @@ node_modules/
 
 # Log files
 *.log
+
+# Authentication config (contains password hash - generate during CI/CD)
+public/auth-config.json
+auth-config.json
