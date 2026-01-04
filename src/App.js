@@ -677,14 +677,26 @@ class App {
 
       appState.setPortfolio(portfolio);
 
-      // Debug: log the final portfolio
-      console.log('Final portfolio being set:', portfolio.map(app => ({ id: app.id, name: app.id })));
+      // Debug: log the final portfolio with task counts
+      console.log('Initial portfolio loaded:', portfolio.map(app => ({
+        id: app.id,
+        todosCount: app.todos?.length || 0
+      })));
 
       // Hydrate tasks from backend (sequential to avoid race conditions)
       await this.hydrateTasksForApps(portfolio);
 
       // Hydrate metadata from backend (sequential to avoid race conditions)
       await this.hydrateMetadataForApps(portfolio);
+
+      // Force a dashboard re-render after all hydration is complete
+      // This ensures task counts are displayed correctly even if state updates
+      // occurred during async hydration
+      const currentState = appState.getState();
+      if (currentState.currentView === 'dashboard') {
+        console.log('Forcing dashboard re-render after hydration');
+        this.updateDashboard(currentState);
+      }
 
       // Load ideas using DataController
       const ideas = await this.dataController.loadIdeas();
@@ -938,7 +950,12 @@ class App {
 
   async hydrateTasksForApps(apps) {
     // If using Supabase, tasks are already loaded with the portfolio
-    if (dataStore.useSupabase) return;
+    if (dataStore.useSupabase) {
+      console.log('hydrateTasksForApps: Skipping - using Supabase backend');
+      return;
+    }
+
+    console.log(`hydrateTasksForApps: Hydrating tasks for ${apps.length} apps from API`);
 
     try {
       const updates = [];
@@ -961,6 +978,7 @@ class App {
             [...remoteKeys].some(k => !localKeys.has(k));
 
           if (hasDiff) {
+            console.log(`hydrateTasksForApps: App "${app.id}" updated from ${local.length} to ${remote.length} tasks`);
             // Remote is source of truth - use remote tasks
             const updatedApp = { ...app, todos: remote };
             await dataStore.saveApp(updatedApp);
@@ -968,10 +986,16 @@ class App {
           }
         }
       }
+
       if (updates.length > 0) {
-        this.applyPortfolioUpdates(updates);
+        console.log(`hydrateTasksForApps: Applying ${updates.length} updates`);
+        this.applyPortfolioUpdates(updates, `Hydrated tasks for ${updates.length} apps from backend`);
+      } else {
+        console.log('hydrateTasksForApps: No updates needed');
       }
-    } catch (_) {}
+    } catch (error) {
+      console.error('hydrateTasksForApps: Error during hydration:', error);
+    }
   }
 
   /**
@@ -1040,9 +1064,21 @@ class App {
       const u = updates.find(x => x.id === a.id);
       return u ? u : a;
     });
+
+    // Log the updates being applied
+    console.log(`Applying ${updates.length} portfolio updates:`, updates.map(u => ({
+      id: u.id,
+      todosCount: u.todos?.length || 0
+    })));
+
     appState.setPortfolio(mergedPortfolio);
     const order = state.sortOrder || 'alphabetical';
-    this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
+
+    // Only update dashboard if it's the current view
+    if (state.currentView === 'dashboard') {
+      this.updateDashboard({ ...state, portfolio: mergedPortfolio, sortOrder: order });
+    }
+
     if (logMessage) console.log(logMessage);
   }
 
@@ -1094,14 +1130,23 @@ class App {
   }
 
   async hydrateTasksFromRepo(app) {
-    if (dataStore.useSupabase) return;
+    if (dataStore.useSupabase) {
+      console.log('hydrateTasksFromRepo: Skipping - using Supabase backend');
+      return;
+    }
+
     try {
       if (!app) return;
+      console.log(`hydrateTasksFromRepo: Fetching tasks for "${app.id}"`);
+
       const remoteResult = await apiService.fetchRepoTasks(app.id, true); // bypass cache
       const remote = unwrapOr(remoteResult, []);
 
       // Remote is source of truth when available
-      if (!Array.isArray(remote)) return;
+      if (!Array.isArray(remote)) {
+        console.log(`hydrateTasksFromRepo: No remote tasks found for "${app.id}"`);
+        return;
+      }
 
       const local = Array.isArray(app.todos) ? app.todos : [];
       const keyOf = (t) => (t.id ? String(t.id) : `${t.title || ''}|${t.dueDate || ''}`);
@@ -1113,14 +1158,21 @@ class App {
         [...localKeys].some(k => !remoteKeys.has(k)) ||
         [...remoteKeys].some(k => !localKeys.has(k));
 
-      if (!hasDiff) return;
+      if (!hasDiff) {
+        console.log(`hydrateTasksFromRepo: No changes for "${app.id}" (${local.length} tasks)`);
+        return;
+      }
+
+      console.log(`hydrateTasksFromRepo: Updating "${app.id}" from ${local.length} to ${remote.length} tasks`);
 
       // Use remote as source of truth
       const updatedApp = { ...app, todos: remote };
       await dataStore.saveApp(updatedApp);
       appState.updateApp(updatedApp);
       if (this.tabbedDetail) this.tabbedDetail.update(updatedApp);
-    } catch (_) {}
+    } catch (error) {
+      console.error(`hydrateTasksFromRepo: Error for "${app?.id}":`, error);
+    }
   }
 
   /**

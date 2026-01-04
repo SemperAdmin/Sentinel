@@ -7,17 +7,28 @@ class SupabaseService {
   constructor() {
     this.client = null
     this.enabled = false
-    
-    if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('your_supabase_url')) {
+
+    // Debug logging to help diagnose production issues
+    const hasUrl = !!SUPABASE_URL
+    const hasKey = !!SUPABASE_ANON_KEY
+    const urlIsPlaceholder = SUPABASE_URL?.includes('your_supabase_url') || SUPABASE_URL?.includes('your-project')
+
+    console.log(`Supabase config: URL=${hasUrl ? 'set' : 'missing'}, Key=${hasKey ? 'set' : 'missing'}, Placeholder=${urlIsPlaceholder}`)
+
+    if (hasUrl && hasKey && !urlIsPlaceholder) {
       try {
         this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
         this.enabled = true
-        console.log('Supabase initialized')
+        console.log('Supabase initialized successfully')
       } catch (error) {
         console.error('Failed to initialize Supabase client:', error)
       }
     } else {
-      console.log('Supabase credentials missing or invalid. Running in local-only mode.')
+      const reasons = []
+      if (!hasUrl) reasons.push('URL missing')
+      if (!hasKey) reasons.push('Key missing')
+      if (urlIsPlaceholder) reasons.push('URL is placeholder')
+      console.log(`Supabase disabled: ${reasons.join(', ')}. Running in local-only mode.`)
     }
   }
 
