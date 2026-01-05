@@ -100,13 +100,26 @@ export class TabbedDetail {
       return null;
     }
     
-    // Update tabs HTML
-    const tabsContainer = document.querySelector('.tabs');
+    // Update tabs HTML - use .tab-nav (the actual class in index.html)
+    const tabsContainer = document.querySelector('.tab-nav');
     if (tabsContainer) {
       tabsContainer.innerHTML = `
         <button class="tab-btn ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
         <button class="tab-btn ${this.activeTab === 'todo' ? 'active' : ''}" data-tab="todo">Tasks ${getPendingTodosCount(this.app)}</button>
       `;
+
+      // Attach tab click handler using event delegation
+      // Remove old handler if exists to prevent stale closure references
+      if (this._tabClickHandler) {
+        tabsContainer.removeEventListener('click', this._tabClickHandler);
+      }
+      this._tabClickHandler = (e) => {
+        const button = e.target.closest('.tab-btn');
+        if (button && button.dataset.tab) {
+          this.switchTab(button.dataset.tab);
+        }
+      };
+      tabsContainer.addEventListener('click', this._tabClickHandler);
     }
     
     // Update the tab content
@@ -555,20 +568,11 @@ export class TabbedDetail {
    */
   attachEventListeners() {
     if (!this.element) return;
-    
-    console.log('Attaching tab event listeners...');
-    // Tab navigation - look for tab buttons in the entire document since they're in the HTML template
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    console.log(`Found ${tabButtons.length} tab buttons`);
-    tabButtons.forEach(button => {
-      console.log(`Adding click listener to tab button: ${button.dataset.tab}`);
-      button.addEventListener('click', (e) => {
-        const tab = e.target.dataset.tab;
-        console.log(`Tab clicked: ${tab}`);
-        this.switchTab(tab);
-      });
-    });
-    
+
+    console.log('Attaching event listeners...');
+    // NOTE: Tab navigation is now handled via event delegation in render()
+    // This prevents duplicate listeners from accumulating on tab buttons
+
     // Action buttons
     const startReviewBtn = this.element.querySelector('#start-review-checklist');
     if (startReviewBtn) {
