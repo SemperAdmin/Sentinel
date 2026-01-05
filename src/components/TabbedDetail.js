@@ -818,11 +818,28 @@ export class TabbedDetail {
   }
 
   /**
-   * Destroy the component
+   * Destroy the component and clean up event listeners
    */
   destroy() {
+    // Clean up tab click handler to prevent memory leaks
+    if (this._tabClickHandler) {
+      const tabsContainer = document.querySelector('.tab-nav');
+      if (tabsContainer) {
+        tabsContainer.removeEventListener('click', this._tabClickHandler);
+      }
+      this._tabClickHandler = null;
+    }
+
+    // Clean up element click handler
+    if (this._boundElementClick && this.element) {
+      this.element.removeEventListener('click', this._boundElementClick);
+      this._boundElementClick = null;
+    }
+
+    // Remove element from DOM
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
+    this.element = null;
   }
 }
