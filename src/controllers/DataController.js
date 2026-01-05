@@ -58,35 +58,58 @@ export class DataController {
           return [];
       }
 
-      // Triple-fallback: repo JSON → local storage → fresh GitHub fetch
+      // Multi-fallback: backend proxy → direct raw GitHub → local storage → fresh GitHub API
       const portfolio = await RecoveryStrategies.withFallback(
-        // Primary: fetch from repo
+        // Primary: fetch from repo via backend proxy
         async () => {
           const portfolioResult = await apiService.fetchPortfolioOverview();
           const data = unwrapOr(portfolioResult, []);
           if (!Array.isArray(data) || data.length === 0) {
-            throw new Error('No portfolio data in repo');
+            throw new Error('No portfolio data from backend proxy');
           }
-          console.log('Loaded portfolio overview from repo JSON');
+          console.log('Loaded portfolio overview from backend proxy');
           // Save to local store
           for (const app of data) {
             await dataStore.saveApp(app);
           }
           return data;
         },
-        // Fallback: load from local storage
+        // First fallback: try direct raw.githubusercontent.com (no backend needed)
         async () => {
-          console.log('Falling back to local portfolio data');
-          const localData = await dataStore.getPortfolio();
-          if (!localData || localData.length === 0) {
-            throw new Error('No local portfolio data available');
-          }
-          return localData;
+          return await RecoveryStrategies.withFallback(
+            async () => {
+              console.log('Backend unavailable, trying direct GitHub raw content...');
+              const rawUrl = `https://raw.githubusercontent.com/${this.defaultGitHubUser}/Sentinel/main/data/portfolio/overview.json`;
+              const response = await fetch(rawUrl);
+              if (!response.ok) {
+                throw new Error(`Direct GitHub fetch failed: ${response.status}`);
+              }
+              const data = await response.json();
+              if (!Array.isArray(data) || data.length === 0) {
+                throw new Error('No portfolio data from direct GitHub');
+              }
+              console.log(`Loaded ${data.length} apps from direct GitHub raw content`);
+              // Save to local store
+              for (const app of data) {
+                await dataStore.saveApp(app);
+              }
+              return data;
+            },
+            // Second fallback: load from local storage
+            async () => {
+              console.log('Falling back to local portfolio data');
+              const localData = await dataStore.getPortfolio();
+              if (!localData || localData.length === 0) {
+                throw new Error('No local portfolio data available');
+              }
+              return localData;
+            }
+          );
         }
       ).catch(async (error) => {
-        // Ultimate fallback: fetch fresh from GitHub
+        // Ultimate fallback: fetch fresh from GitHub API
         errorHandler.logError(ErrorType.DATA, ErrorSeverity.HIGH, 'Failed to load portfolio from all sources', error);
-        console.log('Attempting to fetch fresh data from GitHub...');
+        console.log('Attempting to fetch fresh data from GitHub API...');
         return await this.fetchUserRepositories();
       });
 
