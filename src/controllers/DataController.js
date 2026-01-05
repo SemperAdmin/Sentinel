@@ -58,6 +58,14 @@ export class DataController {
           return [];
       }
 
+      // Helper to save portfolio data to local store
+      const saveToLocalStore = async (data) => {
+        for (const app of data) {
+          await dataStore.saveApp(app);
+        }
+        return data;
+      };
+
       // Multi-fallback: backend proxy → direct raw GitHub → local storage → fresh GitHub API
       const portfolio = await RecoveryStrategies.withFallback(
         // Primary: fetch from repo via backend proxy
@@ -68,18 +76,15 @@ export class DataController {
             throw new Error('No portfolio data from backend proxy');
           }
           console.log('Loaded portfolio overview from backend proxy');
-          // Save to local store
-          for (const app of data) {
-            await dataStore.saveApp(app);
-          }
-          return data;
+          return await saveToLocalStore(data);
         },
         // First fallback: try direct raw.githubusercontent.com (no backend needed)
         async () => {
           return await RecoveryStrategies.withFallback(
             async () => {
               console.log('Backend unavailable, trying direct GitHub raw content...');
-              const rawUrl = `https://raw.githubusercontent.com/${this.defaultGitHubUser}/Sentinel/main/data/portfolio/overview.json`;
+              // Use apiService.managerRepo to match the configured repository
+              const rawUrl = `https://raw.githubusercontent.com/${apiService.managerRepo}/main/data/portfolio/overview.json`;
               const response = await fetch(rawUrl);
               if (!response.ok) {
                 throw new Error(`Direct GitHub fetch failed: ${response.status}`);
@@ -89,11 +94,7 @@ export class DataController {
                 throw new Error('No portfolio data from direct GitHub');
               }
               console.log(`Loaded ${data.length} apps from direct GitHub raw content`);
-              // Save to local store
-              for (const app of data) {
-                await dataStore.saveApp(app);
-              }
-              return data;
+              return await saveToLocalStore(data);
             },
             // Second fallback: load from local storage
             async () => {
