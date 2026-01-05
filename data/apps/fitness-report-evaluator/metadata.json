@@ -1,0 +1,10 @@
+{
+  "id": "fitness-report-evaluator",
+  "description": "",
+  "notes": "Unbiased FITREP marking assistance tool",
+  "platform": "Web",
+  "lastReviewDate": null,
+  "nextReviewDate": "2026-04-03T00:00:00+00:00",
+  "reviewCycle": 90,
+  "updatedAt": "2026-01-05T18:17:33.514Z"
+}
