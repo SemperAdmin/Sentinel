@@ -1,10 +1,10 @@
 {
   "id": "fitness-report-evaluator",
   "description": "",
-  "notes": "Unbiased FITREP marking assistance tool",
+  "notes": "Real-time tracker for USMC MARADMINs and directives. Monitor official Marine Corps publications with advanced filtering and search.",
   "platform": "Web",
   "lastReviewDate": null,
   "nextReviewDate": "2026-04-03T00:00:00+00:00",
   "reviewCycle": 90,
-  "updatedAt": "2026-01-05T18:17:40.218Z"
+  "updatedAt": "2026-01-05T18:48:50.075Z"
 }
