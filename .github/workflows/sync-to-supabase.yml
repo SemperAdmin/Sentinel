@@ -1,0 +1,40 @@
+name: Sync Portfolio to Supabase
+
+on:
+  # Run every 6 hours
+  schedule:
+    - cron: '0 */6 * * *'
+  # Run when portfolio data is updated
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/portfolio/overview.json'
+      - 'data/tasks/**'
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Only run if Supabase is configured
+    if: ${{ vars.VITE_SUPABASE_URL != '' || secrets.VITE_SUPABASE_URL != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync to Supabase
+        run: node scripts/sync-to-supabase.js
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
