@@ -51,11 +51,10 @@ export class DataController {
         }
       }
 
-      // If Supabase is enabled and returned empty (success), return empty to avoid API spam.
-      // But if Supabase FAILED (error), we fall back to other sources.
+      // If Supabase is enabled and returned empty (success), fall back to GitHub sources
+      // This ensures the app works even if the Supabase database isn't populated yet
       if (dataStore.useSupabase && !supabaseError) {
-          console.warn('Supabase is enabled but returned no data. Returning empty portfolio.');
-          return [];
+          console.log('Supabase returned no data, falling back to GitHub sources...');
       }
 
       // Helper to save portfolio data to local store
