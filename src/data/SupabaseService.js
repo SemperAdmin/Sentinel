@@ -1,12 +1,33 @@
-import { createClient } from '@supabase/supabase-js'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Supabase configuration - use safe property access for unbundled environments
+const SUPABASE_URL = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : undefined;
+const SUPABASE_ANON_KEY = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined;
 
 class SupabaseService {
   constructor() {
     this.client = null
     this.enabled = false
+    this._initPromise = null
+    this._initialized = false
+  }
+
+  /**
+   * Lazily initialize Supabase client
+   * Uses dynamic import to prevent errors in unbundled environments
+   */
+  async _ensureInitialized() {
+    if (this._initialized) return;
+
+    if (this._initPromise) {
+      await this._initPromise;
+      return;
+    }
+
+    this._initPromise = this._initialize();
+    await this._initPromise;
+  }
+
+  async _initialize() {
+    if (this._initialized) return;
 
     // Debug logging to help diagnose production issues
     const hasUrl = !!SUPABASE_URL
@@ -15,27 +36,35 @@ class SupabaseService {
 
     console.log(`Supabase config: URL=${hasUrl ? 'set' : 'missing'}, Key=${hasKey ? 'set' : 'missing'}, Placeholder=${urlIsPlaceholder}`)
 
-    if (hasUrl && hasKey && !urlIsPlaceholder) {
-      try {
-        this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-        this.enabled = true
-        console.log('Supabase initialized successfully')
-      } catch (error) {
-        console.error('Failed to initialize Supabase client:', error)
-      }
-    } else {
+    if (!hasUrl || !hasKey || urlIsPlaceholder) {
       const reasons = []
       if (!hasUrl) reasons.push('URL missing')
       if (!hasKey) reasons.push('Key missing')
       if (urlIsPlaceholder) reasons.push('URL is placeholder')
       console.log(`Supabase disabled: ${reasons.join(', ')}. Running in local-only mode.`)
+      this._initialized = true
+      return
     }
+
+    try {
+      // Dynamic import to prevent "Module not found" errors in unbundled environments
+      const { createClient } = await import('@supabase/supabase-js')
+      this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      this.enabled = true
+      console.log('Supabase initialized successfully')
+    } catch (error) {
+      console.warn('Failed to initialize Supabase client:', error.message)
+      console.log('Supabase disabled: client library not available. Running in local-only mode.')
+    }
+
+    this._initialized = true
   }
 
   /**
    * Get all portfolio apps with their related data (todos, improvements)
    */
   async getPortfolio() {
+    await this._ensureInitialized()
     if (!this.enabled) return []
 
     try {
@@ -98,6 +127,7 @@ class SupabaseService {
    * Implements compensation pattern for rollback on partial failures
    */
   async saveApp(app) {
+    await this._ensureInitialized()
     if (!this.enabled) return app
 
     const appId = app.id
@@ -224,6 +254,7 @@ class SupabaseService {
   }
 
   async deleteApp(appId) {
+    await this._ensureInitialized()
     if (!this.enabled) return
 
     const { error } = await this.client
@@ -237,6 +268,7 @@ class SupabaseService {
   // Ideas Methods
 
   async getIdeas() {
+    await this._ensureInitialized()
     if (!this.enabled) return []
 
     const { data: ideas, error: ideasError } = await this.client
@@ -271,6 +303,7 @@ class SupabaseService {
   }
 
   async saveIdea(idea) {
+    await this._ensureInitialized()
     if (!this.enabled) return idea
 
     const dbIdea = this._mapIdeaToDB(idea)
@@ -283,6 +316,7 @@ class SupabaseService {
   }
 
   async addIdeaFeedback(ideaId, feedback) {
+    await this._ensureInitialized()
     if (!this.enabled) return null
     
     const dbFeedback = {
@@ -309,6 +343,7 @@ class SupabaseService {
   }
 
   async deleteIdea(id) {
+    await this._ensureInitialized()
     if (!this.enabled) return
 
     const { error } = await this.client
@@ -322,6 +357,7 @@ class SupabaseService {
   // Auth Methods
 
   async signIn(email, password) {
+    await this._ensureInitialized()
     if (!this.enabled) return { error: { message: 'Supabase not enabled' } }
     
     const { data, error } = await this.client.auth.signInWithPassword({
@@ -334,17 +370,20 @@ class SupabaseService {
   }
 
   async signOut() {
+    await this._ensureInitialized()
     if (!this.enabled) return { error: null }
     return await this.client.auth.signOut()
   }
 
   async getCurrentUser() {
+    await this._ensureInitialized()
     if (!this.enabled) return null
     const { data: { user } } = await this.client.auth.getUser()
     return user
   }
 
   async getUserProfile(userId) {
+    await this._ensureInitialized()
     if (!this.enabled) return null
 
     const { data, error } = await this.client
