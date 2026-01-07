@@ -79,6 +79,11 @@ export const TECH_STACKS = [
 ];
 
 // Default values
+export const DEFAULT_FILTERS = {
+  platform: 'All',
+  status: 'All',
+  health: 'All'
+};
 export const DEFAULT_GITHUB_USER = 'SemperAdmin';
 export const DEFAULT_MANAGER_REPO = 'SemperAdmin/Sentinel';
 export const EXCLUDED_REPO_NAMES = ['eventcall-images'];
@@ -117,6 +122,7 @@ export default {
   INDEXEDDB_STORES,
   RISK_RATINGS,
   TECH_STACKS,
+  DEFAULT_FILTERS,
   DEFAULT_GITHUB_USER,
   DEFAULT_MANAGER_REPO,
   EXCLUDED_REPO_NAMES,

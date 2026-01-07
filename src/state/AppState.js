@@ -2,7 +2,7 @@
  * AppState - Centralized state management for Sentinel
  * Manages application state and provides methods for state mutations
  */
-import { EXCLUDED_REPO_NAMES } from '../utils/constants.js'
+import { EXCLUDED_REPO_NAMES, DEFAULT_FILTERS } from '../utils/constants.js'
 import { getPendingTodosCount } from '../utils/helpers.js'
 
 /**
@@ -118,11 +118,7 @@ class AppState {
 
       // Search and filter state
       searchQuery: '',
-      filters: {
-        platform: 'All',
-        status: 'All',
-        health: 'All'
-      },
+      filters: { ...DEFAULT_FILTERS },
 
       // Authentication state
       isAuthenticated: false,
@@ -389,11 +385,7 @@ class AppState {
   clearSearchAndFilters() {
     this.setState({
       searchQuery: '',
-      filters: {
-        platform: 'All',
-        status: 'All',
-        health: 'All'
-      }
+      filters: { ...DEFAULT_FILTERS }
     });
   }
 
@@ -673,11 +665,7 @@ class AppState {
       autoRepoSync: false,
       sortOrder: 'alphabetical',
       searchQuery: '',
-      filters: {
-        platform: 'All',
-        status: 'All',
-        health: 'All'
-      },
+      filters: { ...DEFAULT_FILTERS },
       isAuthenticated: false,
       userRole: 'guest',
       showLogin: true

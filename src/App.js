@@ -25,7 +25,8 @@ import {
   LOADING_DEBOUNCE_MS,
   DEFAULT_GITHUB_USER,
   IMPROVEMENT_BUDGET_PERCENT,
-  MAX_CONCURRENT_API_REQUESTS
+  MAX_CONCURRENT_API_REQUESTS,
+  DEFAULT_FILTERS
 } from './utils/constants.js';
 import { batchProcess } from './utils/batchProcessor.js';
 import errorHandler, { ErrorType, ErrorSeverity, RecoveryStrategies } from './utils/errorHandler.js';
@@ -947,9 +948,7 @@ class App {
       const searchQuery = state.searchQuery || '';
       // Ensure filters always has default values to prevent filtering issues
       const filters = {
-        platform: 'All',
-        status: 'All',
-        health: 'All',
+        ...DEFAULT_FILTERS,
         ...(state.filters || {})
       };
       const filteredApps = filterApps(state.portfolio, searchQuery, filters);
@@ -977,7 +976,7 @@ class App {
 
       // Render filtered and sorted apps
       if (apps.length === 0) {
-        const hasFilters = (filters.platform && filters.platform !== 'All') || (filters.status && filters.status !== 'All');
+        const hasFilters = filters.platform !== 'All' || filters.status !== 'All' || filters.health !== 'All';
         const hasSearch = searchQuery.trim().length > 0;
         appGrid.innerHTML = `
           <div class="empty-state">
