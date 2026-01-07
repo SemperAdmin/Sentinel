@@ -187,16 +187,9 @@ export function withErrorBoundary(renderFn, fallbackFn) {
 }
 
 /**
- * User-friendly error messages mapping
+ * User-friendly error messages for HTTP status codes
  */
-const USER_FRIENDLY_MESSAGES = {
-  // Network errors
-  'failed to fetch': 'Unable to connect to the server. Please check your internet connection.',
-  'network error': 'Network connection lost. Please try again when you\'re back online.',
-  'timeout': 'The request took too long. Please try again.',
-  'cors': 'Access denied by the server. Please contact support if this persists.',
-
-  // API errors
+const USER_FRIENDLY_STATUS_MESSAGES = {
   '401': 'Your session has expired. Please log in again.',
   '403': 'You don\'t have permission to perform this action.',
   '404': 'The requested data could not be found.',
@@ -204,7 +197,18 @@ const USER_FRIENDLY_MESSAGES = {
   '429': 'Too many requests. Please wait a moment and try again.',
   '500': 'The server encountered an error. Please try again later.',
   '502': 'The server is temporarily unavailable. Please try again later.',
-  '503': 'The service is currently undergoing maintenance. Please try again later.',
+  '503': 'The service is currently undergoing maintenance. Please try again later.'
+};
+
+/**
+ * User-friendly error messages for message text patterns
+ */
+const USER_FRIENDLY_PATTERN_MESSAGES = {
+  // Network errors
+  'failed to fetch': 'Unable to connect to the server. Please check your internet connection.',
+  'network error': 'Network connection lost. Please try again when you\'re back online.',
+  'timeout': 'The request took too long. Please try again.',
+  'cors': 'Access denied by the server. Please contact support if this persists.',
 
   // Storage errors
   'quota': 'Storage space is full. Please clear some cached data.',
@@ -225,12 +229,12 @@ export function getUserFriendlyMessage(error) {
   const status = error.status?.toString() || '';
 
   // Check for status code matches first
-  if (USER_FRIENDLY_MESSAGES[status]) {
-    return USER_FRIENDLY_MESSAGES[status];
+  if (USER_FRIENDLY_STATUS_MESSAGES[status]) {
+    return USER_FRIENDLY_STATUS_MESSAGES[status];
   }
 
   // Check for message pattern matches
-  for (const [pattern, friendlyMessage] of Object.entries(USER_FRIENDLY_MESSAGES)) {
+  for (const [pattern, friendlyMessage] of Object.entries(USER_FRIENDLY_PATTERN_MESSAGES)) {
     if (message.includes(pattern)) {
       return friendlyMessage;
     }

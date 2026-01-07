@@ -59,18 +59,16 @@ export class DataController {
 
       // Helper to save portfolio data to local store while preserving local tasks
       const saveToLocalStore = async (data) => {
-        const mergedData = [];
-        for (const app of data) {
-          // Get existing local app to preserve tasks data
+        const mergedData = await Promise.all(data.map(async (app) => {
           const localApp = await dataStore.getApp(app.id);
           const mergedApp = {
             ...app,
-            // Preserve local todos if they exist (overview.json doesn't include task details)
-            todos: localApp?.todos || app.todos || []
+            // Preserve local todos if they exist, but don't let an empty local array overwrite remote data
+            todos: localApp?.todos?.length ? localApp.todos : (app.todos || localApp?.todos || [])
           };
           await dataStore.saveApp(mergedApp);
-          mergedData.push(mergedApp);
-        }
+          return mergedApp;
+        }));
         return mergedData;
       };
 
