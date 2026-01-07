@@ -945,7 +945,13 @@ class App {
     } else {
       // Apply search and filters (searches name, platform, status, language)
       const searchQuery = state.searchQuery || '';
-      const filters = state.filters || {};
+      // Ensure filters always has default values to prevent filtering issues
+      const filters = {
+        platform: 'All',
+        status: 'All',
+        health: 'All',
+        ...(state.filters || {})
+      };
       const filteredApps = filterApps(state.portfolio, searchQuery, filters);
 
       // Sort filtered apps
@@ -971,7 +977,7 @@ class App {
 
       // Render filtered and sorted apps
       if (apps.length === 0) {
-        const hasFilters = filters.platform !== 'All' || filters.status !== 'All';
+        const hasFilters = (filters.platform && filters.platform !== 'All') || (filters.status && filters.status !== 'All');
         const hasSearch = searchQuery.trim().length > 0;
         appGrid.innerHTML = `
           <div class="empty-state">
