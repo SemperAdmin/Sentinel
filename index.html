@@ -1604,6 +1604,24 @@
                         <div class="search-box-inline">
                             <input type="text" id="app-search" class="search-input-styled" placeholder="Search apps..." autocomplete="off" />
                         </div>
+                        <label class="sort-label filter-label">
+                            <span>Platform</span>
+                            <select id="platform-filter" class="btn btn-secondary sort-select">
+                                <option value="All">All</option>
+                                <option value="Web">Web</option>
+                                <option value="iOS">iOS</option>
+                                <option value="Android">Android</option>
+                                <option value="Desktop">Desktop</option>
+                            </select>
+                        </label>
+                        <label class="sort-label filter-label">
+                            <span>Status</span>
+                            <select id="status-filter" class="btn btn-secondary sort-select">
+                                <option value="All">All</option>
+                                <option value="Active">Active</option>
+                                <option value="Archived">Archived</option>
+                            </select>
+                        </label>
                         <label class="sort-label">
                             <span>Sort</span>
                             <select id="sort-select" class="btn btn-secondary sort-select">
@@ -1613,7 +1631,7 @@
                                 <option value="activeTodo">Active To-Dos</option>
                             </select>
                         </label>
-                        <button class="btn btn-primary" id="refresh-portfolio">REFRESH</button>
+                        <button class="btn btn-primary" id="refresh-portfolio">Refresh</button>
                     </div>
                 </div>
                 <section class="marine-tools-section">

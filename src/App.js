@@ -294,6 +294,24 @@ class App {
       });
     }
 
+    // Platform filter
+    const platformFilter = document.getElementById('platform-filter');
+    if (platformFilter) {
+      platformFilter.addEventListener('change', (e) => {
+        appState.setFilters({ platform: e.target.value });
+        this.updateDashboard(appState.getState());
+      });
+    }
+
+    // Status filter
+    const statusFilter = document.getElementById('status-filter');
+    if (statusFilter) {
+      statusFilter.addEventListener('change', (e) => {
+        appState.setFilters({ status: e.target.value });
+        this.updateDashboard(appState.getState());
+      });
+    }
+
     // Search input with debouncing
     const searchInput = document.getElementById('app-search');
     if (searchInput) {
@@ -925,9 +943,10 @@ class App {
       // Show 6 skeleton cards
       appGrid.innerHTML = skeletonCard.repeat(6);
     } else {
-      // Apply search (searches name, platform, status, language)
+      // Apply search and filters (searches name, platform, status, language)
       const searchQuery = state.searchQuery || '';
-      const filteredApps = filterApps(state.portfolio, searchQuery);
+      const filters = state.filters || {};
+      const filteredApps = filterApps(state.portfolio, searchQuery, filters);
 
       // Sort filtered apps
       const order = state.sortOrder || 'alphabetical';
@@ -952,19 +971,25 @@ class App {
 
       // Render filtered and sorted apps
       if (apps.length === 0) {
+        const hasFilters = filters.platform !== 'All' || filters.status !== 'All';
+        const hasSearch = searchQuery.trim().length > 0;
         appGrid.innerHTML = `
           <div class="empty-state">
             <h3>No matching apps</h3>
-            <p>Try a different search term</p>
-            <button class="btn btn-secondary" id="clear-search-btn">Clear Search</button>
+            <p>${hasFilters ? 'Try adjusting your filters' : hasSearch ? 'Try a different search term' : 'No apps found'}</p>
+            <button class="btn btn-secondary" id="clear-filters-btn">Clear Filters</button>
           </div>
         `;
-        const clearBtn = appGrid.querySelector('#clear-search-btn');
+        const clearBtn = appGrid.querySelector('#clear-filters-btn');
         if (clearBtn) {
           clearBtn.addEventListener('click', () => {
-            appState.setSearchQuery('');
+            appState.clearSearchAndFilters();
             const searchInput = document.getElementById('app-search');
+            const platformFilter = document.getElementById('platform-filter');
+            const statusFilter = document.getElementById('status-filter');
             if (searchInput) searchInput.value = '';
+            if (platformFilter) platformFilter.value = 'All';
+            if (statusFilter) statusFilter.value = 'All';
           });
         }
       } else {
