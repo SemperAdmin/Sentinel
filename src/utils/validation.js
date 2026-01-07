@@ -228,7 +228,7 @@ export function validateAppData(app) {
     errors.push('App must have a valid id');
   }
 
-  if (!isNonEmptyString(app.repoUrl) && !isValidGitHubUrl(app.repoUrl)) {
+  if (!isValidGitHubUrl(app.repoUrl)) {
     errors.push('App must have a valid GitHub repository URL');
   }
 
@@ -360,8 +360,8 @@ export function sanitizeAppData(app) {
     lastReviewDate: app.lastReviewDate || null,
     nextReviewDate: app.nextReviewDate || null,
     pendingTodos: typeof app.pendingTodos === 'number' ? app.pendingTodos : 0,
-    notes: sanitizeString(app.notes || app.description || ''),
-    description: sanitizeString(app.description || app.notes || ''),
+    notes: sanitizeString(app.notes || ''),
+    description: sanitizeString(app.description || ''),
     lastCommitDate: app.lastCommitDate || null,
     latestTag: app.latestTag || null,
     stars: typeof app.stars === 'number' ? app.stars : 0,
