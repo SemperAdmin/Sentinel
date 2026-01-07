@@ -57,12 +57,21 @@ export class DataController {
           console.log('Supabase returned no data, falling back to GitHub sources...');
       }
 
-      // Helper to save portfolio data to local store
+      // Helper to save portfolio data to local store while preserving local tasks
       const saveToLocalStore = async (data) => {
+        const mergedData = [];
         for (const app of data) {
-          await dataStore.saveApp(app);
+          // Get existing local app to preserve tasks data
+          const localApp = await dataStore.getApp(app.id);
+          const mergedApp = {
+            ...app,
+            // Preserve local todos if they exist (overview.json doesn't include task details)
+            todos: localApp?.todos || app.todos || []
+          };
+          await dataStore.saveApp(mergedApp);
+          mergedData.push(mergedApp);
         }
-        return data;
+        return mergedData;
       };
 
       // Multi-fallback: backend proxy → direct raw GitHub → local storage → fresh GitHub API
