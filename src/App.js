@@ -256,6 +256,19 @@ class App {
       });
     }
 
+    // Force clear button (emergency reset)
+    const forceClearBtn = document.getElementById('force-clear-btn');
+    if (forceClearBtn) {
+      forceClearBtn.addEventListener('click', () => {
+        if (confirm('⚠️ This will completely reset the app. Are you sure?')) {
+          localStorage.clear();
+          sessionStorage.clear();
+          indexedDB.deleteDatabase('APM-Portfolio-Manager');
+          location.reload();
+        }
+      });
+    }
+
     // Back button in detail view
     const backBtn = document.getElementById('back-to-dashboard');
     if (backBtn) {
@@ -402,8 +415,7 @@ class App {
     const isAdmin = state.userRole === 'admin';
     const newIdeaBtn = document.getElementById('new-idea-btn');
     const submitIdeaBtn = document.getElementById('submit-idea-btn');
-    const clearCacheBtn = document.getElementById('clear-cache-btn');
-    const forceClearBtn = document.getElementById('force-clear-btn');
+    const adminToolsDropdown = document.getElementById('admin-tools-dropdown');
 
     if (newIdeaBtn) {
       newIdeaBtn.style.display = isAdmin ? '' : 'none';
@@ -413,12 +425,8 @@ class App {
       submitIdeaBtn.style.display = isAdmin ? 'none' : '';
     }
 
-    if (clearCacheBtn) {
-      clearCacheBtn.style.display = isAdmin ? '' : 'none';
-    }
-
-    if (forceClearBtn) {
-      forceClearBtn.style.display = isAdmin ? '' : 'none';
+    if (adminToolsDropdown) {
+      adminToolsDropdown.style.display = isAdmin ? '' : 'none';
     }
 
     // Update navigation active states
@@ -890,15 +898,32 @@ class App {
     // Debug: log what's being rendered
     console.log('Rendering dashboard with portfolio:', state.portfolio?.map(app => app.id));
 
-    // Handle empty portfolio state
+    // Handle empty portfolio state with skeleton loading
     if (!state.portfolio || state.portfolio.length === 0) {
-      appGrid.innerHTML = `
-        <div class="empty-state">
-          <h3>No repositories found</h3>
-          <p>Fetching your GitHub repositories...</p>
-          <div class="loading-spinner"></div>
+      // Show skeleton cards instead of spinner
+      const skeletonCard = `
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-badge"></div>
+          </div>
+          <div class="skeleton skeleton-text long"></div>
+          <div class="skeleton skeleton-text medium"></div>
+          <div class="skeleton-metrics">
+            <div class="skeleton-metric">
+              <div class="skeleton skeleton-metric-label"></div>
+              <div class="skeleton skeleton-metric-value"></div>
+            </div>
+            <div class="skeleton-metric">
+              <div class="skeleton skeleton-metric-label"></div>
+              <div class="skeleton skeleton-metric-value"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-button"></div>
         </div>
       `;
+      // Show 6 skeleton cards
+      appGrid.innerHTML = skeletonCard.repeat(6);
     } else {
       // Apply search (searches name, platform, status, language)
       const searchQuery = state.searchQuery || '';
@@ -1189,28 +1214,34 @@ class App {
     const completedCount = document.getElementById('completed-count');
     const rejectedCount = document.getElementById('rejected-count');
 
+    // Get section containers
+    const pendingSection = pendingList?.closest('.ideas-section');
+    const inDevSection = inDevelopmentList?.closest('.ideas-section');
+    const completedSection = completedList?.closest('.ideas-section');
+    const rejectedSection = rejectedList?.closest('.ideas-section');
+
     if (!pendingList || !completedList) return;
 
     // Split ideas into categories
     const allIdeas = state.ideas || [];
-    
+
     // Pending: No status or explicitly 'pending' or 'public-submission'
     const pending = allIdeas.filter(idea => !idea.status || idea.status === 'pending' || idea.status === 'public-submission');
-    
+
     // In Development
     const inDevelopment = allIdeas.filter(idea => idea.status === 'in_development');
-    
+
     // Completed: 'created' or 'implemented'
     const completed = allIdeas.filter(idea => idea.status === 'created' || idea.status === 'implemented');
-    
+
     // Rejected
     const rejected = allIdeas.filter(idea => idea.status === 'rejected');
 
     // Update counts
-    if (pendingCount) pendingCount.textContent = `(${pending.length})`;
-    if (inDevelopmentCount) inDevelopmentCount.textContent = `(${inDevelopment.length})`;
-    if (completedCount) completedCount.textContent = `(${completed.length})`;
-    if (rejectedCount) rejectedCount.textContent = `(${rejected.length})`;
+    if (pendingCount) pendingCount.textContent = pending.length > 0 ? `(${pending.length})` : '';
+    if (inDevelopmentCount) inDevelopmentCount.textContent = inDevelopment.length > 0 ? `(${inDevelopment.length})` : '';
+    if (completedCount) completedCount.textContent = completed.length > 0 ? `(${completed.length})` : '';
+    if (rejectedCount) rejectedCount.textContent = rejected.length > 0 ? `(${rejected.length})` : '';
 
     const callbacks = {
       onView: (idea) => this.showIdeaDetail(idea),
@@ -1219,7 +1250,7 @@ class App {
       onMarkInDev: (ideaId) => this.markIdeaAsInDev(ideaId)
     };
 
-    // Render pending ideas
+    // Render pending ideas (always show - primary section)
     if (pending.length === 0) {
       pendingList.innerHTML = `
         <div style="text-align: center; padding: 2rem; color: #6c757d;">
@@ -1231,41 +1262,35 @@ class App {
       renderIdeasList(pending, pendingList, callbacks);
     }
 
-    // Render in-development ideas
-    if (inDevelopmentList) {
+    // Render in-development ideas (hide section if empty)
+    if (inDevelopmentList && inDevSection) {
       if (inDevelopment.length === 0) {
-        inDevelopmentList.innerHTML = `
-          <div style="text-align: center; padding: 2rem; color: #6c757d;">
-            <p>No ideas in development.</p>
-          </div>
-        `;
+        inDevSection.style.display = 'none';
         delete inDevelopmentList.dataset.listenerAttached;
       } else {
+        inDevSection.style.display = '';
         renderIdeasList(inDevelopment, inDevelopmentList, callbacks);
       }
     }
 
-    // Render completed ideas
-    if (completed.length === 0) {
-      completedList.innerHTML = `
-        <div style="text-align: center; padding: 2rem; color: #6c757d;">
-          <p>No implemented ideas yet.</p>
-        </div>
-      `;
-      delete completedList.dataset.listenerAttached;
-    } else {
-      renderIdeasList(completed, completedList, callbacks);
+    // Render completed ideas (hide section if empty)
+    if (completedSection) {
+      if (completed.length === 0) {
+        completedSection.style.display = 'none';
+        delete completedList.dataset.listenerAttached;
+      } else {
+        completedSection.style.display = '';
+        renderIdeasList(completed, completedList, callbacks);
+      }
     }
-    // Render rejected ideas
-    if (rejectedList) {
+
+    // Render rejected ideas (hide section if empty)
+    if (rejectedList && rejectedSection) {
       if (rejected.length === 0) {
-        rejectedList.innerHTML = `
-          <div style="text-align: center; padding: 2rem; color: #6c757d;">
-            <p>No rejected ideas.</p>
-          </div>
-        `;
+        rejectedSection.style.display = 'none';
         delete rejectedList.dataset.listenerAttached;
       } else {
+        rejectedSection.style.display = '';
         renderIdeasList(rejected, rejectedList, callbacks);
       }
     }
