@@ -5,16 +5,16 @@
     "description": "UNITED STATES MARINE CORPS FORCES, KOREA\nOPC 371 BOX 76\nAPO AP 96271-9001\n",
     "priority": "medium",
     "status": "Complete",
+    "dueDate": null,
+    "completed": true,
+    "impact": null,
+    "createdAt": "2025-12-31T02:28:09.653+00:00",
     "source": "Facebook",
     "feedbackSummary": "UNITED STATES MARINE CORPS FORCES, KOREA\nOPC 371 BOX 76\nAPO AP 96271-9001\n",
     "submitterName": "JONATHON CAMPOS",
     "submitterEmail": "jonathon.campos1@usmc.mil",
-    "submittedBy": "public",
-    "completed": true,
-    "createdAt": "2025-12-31T02:28:09.653Z",
-    "dueDate": null,
     "effortEstimate": "Small",
-    "completionDate": "2026-01-04",
-    "rejectionReason": ""
+    "rejectionReason": "",
+    "completionDate": ""
   }
 ]
