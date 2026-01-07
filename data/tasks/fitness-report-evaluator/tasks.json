@@ -58,17 +58,17 @@
     "title": "Migrate json to sql tables",
     "description": "Migrate all data from current json files for tasks and ideas to sql tables",
     "priority": "medium",
-    "status": "Complete",
+    "status": "pending",
     "dueDate": null,
-    "completed": true,
+    "completed": false,
     "impact": null,
     "createdAt": "2025-11-27T21:13:12.725+00:00",
     "source": "Other",
-    "feedbackSummary": "",
-    "submitterName": "",
-    "submitterEmail": "",
-    "effortEstimate": "Small",
-    "rejectionReason": "",
-    "completionDate": ""
+    "feedbackSummary": null,
+    "submitterName": null,
+    "submitterEmail": null,
+    "effortEstimate": null,
+    "rejectionReason": null,
+    "completionDate": null
   }
 ]
