@@ -68,6 +68,10 @@ export class AppCard {
       </a>
     ` : '';
 
+    // Determine if there are any urgent items
+    const hasOverdue = this.app.nextReviewDate && new Date(this.app.nextReviewDate) < new Date();
+    const hasActiveTasks = activeTodos > 0;
+
     card.innerHTML = `
       <div class="app-card-header">
         <h3 class="app-card-title">
@@ -83,11 +87,7 @@ export class AppCard {
       ${truncatedDesc ? `<p class="app-card-description">${this.escapeHtml(truncatedDesc)}</p>` : ''}
 
       <div class="app-card-metrics">
-        <div class="metric-item">
-          <span class="metric-label">Last Reviewed:</span>
-          <span class="metric-value">${formatDate(lastReviewedDate, { relative: true })}</span>
-        </div>
-
+        <!-- Primary metrics - always visible -->
         <div class="metric-item">
           <span class="metric-label">Next Review:</span>
           <span class="metric-value">
@@ -96,18 +96,26 @@ export class AppCard {
         </div>
 
         <div class="metric-item">
-          <span class="metric-label">Pending Tasks:</span>
-          <span class="metric-value">${pendingDisplay}</span>
-        </div>
-
-        <div class="metric-item">
           <span class="metric-label">Active Tasks:</span>
           <span class="metric-value">${activeDisplay}</span>
         </div>
       </div>
 
-      <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-        View App
+      <!-- Secondary metrics - shown on hover/expand -->
+      <div class="app-card-metrics-extra" style="display: none;">
+        <div class="metric-item">
+          <span class="metric-label">Last Reviewed:</span>
+          <span class="metric-value">${formatDate(lastReviewedDate, { relative: true })}</span>
+        </div>
+
+        <div class="metric-item">
+          <span class="metric-label">Pending Tasks:</span>
+          <span class="metric-value">${pendingDisplay}</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary app-card-view-btn">
+        View Details
       </button>
     `;
 

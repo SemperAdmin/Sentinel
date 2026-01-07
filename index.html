@@ -35,14 +35,29 @@
             line-height: 1.4;
             color: var(--text-metal);
             background-color: var(--bg-body);
-            background-image: 
+            background-image:
                 linear-gradient(rgba(68, 68, 68, 0.1) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(68, 68, 68, 0.1) 1px, transparent 1px);
             background-size: 20px 20px;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            letter-spacing: 0.02em;
+        }
+
+        /* Keep uppercase for UI elements, labels, and navigation */
+        .btn, .nav-btn, .tab-btn, .metric-label, .status-badge,
+        .app-card-platform, label, .form-group label {
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+
+        /* Readable text for descriptions and content */
+        .app-card-description, .idea-description, .todo-description,
+        .marine-tools-description, .notes-textarea, textarea,
+        .improvement-description, .detail-content p, .status-item span:not(.status-badge) {
+            text-transform: none;
+            letter-spacing: normal;
+            line-height: 1.6;
         }
 
         h1, h2, h3 {
@@ -287,6 +302,27 @@
             border-color: var(--accent-blood);
             box-shadow: var(--shadow-red-glow);
             transform: translateY(-2px);
+        }
+
+        /* Show extra metrics on card hover */
+        .app-card:hover .app-card-metrics-extra {
+            display: flex !important;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--border-seam);
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .app-card-view-btn {
+            width: 100%;
+            margin-top: 1rem;
         }
 
         .app-card::before {
@@ -1296,6 +1332,242 @@
             color: #888;
             text-transform: none;
         }
+
+        /* Admin Dropdown Menu */
+        .admin-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .admin-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .admin-dropdown-toggle::after {
+            content: '▼';
+            font-size: 0.6rem;
+            transition: transform 0.2s ease;
+        }
+
+        .admin-dropdown:hover .admin-dropdown-toggle::after,
+        .admin-dropdown.open .admin-dropdown-toggle::after {
+            transform: rotate(180deg);
+        }
+
+        .admin-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--bg-card);
+            border: 2px solid var(--border-seam);
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 200;
+            margin-top: 0.5rem;
+        }
+
+        .admin-dropdown:hover .admin-dropdown-menu,
+        .admin-dropdown.open .admin-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .admin-dropdown-menu .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            color: var(--text-metal);
+            border: none;
+            border-bottom: 1px solid var(--border-seam);
+            cursor: pointer;
+            text-align: left;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.8rem;
+            transition: var(--transition-metal);
+        }
+
+        .admin-dropdown-menu .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .admin-dropdown-menu .dropdown-item:hover {
+            background: var(--accent-blood);
+        }
+
+        .dropdown-item-danger {
+            color: var(--critical-blood) !important;
+        }
+
+        .dropdown-item-danger:hover {
+            background: var(--critical-blood) !important;
+            color: var(--text-metal) !important;
+        }
+
+        /* Form Validation Styles */
+        .field-invalid {
+            border-color: var(--critical-blood) !important;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25) !important;
+        }
+
+        .field-invalid:focus {
+            border-color: var(--critical-blood) !important;
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5) !important;
+        }
+
+        .field-error {
+            color: var(--critical-blood);
+            font-size: 0.8rem;
+            margin-top: 0.35rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .field-error::before {
+            content: '⚠';
+        }
+
+        .field-valid {
+            border-color: var(--health-metal) !important;
+        }
+
+        .error-summary {
+            background: rgba(220, 53, 69, 0.15);
+            border: 1px solid var(--critical-blood);
+            color: var(--critical-blood);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .error-summary ul {
+            margin: 0.5rem 0 0 1.25rem;
+            padding: 0;
+        }
+
+        .character-counter {
+            text-align: right;
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+
+        .character-counter.warning {
+            color: var(--warning-rust);
+        }
+
+        .character-counter.danger {
+            color: var(--critical-blood);
+        }
+
+        /* Skeleton Loading States */
+        .skeleton {
+            background: linear-gradient(
+                90deg,
+                var(--bg-card) 25%,
+                rgba(255, 255, 255, 0.08) 50%,
+                var(--bg-card) 75%
+            );
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s ease-in-out infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-seam);
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .skeleton-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--border-seam), transparent);
+        }
+
+        .skeleton-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .skeleton-title {
+            height: 1.3rem;
+            width: 60%;
+        }
+
+        .skeleton-badge {
+            height: 1.5rem;
+            width: 4rem;
+        }
+
+        .skeleton-text {
+            height: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .skeleton-text.short {
+            width: 40%;
+        }
+
+        .skeleton-text.medium {
+            width: 70%;
+        }
+
+        .skeleton-text.long {
+            width: 90%;
+        }
+
+        .skeleton-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .skeleton-metric {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .skeleton-metric-label {
+            height: 0.8rem;
+            width: 35%;
+        }
+
+        .skeleton-metric-value {
+            height: 0.8rem;
+            width: 25%;
+        }
+
+        .skeleton-button {
+            height: 2.5rem;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .skeleton-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -1310,11 +1582,16 @@
                     </div>
                 </div>
                 <nav class="header-nav">
-                    <button class="nav-btn active" data-view="dashboard">DASHBOARD</button>
+                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
                     <button class="nav-btn" data-view="ideas">Innovation Lab</button>
-                    <button class="nav-btn" id="clear-cache-btn" title="Clear cache and reload data">🔄 CLEAR CACHE</button>
-                    <button class="nav-btn" id="force-clear-btn" onclick="localStorage.clear(); sessionStorage.clear(); indexedDB.deleteDatabase('APM-Portfolio-Manager'); location.reload();" title="Emergency cache clear">🚨 FORCE CLEAR</button>
-                    <button class="nav-btn" id="auth-btn" title="Login as admin">🔐 LOGIN</button>
+                    <div class="admin-dropdown" id="admin-tools-dropdown" style="display: none;">
+                        <button class="nav-btn admin-dropdown-toggle" id="admin-tools-btn">⚙️ Tools</button>
+                        <div class="admin-dropdown-menu">
+                            <button class="dropdown-item" id="clear-cache-btn" title="Clear cache and reload data">🔄 Clear Cache</button>
+                            <button class="dropdown-item dropdown-item-danger" id="force-clear-btn" title="Emergency cache clear">🚨 Force Clear</button>
+                        </div>
+                    </div>
+                    <button class="nav-btn" id="auth-btn" title="Login as admin">🔐 Login</button>
                 </nav>
             </div>
         </header>
