@@ -17,8 +17,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # Only run if Supabase is configured
-    if: ${{ vars.VITE_SUPABASE_URL != '' || secrets.VITE_SUPABASE_URL != '' }}
+    # Only run if Supabase URL is configured as a repository variable
+    if: ${{ vars.VITE_SUPABASE_URL != '' }}
 
     steps:
       - name: Checkout
