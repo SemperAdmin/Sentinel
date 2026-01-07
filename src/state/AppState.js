@@ -672,6 +672,12 @@ class AppState {
       editingIdea: null,
       autoRepoSync: false,
       sortOrder: 'alphabetical',
+      searchQuery: '',
+      filters: {
+        platform: 'All',
+        status: 'All',
+        health: 'All'
+      },
       isAuthenticated: false,
       userRole: 'guest',
       showLogin: true
