@@ -304,9 +304,13 @@
             transform: translateY(-2px);
         }
 
-        /* Show extra metrics on card hover */
+        /* Extra metrics - hidden by default, shown on hover */
+        .app-card-metrics-extra {
+            display: none;
+        }
+
         .app-card:hover .app-card-metrics-extra {
-            display: flex !important;
+            display: flex;
             flex-direction: column;
             gap: 0.75rem;
             margin-top: 0.75rem;
@@ -1410,15 +1414,19 @@
             color: var(--text-metal) !important;
         }
 
-        /* Form Validation Styles */
-        .field-invalid {
-            border-color: var(--critical-blood) !important;
-            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25) !important;
+        /* Form Validation Styles - higher specificity to override base input styles */
+        input.field-invalid,
+        textarea.field-invalid,
+        select.field-invalid {
+            border-color: var(--critical-blood);
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
         }
 
-        .field-invalid:focus {
-            border-color: var(--critical-blood) !important;
-            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5) !important;
+        input.field-invalid:focus,
+        textarea.field-invalid:focus,
+        select.field-invalid:focus {
+            border-color: var(--critical-blood);
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
         }
 
         .field-error {
@@ -1434,8 +1442,10 @@
             content: '⚠';
         }
 
-        .field-valid {
-            border-color: var(--health-metal) !important;
+        input.field-valid,
+        textarea.field-valid,
+        select.field-valid {
+            border-color: var(--health-metal);
         }
 
         .error-summary {
@@ -1703,7 +1713,7 @@
                 <nav class="header-nav">
                     <button class="nav-btn active" data-view="dashboard">Dashboard</button>
                     <button class="nav-btn" data-view="ideas">Innovation Lab</button>
-                    <div class="admin-dropdown" id="admin-tools-dropdown" style="display: none;">
+                    <div class="admin-dropdown hidden" id="admin-tools-dropdown">
                         <button class="nav-btn admin-dropdown-toggle" id="admin-tools-btn">⚙️ Tools</button>
                         <div class="admin-dropdown-menu">
                             <button class="dropdown-item" id="clear-cache-btn" title="Clear cache and reload data">🔄 Clear Cache</button>

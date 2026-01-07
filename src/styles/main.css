@@ -51,21 +51,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Keep uppercase for UI elements only */
-.btn, .nav-btn, .tab-btn, .metric-label, .status-badge,
-.app-card-platform, .form-group label {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Readable text for descriptions and content */
-.app-card-description, .idea-description, .todo-description,
-.notes-textarea, textarea, .improvement-description {
-  text-transform: none;
-  letter-spacing: normal;
-  line-height: 1.6;
-}
-
 /* Header */
 .header {
   background-color: var(--primary-dark);

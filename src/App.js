@@ -436,15 +436,15 @@ class App {
     const adminToolsDropdown = document.getElementById('admin-tools-dropdown');
 
     if (newIdeaBtn) {
-      newIdeaBtn.style.display = isAdmin ? '' : 'none';
+      newIdeaBtn.classList.toggle('hidden', !isAdmin);
     }
 
     if (submitIdeaBtn) {
-      submitIdeaBtn.style.display = isAdmin ? 'none' : '';
+      submitIdeaBtn.classList.toggle('hidden', isAdmin);
     }
 
     if (adminToolsDropdown) {
-      adminToolsDropdown.style.display = isAdmin ? '' : 'none';
+      adminToolsDropdown.classList.toggle('hidden', !isAdmin);
     }
 
     // Update navigation active states
@@ -1295,33 +1295,30 @@ class App {
 
     // Render in-development ideas (hide section if empty)
     if (inDevelopmentList && inDevSection) {
+      inDevSection.classList.toggle('hidden', inDevelopment.length === 0);
       if (inDevelopment.length === 0) {
-        inDevSection.style.display = 'none';
         delete inDevelopmentList.dataset.listenerAttached;
       } else {
-        inDevSection.style.display = '';
         renderIdeasList(inDevelopment, inDevelopmentList, callbacks);
       }
     }
 
     // Render completed ideas (hide section if empty)
     if (completedSection) {
+      completedSection.classList.toggle('hidden', completed.length === 0);
       if (completed.length === 0) {
-        completedSection.style.display = 'none';
         delete completedList.dataset.listenerAttached;
       } else {
-        completedSection.style.display = '';
         renderIdeasList(completed, completedList, callbacks);
       }
     }
 
     // Render rejected ideas (hide section if empty)
     if (rejectedList && rejectedSection) {
+      rejectedSection.classList.toggle('hidden', rejected.length === 0);
       if (rejected.length === 0) {
-        rejectedSection.style.display = 'none';
         delete rejectedList.dataset.listenerAttached;
       } else {
-        rejectedSection.style.display = '';
         renderIdeasList(rejected, rejectedList, callbacks);
       }
     }

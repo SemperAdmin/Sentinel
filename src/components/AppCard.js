@@ -102,7 +102,7 @@ export class AppCard {
       </div>
 
       <!-- Secondary metrics - shown on hover/expand -->
-      <div class="app-card-metrics-extra" style="display: none;">
+      <div class="app-card-metrics-extra">
         <div class="metric-item">
           <span class="metric-label">Last Reviewed:</span>
           <span class="metric-value">${formatDate(lastReviewedDate, { relative: true })}</span>
