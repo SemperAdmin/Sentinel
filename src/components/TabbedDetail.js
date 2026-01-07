@@ -227,7 +227,7 @@ export class TabbedDetail {
 
         <div class="detail-section">
           <h3>Past Reviews</h3>
-          <div id="past-reviews" style="color:#6c757d;">Loading...</div>
+          <div id="past-reviews" class="loading-text">Loading...</div>
         </div>
       </div>
     `;
@@ -245,32 +245,32 @@ export class TabbedDetail {
     return `
       <div id="todo-tab" class="tab-pane active">
         <div class="detail-section">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div class="flex-between mb-md">
             <h3>To-Do Dashboard</h3>
-            <div style="display: flex; gap: 0.5rem;">
+            <div class="flex-gap-sm">
               ${appState.isAdmin() ? '<button class="btn btn-primary" id="add-todo-btn">+ Add New Task</button>' : '<button class="btn btn-success" id="suggest-improvement-btn">💡 Suggest Improvement</button>'}
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
+          <div class="stats-grid">
             <div class="app-card">
               <div class="app-card-header"><h4 class="app-card-title">Total</h4></div>
-              <div style="font-size: 1.8rem; font-weight: 700;">${todos.length}</div>
-              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">All tasks</div>
+              <div class="stat-value">${todos.length}</div>
+              <div class="stat-label">All tasks</div>
             </div>
             <div class="app-card">
               <div class="app-card-header"><h4 class="app-card-title">Active</h4></div>
-              <div style="font-size: 1.8rem; font-weight: 700;">${activeTodos.length}</div>
-              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">In progress</div>
+              <div class="stat-value">${activeTodos.length}</div>
+              <div class="stat-label">In progress</div>
             </div>
             <div class="app-card">
               <div class="app-card-header"><h4 class="app-card-title">Completed</h4></div>
-              <div style="font-size: 1.8rem; font-weight: 700;">${completedTodos.length}</div>
-              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">Finished</div>
+              <div class="stat-value">${completedTodos.length}</div>
+              <div class="stat-label">Finished</div>
             </div>
             <div class="app-card">
               <div class="app-card-header"><h4 class="app-card-title">Overdue</h4></div>
-              <div style="font-size: 1.8rem; font-weight: 700;">${activeTodos.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length}</div>
-              <div style="color: #888; font-size: 0.8rem; margin-top: 0.25rem;">Past due</div>
+              <div class="stat-value">${activeTodos.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length}</div>
+              <div class="stat-label">Past due</div>
             </div>
           </div>
         </div>
@@ -279,28 +279,28 @@ export class TabbedDetail {
         <div class="detail-section">
           <h3>Pending Tasks</h3>
           <div id="pending-todos" class="todo-list">
-            ${pendingTodos.length > 0 ? pendingTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p style="color: #6c757d;">No pending tasks</p>'}
+            ${pendingTodos.length > 0 ? pendingTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p class="text-muted">No pending tasks</p>'}
           </div>
         </div>
 
         <div class="detail-section">
           <h3>Active Tasks</h3>
           <div id="active-todos" class="todo-list">
-            ${activeTodos.length > 0 ? activeTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p style="color: #6c757d;">No active tasks</p>'}
+            ${activeTodos.length > 0 ? activeTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p class="text-muted">No active tasks</p>'}
           </div>
         </div>
 
         <div class="detail-section">
           <h3>Completed Tasks</h3>
           <div id="completed-todos" class="todo-list completed">
-            ${completedTodos.length > 0 ? completedTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p style="color: #6c757d;">No completed tasks</p>'}
+            ${completedTodos.length > 0 ? completedTodos.map(todo => this.renderTodoItem(todo)).join('') : '<p class="text-muted">No completed tasks</p>'}
           </div>
         </div>
 
         ${appState.isAdmin() ? `
           <div class="detail-section">
             <h3>Quick Actions</h3>
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <div class="flex-gap-md flex-wrap">
               <button class="btn btn-secondary" id="clear-completed-btn">Clear Completed</button>
               <button class="btn btn-secondary" id="export-todos-btn">Export Tasks</button>
             </div>
@@ -342,13 +342,13 @@ export class TabbedDetail {
         <div class="todo-content">
           <div class="todo-title">
             <span class="source-icon">${sourceIcon}</span> ${this.escapeHtml(todo.title)}
-            ${isPublicSubmission ? '<span style="background: var(--primary-blue); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;">PUBLIC FEEDBACK</span>' : ''}
+            ${isPublicSubmission ? '<span class="badge-public">Public Feedback</span>' : ''}
           </div>
 
           ${todo.description ? `<div class="todo-description">${this.escapeHtml(todo.description)}</div>` : ''}
           ${todo.dueDate ? `<div class="todo-due">Due: ${formatDate(todo.dueDate)}</div>` : ''}
           ${appState.isAdmin() && isPublicSubmission ? `
-            <div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+            <div class="submitter-info">
               ${todo.submitterName ? `<span>👤 ${this.escapeHtml(todo.submitterName)}</span>` : ''}
               ${todo.submitterEmail ? `<span>📧 ${this.escapeHtml(todo.submitterEmail)}</span>` : ''}
             </div>

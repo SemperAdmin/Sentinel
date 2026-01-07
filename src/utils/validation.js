@@ -211,6 +211,169 @@ export function validationResult(isValid, error) {
   return isValid ? { isValid: true } : { isValid: false, error };
 }
 
+/**
+ * Validate app object from API response
+ * @param {Object} app - App object to validate
+ * @returns {{isValid: boolean, errors: string[]}}
+ */
+export function validateAppData(app) {
+  const errors = [];
+
+  if (!app || typeof app !== 'object') {
+    return { isValid: false, errors: ['App data must be an object'] };
+  }
+
+  // Required fields
+  if (!isNonEmptyString(app.id)) {
+    errors.push('App must have a valid id');
+  }
+
+  if (!isNonEmptyString(app.repoUrl) && !isValidGitHubUrl(app.repoUrl)) {
+    errors.push('App must have a valid GitHub repository URL');
+  }
+
+  // Optional but should be valid if present
+  if (app.platform && !['Web', 'iOS', 'Android', 'Desktop', 'Cross-platform'].includes(app.platform)) {
+    errors.push(`Invalid platform: ${app.platform}`);
+  }
+
+  if (app.status && !['Active', 'Archived', 'Deprecated'].includes(app.status)) {
+    errors.push(`Invalid status: ${app.status}`);
+  }
+
+  if (app.lastCommitDate && isNaN(Date.parse(app.lastCommitDate))) {
+    errors.push('Invalid lastCommitDate format');
+  }
+
+  if (app.nextReviewDate && isNaN(Date.parse(app.nextReviewDate))) {
+    errors.push('Invalid nextReviewDate format');
+  }
+
+  if (app.todos && !Array.isArray(app.todos)) {
+    errors.push('todos must be an array');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Validate portfolio array from API response
+ * @param {Array} portfolio - Portfolio array to validate
+ * @returns {{isValid: boolean, errors: string[], validApps: Array}}
+ */
+export function validatePortfolioData(portfolio) {
+  const errors = [];
+  const validApps = [];
+
+  if (!Array.isArray(portfolio)) {
+    return { isValid: false, errors: ['Portfolio data must be an array'], validApps: [] };
+  }
+
+  portfolio.forEach((app, index) => {
+    const result = validateAppData(app);
+    if (result.isValid) {
+      validApps.push(app);
+    } else {
+      errors.push(`App at index ${index}: ${result.errors.join(', ')}`);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    validApps // Return valid apps even if some are invalid
+  };
+}
+
+/**
+ * Validate tasks array from API response
+ * @param {Array} tasks - Tasks array to validate
+ * @returns {{isValid: boolean, errors: string[], validTasks: Array}}
+ */
+export function validateTasksData(tasks) {
+  const errors = [];
+  const validTasks = [];
+
+  if (!Array.isArray(tasks)) {
+    return { isValid: false, errors: ['Tasks data must be an array'], validTasks: [] };
+  }
+
+  tasks.forEach((task, index) => {
+    if (isValidTodo(task)) {
+      validTasks.push(task);
+    } else {
+      errors.push(`Task at index ${index} is invalid`);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    validTasks
+  };
+}
+
+/**
+ * Validate ideas array from API response
+ * @param {Array} ideas - Ideas array to validate
+ * @returns {{isValid: boolean, errors: string[], validIdeas: Array}}
+ */
+export function validateIdeasData(ideas) {
+  const errors = [];
+  const validIdeas = [];
+
+  if (!Array.isArray(ideas)) {
+    return { isValid: false, errors: ['Ideas data must be an array'], validIdeas: [] };
+  }
+
+  ideas.forEach((idea, index) => {
+    if (isValidIdea(idea)) {
+      validIdeas.push(idea);
+    } else {
+      errors.push(`Idea at index ${index} is invalid`);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    validIdeas
+  };
+}
+
+/**
+ * Sanitize and validate app data, returning a clean version
+ * @param {Object} app - Raw app data
+ * @returns {Object} Sanitized app data with defaults
+ */
+export function sanitizeAppData(app) {
+  if (!app || typeof app !== 'object') return null;
+
+  return {
+    id: String(app.id || '').toLowerCase().trim(),
+    repoUrl: sanitizeGitHubUrl(app.repoUrl) || '',
+    platform: app.platform || 'Web',
+    status: app.status || 'Active',
+    lastReviewDate: app.lastReviewDate || null,
+    nextReviewDate: app.nextReviewDate || null,
+    pendingTodos: typeof app.pendingTodos === 'number' ? app.pendingTodos : 0,
+    notes: sanitizeString(app.notes || app.description || ''),
+    description: sanitizeString(app.description || app.notes || ''),
+    lastCommitDate: app.lastCommitDate || null,
+    latestTag: app.latestTag || null,
+    stars: typeof app.stars === 'number' ? app.stars : 0,
+    language: app.language || null,
+    isPrivate: Boolean(app.isPrivate),
+    archived: Boolean(app.archived),
+    todos: Array.isArray(app.todos) ? app.todos : [],
+    improvements: Array.isArray(app.improvements) ? app.improvements : [],
+    developerNotes: sanitizeString(app.developerNotes || '')
+  };
+}
+
 export default {
   isValidGitHubUrl,
   isValidEmail,
@@ -225,5 +388,10 @@ export default {
   isValidAppId,
   isValidTodo,
   isValidIdea,
-  validationResult
+  validationResult,
+  validateAppData,
+  validatePortfolioData,
+  validateTasksData,
+  validateIdeasData,
+  sanitizeAppData
 };

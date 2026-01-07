@@ -1568,6 +1568,125 @@
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 1.5rem;
         }
+
+        /* Utility Classes for Component Styles */
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .flex-gap-sm {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .flex-gap-md {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .flex-wrap {
+            flex-wrap: wrap;
+        }
+
+        .mb-sm { margin-bottom: 0.5rem; }
+        .mb-md { margin-bottom: 1rem; }
+        .mt-sm { margin-top: 0.25rem; }
+        .mt-md { margin-top: 0.5rem; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Text utilities */
+        .text-muted {
+            color: #6c757d;
+        }
+
+        .text-sm {
+            font-size: 0.8rem;
+        }
+
+        /* Submitter info display */
+        .submitter-info {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* Public feedback badge */
+        .badge-public {
+            background: var(--idea-control);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        /* Loading text */
+        .loading-text {
+            color: #6c757d;
+        }
+
+        /* Error Boundary Styles */
+        .error-boundary {
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .error-boundary.error-critical {
+            background: rgba(220, 53, 69, 0.15);
+            border: 2px solid var(--critical-blood);
+        }
+
+        .error-boundary.error-high {
+            background: rgba(255, 193, 7, 0.15);
+            border: 2px solid var(--warning-rust);
+        }
+
+        .error-boundary.error-medium,
+        .error-boundary.error-low {
+            background: rgba(108, 117, 125, 0.15);
+            border: 2px solid var(--border-seam);
+        }
+
+        .error-title {
+            margin: 0 0 0.75rem 0;
+            font-size: 1.1rem;
+        }
+
+        .error-message {
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
