@@ -1,10 +1,10 @@
 {
   "id": "eventcall",
   "description": "",
-  "notes": "No description available",
+  "notes": "Naval Letter Format Generator - SECNAV M-5216.5 Compliant by Semper Admin",
   "platform": "Web",
   "lastReviewDate": null,
   "nextReviewDate": "2026-04-03T00:00:00+00:00",
   "reviewCycle": 90,
-  "updatedAt": "2026-01-07T09:02:21.464Z"
+  "updatedAt": "2026-01-07T09:02:53.940Z"
 }
