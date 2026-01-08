@@ -180,19 +180,21 @@ class DataStore {
    */
   async getApp(id) {
     if (!this.initialized) await this.init();
-    
+
     if (this.useSupabase) {
       // getPortfolio already fetches full objects, but if we need single fetch:
       // For now, rely on getPortfolio being the main entry or implement getApp in SupabaseService
       // Or filter from getPortfolio if not implemented
       const portfolio = await supabaseService.getPortfolio();
+      // Handle null case (empty database or error)
+      if (!portfolio) return null;
       return portfolio.find(app => app.id === id);
     }
 
     if (this.usingFallback) {
       return this.fallbackStorage.portfolio.get(id);
     }
-    
+
     try {
       return await this.db.get(PORTFOLIO_STORE, id);
     } catch (error) {
@@ -208,23 +210,36 @@ class DataStore {
   async saveApp(app) {
     if (!this.initialized) await this.init();
 
-    // Always cache to IndexedDB when available (for fallback)
-    if (this.db && !this.usingFallback) {
-      try {
-        await this.db.put(PORTFOLIO_STORE, app);
-      } catch (cacheErr) {
-        console.warn('Failed to cache app to IndexedDB:', cacheErr.message);
-      }
-    } else if (this.usingFallback) {
-      this.fallbackStorage.portfolio.set(app.id, app);
-    }
-
-    // If using Supabase, also save there (primary storage)
+    // If using Supabase, save to Supabase (primary) and cache to IndexedDB.
     if (this.useSupabase) {
+      // Cache to IndexedDB first. A failure here should not stop the primary save.
+      if (this.db && !this.usingFallback) {
+        try {
+          await this.db.put(PORTFOLIO_STORE, app);
+        } catch (cacheErr) {
+          console.warn('Failed to cache app to IndexedDB:', cacheErr.message);
+        }
+      } else if (this.usingFallback) {
+        this.fallbackStorage.portfolio.set(app.id, app);
+      }
+      // Save to primary storage.
       return await supabaseService.saveApp(app);
     }
 
-    return app;
+    // If not using Supabase, IndexedDB (or fallback) is the primary storage.
+    // A failure here should be propagated.
+    if (this.usingFallback) {
+      this.fallbackStorage.portfolio.set(app.id, app);
+      return app;
+    }
+
+    try {
+      await this.db.put(PORTFOLIO_STORE, app);
+      return app;
+    } catch (error) {
+      console.error('Failed to save app to IndexedDB:', error);
+      throw new Error('Failed to save app data');
+    }
   }
 
   /**
