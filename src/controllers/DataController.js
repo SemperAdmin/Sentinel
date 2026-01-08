@@ -29,46 +29,74 @@ export class DataController {
 
   /**
    * Load initial portfolio data with triple-fallback strategy
+   * IMPORTANT: GitHub is the source of truth for the app LIST
+   * Supabase enriches app data (todos, metadata) but doesn't replace the list
    * @returns {Promise<App[]>}
    */
   async loadPortfolioData() {
+    let supabaseData = null;
     let supabaseError = false;
 
     try {
-      // Check if using Supabase backend
+      // Try to load from Supabase first if enabled
       if (dataStore.useSupabase) {
         console.log('Loading portfolio data from Supabase...');
         try {
-          const supabaseData = await dataStore.getPortfolio();
+          supabaseData = await dataStore.getPortfolio();
           if (supabaseData && supabaseData.length > 0) {
             console.log(`Loaded ${supabaseData.length} apps from Supabase`);
+            // Supabase has data - use it as the source
             return this.filterPortfolio(supabaseData);
           }
-          console.log('Supabase returned no data.');
+          // supabaseData is null or empty - will fall through to GitHub
+          console.log('Supabase returned no data (null or empty), falling back to GitHub sources...');
         } catch (err) {
-           console.error('Supabase load failed:', err);
-           supabaseError = true;
+          console.error('Supabase load failed:', err);
+          supabaseError = true;
         }
       }
 
-      // If Supabase is enabled and returned empty (success), fall back to GitHub sources
-      // This ensures the app works even if the Supabase database isn't populated yet
-      if (dataStore.useSupabase && !supabaseError) {
-          console.log('Supabase returned no data, falling back to GitHub sources...');
-      }
+      // ALWAYS fall back to GitHub when:
+      // 1. Supabase is not enabled
+      // 2. Supabase returned null/empty
+      // 3. Supabase had an error
+      console.log('Loading portfolio from GitHub sources (Supabase not available or empty)...');
 
       // Helper to save portfolio data to local store while preserving local tasks
+      // Also syncs to Supabase if enabled (populating the database for future use)
       const saveToLocalStore = async (data) => {
         const mergedData = await Promise.all(data.map(async (app) => {
-          const localApp = await dataStore.getApp(app.id);
+          // Try to get existing app from local storage (IndexedDB)
+          let localApp = null;
+          try {
+            // Temporarily bypass Supabase to get local data
+            if (dataStore.usingFallback) {
+              localApp = dataStore.fallbackStorage.portfolio.get(app.id);
+            } else if (dataStore.db) {
+              localApp = await dataStore.db.get('portfolio', app.id);
+            }
+          } catch (e) {
+            // Ignore errors, localApp will remain null
+          }
+
           const mergedApp = {
             ...app,
             // Preserve local todos if they exist, but don't let an empty local array overwrite remote data
             todos: localApp?.todos?.length ? localApp.todos : (app.todos || localApp?.todos || [])
           };
-          await dataStore.saveApp(mergedApp);
+
+          // Save to appropriate storage
+          try {
+            await dataStore.saveApp(mergedApp);
+          } catch (saveErr) {
+            // If save fails (e.g., Supabase permission error), log but continue
+            console.warn(`Failed to save app ${mergedApp.id}:`, saveErr.message || saveErr);
+          }
+
           return mergedApp;
         }));
+
+        console.log(`Saved ${mergedData.length} apps to data store`);
         return mergedData;
       };
 
@@ -102,13 +130,26 @@ export class DataController {
               console.log(`Loaded ${data.length} apps from direct GitHub raw content`);
               return await saveToLocalStore(data);
             },
-            // Second fallback: load from local storage
+            // Second fallback: load from local IndexedDB storage (bypassing Supabase)
             async () => {
-              console.log('Falling back to local portfolio data');
-              const localData = await dataStore.getPortfolio();
-              if (!localData || localData.length === 0) {
-                throw new Error('No local portfolio data available');
+              console.log('Falling back to local IndexedDB portfolio data');
+              let localData = null;
+
+              // Directly access IndexedDB, bypassing Supabase
+              if (dataStore.usingFallback) {
+                localData = Array.from(dataStore.fallbackStorage.portfolio.values());
+              } else if (dataStore.db) {
+                try {
+                  localData = await dataStore.db.getAll('portfolio');
+                } catch (e) {
+                  console.warn('Failed to read from IndexedDB:', e);
+                }
               }
+
+              if (!localData || localData.length === 0) {
+                throw new Error('No local portfolio data available in IndexedDB');
+              }
+              console.log(`Found ${localData.length} apps in local IndexedDB`);
               return localData;
             }
           );
@@ -134,9 +175,19 @@ export class DataController {
         }
       }
 
+      // Log summary for debugging
+      console.log('=== Portfolio Load Summary ===');
+      console.log(`  Source: ${dataStore.useSupabase ? 'Supabase (or GitHub fallback)' : 'GitHub/Local'}`);
+      console.log(`  Total apps loaded: ${filteredPortfolio.length}`);
+      console.log(`  App IDs: ${filteredPortfolio.map(a => a.id).join(', ')}`);
+      console.log('==============================');
+
       return filteredPortfolio;
     } catch (error) {
       errorHandler.logError(ErrorType.DATA, ErrorSeverity.CRITICAL, 'Failed to load portfolio data', error);
+      console.error('=== Portfolio Load FAILED ===');
+      console.error(`  Error: ${error.message}`);
+      console.error('==============================');
       throw error;
     }
   }
