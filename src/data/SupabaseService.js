@@ -75,6 +75,9 @@ class SupabaseService {
       console.log(`Supabase: Loaded ${todos?.length || 0} total todos`)
       if (todos && todos.length > 0) {
         console.log('Supabase: Sample todo app_ids:', todos.slice(0, 5).map(t => t.app_id))
+        // Debug: Log all unique app_ids in todos
+        const uniqueAppIds = [...new Set(todos.map(t => t.app_id))];
+        console.log('Supabase: Unique app_ids in todos table:', uniqueAppIds);
       }
 
       // Map data back to apps
@@ -83,8 +86,10 @@ class SupabaseService {
           .filter(t => t.app_id === app.id)
           .map(t => this._mapTodoFromDB(t))
 
+        // Debug: Log todo assignment
         if (appTodos.length > 0) {
-          console.log(`Supabase: App "${app.id}" has ${appTodos.length} todos`)
+          console.log(`Supabase: App "${app.id}" (${app.name}) assigned ${appTodos.length} todos:`,
+            appTodos.map(t => ({ id: t.id, title: t.title?.substring(0, 30) })));
         }
 
         return {
