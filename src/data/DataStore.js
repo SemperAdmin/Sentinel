@@ -144,20 +144,30 @@ class DataStore {
 
   /**
    * Get all portfolio apps
+   * Returns null if no data is available (signals fallback should be used)
    */
   async getPortfolio() {
     if (!this.initialized) await this.init();
-    
+
     if (this.useSupabase) {
-      return await supabaseService.getPortfolio();
+      const supabaseData = await supabaseService.getPortfolio();
+      // If Supabase returns null, it means "empty database, use fallback"
+      // If Supabase returns [], it means "actual empty result after filters"
+      if (supabaseData === null) {
+        console.log('DataStore: Supabase returned null, signaling GitHub fallback needed');
+        return null;
+      }
+      return supabaseData;
     }
 
     if (this.usingFallback) {
-      return Array.from(this.fallbackStorage.portfolio.values());
+      const data = Array.from(this.fallbackStorage.portfolio.values());
+      return data.length > 0 ? data : null;
     }
-    
+
     try {
-      return await this.db.getAll(PORTFOLIO_STORE);
+      const data = await this.db.getAll(PORTFOLIO_STORE);
+      return data && data.length > 0 ? data : null;
     } catch (error) {
       console.error('Failed to get portfolio:', error);
       throw new Error('Failed to retrieve portfolio data');

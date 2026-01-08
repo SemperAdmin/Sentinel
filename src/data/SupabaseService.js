@@ -34,9 +34,11 @@ class SupabaseService {
 
   /**
    * Get all portfolio apps with their related data (todos, improvements)
+   * Returns null if Supabase is empty (to signal fallback should be used)
+   * Returns [] only on actual errors that should stop fallback
    */
   async getPortfolio() {
-    if (!this.enabled) return []
+    if (!this.enabled) return null  // Return null to signal "use fallback"
 
     try {
       // Fetch apps
@@ -47,7 +49,12 @@ class SupabaseService {
 
       if (appsError) throw appsError
 
-      if (!apps || apps.length === 0) return []
+      // Return null if empty to signal "Supabase has no data, use GitHub fallback"
+      // This is different from returning [] which would mean "query succeeded but filtered to nothing"
+      if (!apps || apps.length === 0) {
+        console.log('Supabase: No apps found in database, signaling fallback to GitHub');
+        return null;
+      }
 
       console.log(`Supabase: Loaded ${apps.length} apps`)
 
@@ -88,7 +95,16 @@ class SupabaseService {
 
     } catch (error) {
       console.error('Supabase getPortfolio error:', error)
-      throw error
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      })
+      // Return null to signal fallback instead of throwing
+      // This allows the app to continue working even if Supabase has issues
+      console.log('Supabase error occurred, signaling fallback to GitHub');
+      return null;
     }
   }
 
@@ -370,17 +386,23 @@ class SupabaseService {
       id: app.id,
       repo_url: app.repoUrl,
       name: app.name || app.id, // Fallback
-      platform: app.platform,
-      status: app.status,
-      description: app.notes, // 'notes' in JS maps to 'description' in DB
+      platform: app.platform || 'Web',
+      status: app.status || 'Active',
+      description: app.notes || app.description || '', // 'notes' in JS maps to 'description' in DB
       github_stats: {
-        stars: app.stars,
-        forks: app.forks,
-        issues: app.openIssues,
-        lastCommit: app.lastCommitDate
+        stars: app.stars || 0,
+        forks: app.forks || 0,
+        issues: app.openIssues || 0,
+        lastCommit: app.lastCommitDate,
+        latestTag: app.latestTag,
+        language: app.language
       },
       last_review_date: app.lastReviewDate,
       next_review_date: app.nextReviewDate,
+      archived: app.archived || false,
+      developer_notes: app.developerNotes || '',
+      improvement_budget: app.improvementBudget || 20,
+      current_sprint: app.currentSprint || '',
       // owner_id handled by RLS or default
     }
   }
@@ -390,15 +412,24 @@ class SupabaseService {
       id: app.id,
       repoUrl: app.repo_url,
       name: app.name,
-      platform: app.platform,
-      status: app.status,
-      notes: app.description,
+      platform: app.platform || 'Web',
+      status: app.status || 'Active',
+      notes: app.description || '',
+      description: app.description || '',  // Some components use 'description' instead of 'notes'
       stars: app.github_stats?.stars || 0,
       forks: app.github_stats?.forks || 0,
       openIssues: app.github_stats?.issues || 0,
       lastCommitDate: app.github_stats?.lastCommit || null,
+      latestTag: app.github_stats?.latestTag || null,
+      language: app.github_stats?.language || null,
       lastReviewDate: app.last_review_date,
       nextReviewDate: app.next_review_date,
+      isPrivate: false,  // Only public apps are stored in Supabase
+      archived: app.archived || false,
+      developerNotes: app.developer_notes || '',
+      improvementBudget: app.improvement_budget || 20,
+      currentSprint: app.current_sprint || '',
+      pendingTodos: 0,  // Will be calculated from todos array
       todos: [], // populated separately
     }
   }
