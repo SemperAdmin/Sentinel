@@ -91,6 +91,7 @@ class DataStore {
 
   /**
    * Initialize the database and create object stores
+   * ALWAYS initializes IndexedDB even when Supabase is enabled (for fallback)
    */
   async init() {
     if (this.initialized) return;
@@ -98,11 +99,11 @@ class DataStore {
     // Check if Supabase is enabled
     if (supabaseService.enabled) {
       this.useSupabase = true;
-      this.initialized = true;
-      console.log('DataStore using Supabase backend');
-      return;
+      console.log('DataStore: Supabase backend enabled');
+      // DON'T return early - still initialize IndexedDB as fallback
     }
 
+    // ALWAYS initialize IndexedDB for local caching/fallback
     try {
       if (typeof indexedDB === 'undefined' || !indexedDB) {
         this.usingFallback = true;
@@ -130,9 +131,9 @@ class DataStore {
       });
 
       this.initialized = true;
-      console.log('DataStore initialized successfully');
+      console.log(`DataStore initialized: Supabase=${this.useSupabase}, IndexedDB=${!!this.db}`);
     } catch (error) {
-      console.warn('Failed to initialize DataStore, using fallback storage:', error);
+      console.warn('Failed to initialize IndexedDB, using fallback storage:', error);
       this.usingFallback = true;
       this.initialized = true;
     }
@@ -202,26 +203,28 @@ class DataStore {
 
   /**
    * Save or update an app
+   * When Supabase is enabled, also caches to IndexedDB for fallback
    */
   async saveApp(app) {
     if (!this.initialized) await this.init();
-    
+
+    // Always cache to IndexedDB when available (for fallback)
+    if (this.db && !this.usingFallback) {
+      try {
+        await this.db.put(PORTFOLIO_STORE, app);
+      } catch (cacheErr) {
+        console.warn('Failed to cache app to IndexedDB:', cacheErr.message);
+      }
+    } else if (this.usingFallback) {
+      this.fallbackStorage.portfolio.set(app.id, app);
+    }
+
+    // If using Supabase, also save there (primary storage)
     if (this.useSupabase) {
       return await supabaseService.saveApp(app);
     }
 
-    if (this.usingFallback) {
-      this.fallbackStorage.portfolio.set(app.id, app);
-      return app;
-    }
-    
-    try {
-      await this.db.put(PORTFOLIO_STORE, app);
-      return app;
-    } catch (error) {
-      console.error('Failed to save app:', error);
-      throw new Error('Failed to save app data');
-    }
+    return app;
   }
 
   /**
